@@ -1,8 +1,55 @@
 ## 4.3.0 (TBD)
 
+- Bug Fixes
+    - Background output printed above an active reserved prompt through `run_in_terminal()` or
+      `patch_stdout()` is preserved when the prompt redraws.
+    - Reserved rendering preserves unfinished command output when the main prompt returns by
+      starting the prompt on a fresh line. Trailing control sequences do not count as unfinished
+      output, and a line another program finished during a terminal handoff is not given an extra
+      blank line.
+    - Falling back from reserved rendering during a command restores the native toolbar layout and
+      stdout proxy, so a recovered toolbar remains visible during the command, including when the
+      fallback happens while the command has handed the terminal to another program or while the
+      built-in pager is open. A fallback during paging no longer flashes the command output through
+      the pager, and the pager's exit restores the display even if that exit fails.
+    - Resuming the reserved command display after a terminal handoff preserves the cursor column of
+      unfinished guest output, so later command output continues the same line.
+    - A reserved toolbar started in a terminal below the minimum height now activates when the
+      terminal grows, including during a quiet command.
+    - Reserved bottom toolbars now indicate clipped content with a right-edge ellipsis (`…`). Long
+      lines are truncated without wrapping, and newlines beyond the reserved row are indicated
+      instead of silently hiding content, including when the first line is empty. Trailing
+      whitespace and a trailing newline are not marked, since nothing visible is lost.
+    - Reserved bottom toolbars display control characters in caret notation, as legacy rendering
+      does, instead of sending them to the terminal.
+    - Resizing the terminal while a reserved toolbar is active now reinstalls the reserved rows for
+      the new size and repaints the toolbar at the new bottom row, instead of leaving the renderer
+      wrapping to the old width. A stale toolbar is no longer left behind when the terminal grows.
+    - Command output that does not end in a newline (for example a progress line updated with a
+      carriage return) is no longer erased by a reserved toolbar's redraw, its shutdown, or a
+      terminal resize. The line in progress is preserved and the next write continues it. When
+      shrinking leaves that line in the rows the toolbar takes, the line and its cursor are moved up
+      into the usable region before the toolbar is painted.
+    - Reserved rendering is no longer left suppressed, and the main prompt invisible, when a
+      terminal that shrank below the two-row minimum during a command grows back afterward.
+    - The built-in pager (used by `Cmd.ppaged()`) again displays its content in reserved toolbar
+      mode. It had rendered nothing while still accepting its keys, because the command display's
+      renderer frames were being suppressed.
+    - Command output that does not end in a newline is no longer erased when a command finishes in
+      reserved toolbar mode. The command display's shutdown had cleared the line still in progress.
+    - Resizing the terminal during a quiet command is now detected on its own, through
+      prompt-toolkit's terminal-size poll, instead of only when another event forces a redraw.
+    - Growing the terminal back after it had shrunk below the two-row minimum now reacquires the
+      reserved rows. A 24-to-2-to-24 resize sequence had left reserved rendering inactive.
+
+- Breaking Changes
+    - Replaced `enable_bottom_toolbar` with `bottom_toolbar_mode` in `Cmd.__init__()`. The default,
+      `cmd2.ToolbarMode.OFF`, disables the toolbar. Use `cmd2.ToolbarMode.AUTO` where you previously
+      passed `enable_bottom_toolbar=True`.
+
 - Enhancements
-    - `enable_bottom_toolbar=True` now keeps the toolbar visible and refreshing during command
-      execution
+    - `bottom_toolbar_mode=cmd2.ToolbarMode.AUTO` now keeps the toolbar visible and refreshing
+      during command execution
     - `Cmd.read_input()` and `Cmd.read_secret()` now keep the bottom toolbar visible while they wait
       for input, refreshing at the same `refresh_interval` as the main prompt, instead of the
       toolbar disappearing for the duration of the nested prompt. `Cmd.select()` is unchanged, since

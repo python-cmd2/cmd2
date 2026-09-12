@@ -64,6 +64,7 @@ from .theme import (
     reset_theme,
     update_theme,
 )
+from .toolbar_mode import ToolbarMode
 from .utils import (
     CustomCompletionSettings,
     Settable,
@@ -120,6 +121,7 @@ __all__: list[str] = [  # noqa: RUF022
     "stylize",
     # Styles
     "Cmd2Style",
+    "ToolbarMode",
     # Theme
     "get_theme",
     "reset_theme",

@@ -1015,16 +1015,23 @@ def test_edit_file(base_app, request, monkeypatch) -> None:
     base_app.editor = "fooedit"
 
     # Mock out the subprocess.Popen call so we don't actually open an editor
-    m = mock.MagicMock(name="Popen")
+    # Model a completed editor, including communicate(), so ProcReader cleanup
+    # succeeds instead of raising while unpacking an unconfigured MagicMock.
+    process = mock.Mock(stdout=None, stderr=None, returncode=0)
+    process.communicate.return_value = (None, None)
+    m = mock.Mock(name="Popen", return_value=process)
     monkeypatch.setattr("subprocess.Popen", m)
 
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, "script.txt")
 
-    run_cmd(base_app, f"edit {filename}")
+    _, errors = run_cmd(base_app, f"edit {filename}")
 
     # We think we have an editor, so should expect a Popen call
     m.assert_called_once()
+    process.communicate.assert_called_once_with()
+    assert errors == []
+    assert base_app.last_result == 0
 
 
 @pytest.mark.parametrize("file_name", odd_file_names)
@@ -1045,16 +1052,23 @@ def test_edit_file_with_spaces(base_app, request, monkeypatch) -> None:
     base_app.editor = "fooedit"
 
     # Mock out the subprocess.Popen call so we don't actually open an editor
-    m = mock.MagicMock(name="Popen")
+    # Model a completed editor, including communicate(), so ProcReader cleanup
+    # succeeds instead of raising while unpacking an unconfigured MagicMock.
+    process = mock.Mock(stdout=None, stderr=None, returncode=0)
+    process.communicate.return_value = (None, None)
+    m = mock.Mock(name="Popen", return_value=process)
     monkeypatch.setattr("subprocess.Popen", m)
 
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, "my commands.txt")
 
-    run_cmd(base_app, f'edit "{filename}"')
+    _, errors = run_cmd(base_app, f'edit "{filename}"')
 
     # We think we have an editor, so should expect a Popen call
     m.assert_called_once()
+    process.communicate.assert_called_once_with()
+    assert errors == []
+    assert base_app.last_result == 0
 
 
 def test_edit_blank(base_app, monkeypatch) -> None:
@@ -1062,13 +1076,20 @@ def test_edit_blank(base_app, monkeypatch) -> None:
     base_app.editor = "fooedit"
 
     # Mock out the subprocess.Popen call so we don't actually open an editor
-    m = mock.MagicMock(name="Popen")
+    # Model a completed editor, including communicate(), so ProcReader cleanup
+    # succeeds instead of raising while unpacking an unconfigured MagicMock.
+    process = mock.Mock(stdout=None, stderr=None, returncode=0)
+    process.communicate.return_value = (None, None)
+    m = mock.Mock(name="Popen", return_value=process)
     monkeypatch.setattr("subprocess.Popen", m)
 
-    run_cmd(base_app, "edit")
+    _, errors = run_cmd(base_app, "edit")
 
     # We have an editor, so should expect a Popen call
     m.assert_called_once()
+    process.communicate.assert_called_once_with()
+    assert errors == []
+    assert base_app.last_result == 0
 
 
 def test_base_py_interactive(base_app) -> None:
@@ -4521,17 +4542,17 @@ def test_refresh_interval() -> None:
     assert custom_app.main_session.refresh_interval == 5.0
 
 
-def test_enable_bottom_toolbar() -> None:
+def test_bottom_toolbar_mode() -> None:
     # Test default
     default_app = cmd2.Cmd()
     assert default_app.main_session.bottom_toolbar is None
 
-    # Test True
-    custom_app = cmd2.Cmd(enable_bottom_toolbar=True)
+    # Test enabled
+    custom_app = cmd2.Cmd(bottom_toolbar_mode=cmd2.ToolbarMode.AUTO)
     assert custom_app.main_session.bottom_toolbar == custom_app.get_bottom_toolbar
 
-    # Test False
-    custom_app = cmd2.Cmd(enable_bottom_toolbar=False)
+    # Test disabled
+    custom_app = cmd2.Cmd(bottom_toolbar_mode=cmd2.ToolbarMode.OFF)
     assert custom_app.main_session.bottom_toolbar is None
 
 
@@ -4653,7 +4674,6 @@ def test_create_main_session_with_custom_tty() -> None:
         app._create_main_session(
             auto_suggest=True,
             completekey=app.DEFAULT_COMPLETEKEY,
-            enable_bottom_toolbar=False,
             enable_rprompt=False,
             complete_in_thread=False,
             refresh_interval=0.0,

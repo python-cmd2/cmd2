@@ -910,38 +910,39 @@ def test_history_cannot_create_directory(mocker, capsys) -> None:
     assert "Error creating persistent history file directory" in err
 
 
-def test_history_file_permission_error(mocker, capsys) -> None:
+def test_history_file_permission_error(mocker, capsys, tmp_path) -> None:
     mock_open = mocker.patch("builtins.open")
     mock_open.side_effect = PermissionError
 
-    cmd2.Cmd(persistent_history_file="/tmp/doesntmatter")
+    # A path under tmp_path rather than a fixed one: mocking open() does not stop the
+    # history setup from creating the file's parent directory, and a fixed path would leave
+    # that directory behind as a side effect other tests could come to depend on.
+    cmd2.Cmd(persistent_history_file=str(tmp_path / "doesntmatter"))
     out, err = capsys.readouterr()
     assert not out
     assert "Cannot read persistent history file" in err
 
 
-def test_history_file_bad_compression(mocker, capsys) -> None:
-    history_file = "/tmp/doesntmatter"
-    with open(history_file, "wb") as f:
-        f.write(b"THIS IS NOT COMPRESSED DATA")
+def test_history_file_bad_compression(capsys, tmp_path) -> None:
+    history_file = tmp_path / "doesntmatter"
+    history_file.write_bytes(b"THIS IS NOT COMPRESSED DATA")
 
-    cmd2.Cmd(persistent_history_file=history_file)
+    cmd2.Cmd(persistent_history_file=str(history_file))
     out, err = capsys.readouterr()
     assert not out
     assert "Error decompressing persistent history data" in err
 
 
-def test_history_file_bad_json(mocker, capsys) -> None:
+def test_history_file_bad_json(capsys, tmp_path) -> None:
     import lzma
 
     data = b"THIS IS NOT JSON"
     compressed_data = lzma.compress(data)
 
-    history_file = "/tmp/doesntmatter"
-    with open(history_file, "wb") as f:
-        f.write(compressed_data)
+    history_file = tmp_path / "doesntmatter"
+    history_file.write_bytes(compressed_data)
 
-    cmd2.Cmd(persistent_history_file=history_file)
+    cmd2.Cmd(persistent_history_file=str(history_file))
     out, err = capsys.readouterr()
     assert not out
     assert "Error processing persistent history data" in err

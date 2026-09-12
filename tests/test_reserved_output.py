@@ -67,12 +67,14 @@ class TestVirtualGeometry:
         assert adapter.get_size().rows == 23
 
     def test_the_virtual_size_follows_a_resize(self) -> None:
-        output, _stream = make_output(rows=24)
+        """The height is re-read from the backend, so a resize shows through immediately --
+        before any reconfigure -- which is what lets prompt-toolkit's size poll notice it."""
+        output, _stream, screen = make_shrinkable_output(rows=24, columns=80)
         display = TerminalDisplay(output)
         display.acquire()
         adapter = display.output
-        # Publish a taller generation the way reconfigure() does.
-        display._geometry = Geometry(generation=99, physical_rows=40, columns=80, reserved_rows=1)
+        assert adapter.get_size() == Size(rows=23, columns=80)
+        screen.rows = 40
         assert adapter.get_size() == Size(rows=39, columns=80)
 
 
@@ -248,7 +250,7 @@ class TestCprCoordinateContract:
         """The arithmetic above is only sound because of this."""
         output, stream = make_output(rows=24)
         TerminalDisplay(output).acquire()
-        assert stream.getvalue() == "\x1b7\x1b[1;23r\x1b8"
+        assert stream.getvalue() == "\x1bD\x1b[1A\x1b7\x1b[1;23r\x1b8"
 
     def test_a_cursor_in_the_reserved_band_gives_a_nonpositive_height(self) -> None:
         """The R5 hazard, stated in geometry terms: rejecting it belongs to the bridge, but
@@ -361,7 +363,7 @@ class TestScreenBufferTransitions:
         adapter, stream, display = make_reserved(rows=24)
         adapter.enter_alternate_screen()
         adapter.flush()
-        assert stream.getvalue().startswith("\x1b7\x1b[r\x1b8"), "margins were left installed"
+        assert stream.getvalue().startswith("\x1b7\x1b[24;1H\x1b[0m\x1b[J\x1b[r\x1b8"), "margins were left installed"
         assert not display.is_reserved
 
     def test_leaving_the_alternate_screen_re_establishes_the_region(self) -> None:

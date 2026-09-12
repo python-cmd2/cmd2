@@ -24,6 +24,7 @@ bookkeeping. It is a narrow initialization contract tied to a qualified prompt-t
 and :mod:`tests.test_prompt_toolkit_bridge` holds it to that version by name.
 """
 
+import re
 from collections import deque
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
@@ -41,6 +42,13 @@ if TYPE_CHECKING:  # pragma: no cover
     from prompt_toolkit.renderer import Renderer
 
     from .terminal_display import TerminalDisplay
+
+
+#: Trailing control that moves nothing the user can see: carriage returns, CSI sequences such
+#: as an SGR reset, and OSC sequences such as a window title. Stripped before deciding whether
+#: output ended on a fresh line, so a reset emitted after the newline does not count as text
+#: on a new line, and a write made only of control says nothing about the line at all.
+_TRAILING_CONTROL = re.compile(r"(?:\r|\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\))+\Z")
 
 
 class ReservedModeFailureError(RuntimeError):
@@ -116,6 +124,11 @@ class PromptToolkitBridge:
         self._in_flight: PreparedRender | None = None
         self._preparing = False
         self._committed: Generations | None = None
+        # The renderer's screen as of the last committed frame. Preparation advances the
+        # renderer's own ``_last_screen`` to a frame that may never be emitted, so this is the
+        # baseline a managed write restores: not the uncommitted advance, and not a cleared
+        # baseline that would force an erasing repaint over the output just written.
+        self._committed_screen: Any = None
         self._needs_resynchronization = False
         self._reserved_emission_stopped = False
         self._redraw_pending = False
@@ -123,7 +136,30 @@ class PromptToolkitBridge:
         self._pending_error: BaseException | None = None
         self._prompt_anchor: int | None = None
         self._resynchronization_reason: str | None = None
-        self._pending_cpr: deque[Generations] = deque()
+        # One entry per outstanding request, in the order they went out. An entry is ``None``
+        # once the screen it asked about is gone: the reply is still coming, so the place has
+        # to be kept, but nothing it says can be believed.
+        self._pending_cpr: deque[Generations | None] = deque()
+        # The upstream methods this bridge wraps, by name. Kept after unbinding as well as
+        # during: preparation calls the real render through this rather than the attribute,
+        # which would re-enter the wrapper and never terminate -- and a wrapper somebody else
+        # installed over ours may outlive the binding and still call in here.
+        self._originals: dict[str, Any] = {}
+        self._bound = False
+        # What this bridge put in their place, so teardown can tell its own replacements from
+        # something another caller installed afterwards.
+        self._installed: dict[str, Any] = {}
+        self._bound_app: Application[Any] | None = None
+        self._emission_stopped_handler: Callable[[], None] | None = None
+        self._frame_committed_handler: Callable[[], object] | None = None
+        self._render_attempted_handler: Callable[[], object] | None = None
+        # Whether the last thing this bridge tried to emit actually reached the terminal.
+        self._last_emission_committed = False
+        self._after_render_event: Any = None
+        self._after_render_original: Any = None
+        self._after_render_installed: Any = None
+        self._render_suppressed = False
+        self._unfinished_command_output = False
 
     # -- what is known ---------------------------------------------------------------------
 
@@ -205,26 +241,78 @@ class PromptToolkitBridge:
         """
         self._redraw_scheduler = scheduler
 
-    def note_managed_write(self, prompt_anchor: int | None = None) -> None:
-        """Record that managed output reached the terminal.
+    def note_managed_write(self, prompt_anchor: int | None = None, *, data: str | None = None) -> None:
+        """Record that command output reached the terminal.
 
-        This invalidates the committed baseline rather than only bumping a generation.
-        Generation comparison catches a write that lands *during* a preparation, but a write
-        between two frames leaves the renderer believing its last screen is still displayed
-        and its cursor still where that screen ended -- and the output just emitted moved the
-        cursor, and may have scrolled everything above it. The next frame would be diffed
-        against a screen the terminal no longer shows, from an origin it no longer has.
+        In reserved mode command output goes straight to the terminal, below an empty command
+        display and beside a toolbar pinned outside the scroll region. So a managed write
+        changes what is *on* the terminal without changing what the command display would draw
+        -- which is nothing -- and without moving the toolbar. The renderer's committed
+        baseline still describes the empty command display correctly, and the next frame diffed
+        against it is a true no-op that emits nothing and, wrapped in the cursor save and
+        restore :meth:`set_preserve_cursor` installs, leaves the cursor where the output left
+        it. A line in progress therefore survives, and the next write continues it.
 
-        :param prompt_anchor: the physical row the prompt now starts on, where the layer that
-            emitted the output knows it. Passing nothing *forgets* the origin rather than
-            keeping the old one: the write moved the cursor and may have scrolled the screen,
-            so the remembered row is exactly what is no longer true, and recovery asks the
-            terminal instead.
+        This is why a managed write must *not* recover here, and above all must not clear the
+        baseline. Clearing it forces the next frame to repaint from scratch: the renderer homes
+        the cursor and erases downward, and that erase lands on the very output just written --
+        wiping a line still in progress, or scrolling the region to reserve space it does not
+        need. What the write does need is to drop any frame prepared against the cursor it
+        moved, and to bump the generation so a frame preparing concurrently cannot commit
+        against the terminal as it was.
+
+        The prompt's own origin is re-established when the prompt renders, by the cursor report
+        prompt-toolkit requests for itself; the bridge does not need to guess it from here.
+
+        :param prompt_anchor: the physical row the prompt now starts on, where a caller happens
+            to know it. Passing nothing forgets any remembered origin rather than keeping a row
+            the output has moved past.
+        :param data: emitted command text, for deciding whether the next prompt needs a new line
         """
         self._terminal_generation += 1
+        if data:
+            visible = _TRAILING_CONTROL.sub("", data)
+            if visible:
+                self._unfinished_command_output = not visible.endswith("\n")
         self._prompt_anchor = prompt_anchor
-        self.require_resynchronization("managed output reached the terminal")
+        # Only the frame in flight goes; it was prepared against the cursor and content this
+        # write moved, so committing it would emit a stale frame. The renderer's baseline is
+        # reset to the last committed screen -- not left as the advance a pending preparation
+        # made, which the terminal never received, and not cleared, which would force the next
+        # frame to erase down over the output just written.
+        self._in_flight = None
+        self._renderer._last_screen = self._committed_screen
         self._request_redraw()
+
+    @property
+    def has_unfinished_command_output(self) -> bool:
+        """Whether the last visible command output stopped part-way through a line."""
+        return self._unfinished_command_output
+
+    def forget_unfinished_command_output(self) -> None:
+        """Drop the verdict about a line in progress: the cursor is no longer where it left it.
+
+        A guest program that took the terminal, or an erase that cleared the screen, has moved
+        the cursor since. The line the verdict described may well be finished by now, and
+        adding a newline for it would push the next prompt down by a blank line. Output the
+        guest itself left unfinished is not seen here -- it bypasses the serializer -- and is
+        the guest's to finish, as it was before the reservation existed.
+        """
+        self._unfinished_command_output = False
+
+    def finish_command_output(self) -> None:
+        """Start the next prompt on a fresh line if command output left one unfinished.
+
+        The reserved erase deletes whole lines. Moving past a partial line before the
+        prompt's first render preserves that line, including at the scrolling margin.
+        """
+        with self._lock.transaction("finish command output"):
+            if self._unfinished_command_output:
+                self._display.output.write_raw("\r\n")
+                self._display.output.flush()
+                self._unfinished_command_output = False
+                self._prompt_anchor = None
+                self._terminal_generation += 1
 
     def note_owner_change(self) -> None:
         """Record that a different UI owner now holds the terminal."""
@@ -254,14 +342,66 @@ class PromptToolkitBridge:
         self._resynchronization_reason = reason
         self._retire()
 
+    def set_frame_committed_handler(self, handler: "Callable[[], object]") -> None:
+        """Install what to call after a frame has actually reached the terminal.
+
+        Runs off the lock and only for a committed frame. Upstream's own after-render event
+        fires during preparation, when the frame exists only as a recording, so it cannot
+        answer "has the user seen this".
+
+        :param handler: called after each committed frame; its return value is ignored
+        """
+        self._frame_committed_handler = handler
+
+    def set_render_attempted_handler(self, handler: "Callable[[], object] | None") -> None:
+        """Install what to call after each render attempt, whatever came of it.
+
+        Distinct from the committed-frame handler on purpose. "A frame reached the terminal"
+        and "the renderer has been through a frame" are different facts, and something waiting
+        for the display to start needs the second: a frame skipped while recovery is owed
+        still means the application is running and rendering.
+
+        :param handler: called after every render attempt, or ``None`` to remove it
+        """
+        self._render_attempted_handler = handler
+
+    def set_render_suppressed(self, suppressed: bool) -> None:
+        """Stop emitting the renderer's own frames while the command display owns the terminal.
+
+        The command display has nothing of its own to draw in reserved mode: the toolbar is
+        painted independently, and command output goes straight to the terminal. A renderer
+        frame there would only reserve the usable height and scroll to claim it, moving the
+        cursor off the line output is still writing. So while this is set, a render repaints
+        the toolbar and reports the frame but emits nothing through the renderer, leaving
+        command output and the cursor exactly as they are. It is set while the command display
+        owns the terminal and cleared at the prompt, whose frames must render for real.
+
+        :param suppressed: whether the renderer's frames are suppressed
+        """
+        self._render_suppressed = suppressed
+
+    def set_emission_stopped_handler(self, handler: "Callable[[], None]") -> None:
+        """Install what to call when reserved rendering has to be abandoned.
+
+        The owner of the reservation is what runs here: rendering cannot resume until the rows
+        have been given back and this bridge unbound, and only the owner can do either.
+
+        :param handler: called once, when emission is abandoned
+        """
+        self._emission_stopped_handler = handler
+
     def stop_reserved_emission(self, error: BaseException) -> None:
         """Abandon reserved rendering after a failure that could not be cleaned up.
 
         :param error: what went wrong, to be reported once
         """
+        if self._reserved_emission_stopped:
+            return
         self._reserved_emission_stopped = True
         self._pending_error = error
         self._retire()
+        if self._emission_stopped_handler is not None:
+            self._emission_stopped_handler()
 
     def set_prompt_anchor(self, physical_row: int) -> None:
         """Record the physical row the prompt starts on.
@@ -287,12 +427,317 @@ class PromptToolkitBridge:
         self._in_flight = None
         self._renderer._last_screen = None
 
+    # -- binding ---------------------------------------------------------------------------
+
+    def bind(self, app: "Application[Any]") -> None:
+        """Route the application's own renders through this bridge.
+
+        prompt-toolkit renders from its event loop whenever it decides to, so intercepting is
+        the only way those frames come under the transaction. The interception is installed on
+        the renderer *instance* and removed again on the way out -- patching the class would
+        change every renderer in the process, including ones cmd2 does not own.
+
+        :param app: the application whose renders are being intercepted
+        """
+        if self._bound:
+            return
+        renderer = self._renderer
+        replacements = {
+            "render": self._render_through_bridge,
+            "erase": self._erase_through_bridge,
+            "clear": self._clear_through_bridge,
+            # Upstream both asks for cursor reports and receives them: its own key binding
+            # calls report_absolute_cursor_row when the reply arrives. Unrecorded, a request
+            # would have its reply arrive uncorrelated and be discarded, leaving the prompt's
+            # height unknown; unvalidated, a reply from inside the reserved band would set a
+            # height of zero or less and never say so.
+            "request_absolute_cursor_position": self._request_cursor_position_through_bridge,
+            "report_absolute_cursor_row": self._report_cursor_row_through_bridge,
+        }
+        self._originals = {name: getattr(renderer, name) for name in replacements}
+        self._installed = dict(replacements)
+        self._bound_app = app
+        self._bound = True
+        # Upstream fires this after ``render()`` returns, whatever the wrapper decided to do,
+        # so a frame the bridge skipped would still tell everything waiting on a rendered
+        # frame that one had happened -- including the command display's readiness signal.
+        self._after_render_event = app.after_render
+        self._after_render_original = app.after_render.fire
+        self._after_render_installed = self._fire_after_render_through_bridge
+        # By name, as with the renderer's methods: this replacement belongs to this event
+        # object, not to the class every application's events are built from.
+        setattr(app.after_render, "fire", self._after_render_installed)  # noqa: B010
+        for name, replacement in replacements.items():
+            # Set by name so the replacement lands on this instance. Assigning the class
+            # attribute would change every renderer in the process, including ones cmd2 does
+            # not own.
+            setattr(renderer, name, replacement)
+        if self._redraw_scheduler is None:
+            self._redraw_scheduler = app.invalidate
+
+    def unbind(self) -> None:
+        """Give the renderer its own methods back.
+
+        Safe to call when nothing was bound: teardown reaches this from more than one place.
+        """
+        event, self._after_render_event = self._after_render_event, None
+        if event is not None and getattr(event, "fire", None) == self._after_render_installed:
+            setattr(event, "fire", self._after_render_original)  # noqa: B010
+        self._after_render_installed = None
+
+        self._bound = False
+        installed, self._installed = self._installed, {}
+        for name, original in self._originals.items():
+            # Restored only where this bridge's replacement is still in place. Another caller
+            # may have wrapped the renderer since -- for tracing, for a test -- and putting
+            # the original back over theirs would silently undo it.
+            if getattr(self._renderer, name, None) == installed.get(name):
+                setattr(self._renderer, name, original)
+        self._bound_app = None
+
+    def _render_through_bridge(self, app: "Application[Any]", layout: Any, is_done: bool = False) -> None:
+        """Prepare and commit one frame, telling anything waiting that an attempt was made.
+
+        Unbound, this passes straight through. A wrapper installed over this one -- for
+        tracing, for a test -- is left in place by :meth:`unbind` precisely because it is not
+        ours to remove, and it goes on calling in here afterwards. The bridge is no longer the
+        terminal's owner then, so the honest answer is upstream's own behaviour rather than an
+        error.
+
+        :param app: the application being rendered
+        :param layout: the layout to render; upstream passes ``app.layout``
+        :param is_done: whether this is the final frame of a prompt
+        """
+        if not self._bound:
+            self._originals["render"](app, layout, is_done)
+            return
+        try:
+            self._render_frame(app, layout, is_done)
+        finally:
+            if self._render_attempted_handler is not None:
+                self._render_attempted_handler()
+
+    def _render_frame(self, app: "Application[Any]", layout: Any, is_done: bool = False) -> None:
+        """Prepare and commit one frame in place of upstream's direct render.
+
+        Runs on the UI thread, which is where recovery's callbacks belong too, so an owed
+        recovery is done here rather than deferred: a frame prepared before the terminal has
+        been resynchronized would be diffed against a screen nobody has seen.
+
+        :param app: the application being rendered
+        :param layout: the layout to render; upstream passes ``app.layout``
+        :param is_done: whether this is the final frame of a prompt
+        """
+        self._last_emission_committed = False
+        if self._reserved_emission_stopped:
+            # Abandoned, but the rows are still withheld until the owner releases them.
+            # Rendering upstream directly from here would write outside the transaction and
+            # into a terminal that is still reserved. Compatibility rendering follows the
+            # release: once the owner has unbound this bridge, upstream's own render is back
+            # on the renderer and nothing routes through here at all.
+            return
+
+        self._reconfigure_if_resized()
+
+        if self._needs_resynchronization:
+            try:
+                self.resynchronize()
+            except ReservedModeFailureError as error:
+                # Raised from here, this would climb out through upstream's redraw and end the
+                # application: nothing above a render is placed to catch it. The failure is
+                # the kind the error's contract describes -- release the reservation, then
+                # render natively -- so it goes through the same door as every other
+                # abandonment. The owner's handler gives the rows back and unbinds this
+                # bridge; the redraw asked for afterwards is upstream's own, drawn by the
+                # render this wrapper no longer stands in front of.
+                self.stop_reserved_emission(error)
+                app.invalidate()
+                return
+            if self._needs_resynchronization:
+                # Recovery is waiting on the terminal to say where the cursor is. Drawing now
+                # would guess at the origin, which is the thing recovery exists to avoid.
+                return
+
+        if self._render_suppressed:
+            # The command display owns the terminal and has nothing of its own to draw. Its
+            # toolbar is repainted here; a renderer frame is not emitted, so command output and
+            # the cursor it left mid-line are untouched. The frame still counts as rendered, so
+            # readiness and after-render fire as they would for any frame.
+            self._last_emission_committed = True
+            if self._frame_committed_handler is not None:
+                self._frame_committed_handler()
+            return
+
+        prepared = self.prepare(app, layout, is_done=is_done)
+        if prepared is None:
+            self._request_redraw()
+            return
+        if not self.commit(prepared):
+            self._request_redraw()
+            return
+        self._last_emission_committed = True
+        if self._frame_committed_handler is not None:
+            self._frame_committed_handler()
+
+    def _reconfigure_if_resized(self) -> None:
+        """Remeasure the physical terminal and re-establish the region if it changed size.
+
+        The command display runs on its own thread, where the window-change signal cannot be
+        delivered, so prompt-toolkit's size poll is the only notice a resize gives there --
+        and the poll reads the reserved adapter, which reports the *virtual* size and goes on
+        hiding the change until the region has been remeasured. At the main prompt the signal
+        does fire, but its recovery reinstalls the region from the old geometry. Either way
+        the remeasure has to happen on the render the poll or the signal drives, or the
+        renderer wraps to a stale width and the toolbar paints at an obsolete row.
+
+        The prompt origin is forgotten: a resize reflows the screen, so the remembered row is
+        no longer where the prompt starts, and recovery re-establishes it from the terminal.
+
+        A terminal that shrank below the two-row floor is released but still leased -- it is
+        temporarily ineligible, not given up. When it grows back, its geometry is ``None`` yet
+        the reservation must be reacquired, so a released-but-leased display is remeasured here
+        too, distinct from a display whose loop has ended and holds no lease at all.
+        """
+        geometry = self._display.geometry
+        with self._lock.transaction("resize"):
+            if geometry is None:
+                # Released owner: the loop has ended and there is nothing to reacquire. A
+                # display still holding its lease is only temporarily below the floor, and
+                # reconfigure reinstalls the region once the terminal is eligible again.
+                if self._display.lease_depth == 0 or not self._display.reconfigure():
+                    return
+            elif self._display.terminal.physical_size() == geometry.physical_size:
+                return
+            else:
+                self._display.reconfigure()
+        self.forget_prompt_anchor()
+        # A prompt owes recovery: its origin has to be re-established from the terminal, and
+        # its frame repainted. A command does not -- it owns the cursor and is still writing
+        # to it, so a homing recovery would move the cursor off the line in progress. The
+        # region has been reinstalled and the toolbar repaints itself against the new
+        # geometry; the command's output and cursor are left exactly where they are.
+        if not self._render_suppressed:
+            self.note_geometry_change()
+
+    def _fire_after_render_through_bridge(self) -> None:
+        """Tell the application a frame was rendered, but only if one actually was.
+
+        A skipped frame -- recovery owed and unfinished, a preparation refused, a commit
+        retired -- emitted nothing. Everything downstream of this event believes a frame is on
+        the screen: layout metadata is published from it, and the command display treats it as
+        the signal that its first frame has been drawn.
+        """
+        if self._bound and not self._last_emission_committed:
+            return
+        self._after_render_original()
+
+    def _request_cursor_position_through_bridge(self) -> None:
+        """Let upstream ask for the cursor, and record the request if one went out.
+
+        Upstream does not always emit one: in full-screen mode, and on backends that answer
+        natively, it fills in the height and returns. Recording those would leave entries in
+        the queue that no reply will ever consume, so what is recorded is what the renderer
+        actually started waiting for.
+        """
+        renderer = self._renderer
+        if not self._bound:
+            self._originals["request_absolute_cursor_position"]()
+            return
+        with self._lock.transaction("cursor position request"):
+            if self._reserved_emission_stopped:
+                return
+            generations = self.generations()
+            outstanding = len(renderer._waiting_for_cpr_futures)
+            self._originals["request_absolute_cursor_position"]()
+            if len(renderer._waiting_for_cpr_futures) > outstanding:
+                self._pending_cpr.append(generations)
+
+    def _report_cursor_row_through_bridge(self, row: int) -> None:
+        """Take a reply upstream's key binding delivered, through the same validation.
+
+        :param row: the one-based physical row the terminal reported
+        """
+        if not self._bound:
+            self._originals["report_absolute_cursor_row"](row)
+            return
+        self.report_cursor_row(row)
+
+    def _erase_through_bridge(self, leave_alternate_screen: bool = True) -> None:
+        """Erase under the transaction, and treat what is left as unknown.
+
+        An erase moves the cursor and clears the screen below it, so nothing may be diffed
+        against what was there. Upstream's own ``reset()`` runs inside it, which is exactly the
+        state the bridge must not inherit beliefs from.
+
+        :param leave_alternate_screen: passed through to upstream
+        """
+        if not self._bound:
+            self._originals["erase"](leave_alternate_screen)
+            return
+        # A resize can be the reason the renderer is erasing here (prompt-toolkit erases,
+        # requests the cursor, then redraws). A terminal that resets its margins on resize would
+        # make this bounded erase run against the whole screen, deleting lines and scrolling
+        # the old toolbar row up into the output. Reinstalling the region for the new size
+        # first -- which also clears the old band -- keeps the erase bounded.
+        self._reconfigure_if_resized()
+        if self._render_suppressed:
+            # The command display owns the terminal and draws nothing of its own, so this
+            # erase would only clear command output -- including a line left in progress. The
+            # region has been reinstalled for the new size and the toolbar repaints itself;
+            # the command's output stays, and its cursor with it.
+            return
+        self._last_emission_committed = False
+        with self._lock.transaction("erase"):
+            try:
+                self._originals["erase"](leave_alternate_screen)
+                self._last_emission_committed = True
+            finally:
+                # Recorded whether or not it finished. An erase that raised part-way has still
+                # moved the cursor and cleared some of what was below it, and a stream cannot
+                # say how much.
+                # run_in_terminal also erases before handing output to its callback. Its
+                # immediate redraw must wait for the post-output cursor report, rather than
+                # recovering at the old prompt row and erasing the callback's output.
+                self._prompt_anchor = None
+                self._invalidate_pending_cursor_reports()
+                # The screen below the cursor is gone, and with it any line in progress.
+                self._unfinished_command_output = False
+                self.require_resynchronization("the renderer erased the screen")
+
+    def _clear_through_bridge(self) -> None:
+        """Clear under the transaction, and treat what is left as unknown.
+
+        A clear also moves the prompt. Whatever row it started on, it is not that row now, so
+        the remembered origin is forgotten rather than carried across -- recovery would
+        otherwise place the next frame where the prompt used to be. Cursor reports already in
+        flight describe the screen before the clear and are discarded with it.
+
+        Unbound, this passes straight through, for the reason given on the render wrapper: a
+        retired bridge is not the terminal's owner, and taking its lock or invalidating its
+        state on someone else's behalf would be acting as one.
+        """
+        if not self._bound:
+            self._originals["clear"]()
+            return
+        self._last_emission_committed = False
+        with self._lock.transaction("clear"):
+            try:
+                self._originals["clear"]()
+                self._last_emission_committed = True
+            finally:
+                self._prompt_anchor = None
+                self._invalidate_pending_cursor_reports()
+                self._unfinished_command_output = False
+                self.require_resynchronization("the renderer cleared the screen")
+
     # -- prepare and commit ----------------------------------------------------------------
 
-    def prepare(self, app: "Application[Any]") -> PreparedRender | None:
+    def prepare(self, app: "Application[Any]", layout: Any = None, *, is_done: bool = False) -> PreparedRender | None:
         """Record a full renderer frame without emitting anything.
 
         :param app: the application to render
+        :param layout: the layout to render; the application's own by default
+        :param is_done: whether this is the final frame of a prompt
         :return: the prepared frame, or ``None`` if one cannot be prepared right now
         """
         assert_no_terminal_transaction("preparing a renderer frame")
@@ -315,8 +760,9 @@ class PromptToolkitBridge:
         # state is provisional -- a second render or an input dispatch started from one of
         # them would consume a screen that does not exist.
         self._preparing = True
+        render = self._originals.get("render", self._renderer.render)
         try:
-            self._renderer.render(app, app.layout)
+            render(app, app.layout if layout is None else layout, is_done)
         except Exception as error:  # noqa: BLE001 - a layout callback must not end a command
             self._pending_error = error
             self.require_resynchronization("preparing the frame raised")
@@ -331,11 +777,19 @@ class PromptToolkitBridge:
             # publication that follows -- leaving a frame in flight that nothing invalidated
             # and everything downstream believes is current.
             if self.needs_resynchronization or self.reserved_emission_stopped:
-                # Something invalidated the terminal while the frame was being prepared -- a
-                # managed write from inside a layout callback, say, or a failure that
-                # abandoned the reservation outright. Either way the operations are recorded
-                # against a terminal that has moved on.
+                # Something invalidated the terminal while the frame was being prepared -- an
+                # erase from inside a layout callback, say, or a failure that abandoned the
+                # reservation outright. Either way the operations are recorded against a
+                # terminal that has moved on.
                 self._retire()
+                return None
+
+            if self.generations() != generations:
+                # A managed write landed while the frame was being prepared. It emits no
+                # recovery of its own -- command output leaves the empty command display's
+                # baseline correct -- but the frame was recorded against the cursor and content
+                # that write moved, so it must not be published as current.
+                self._in_flight = None
                 return None
 
             prepared = PreparedRender(batch=recorder.batch(), generations=generations)
@@ -390,6 +844,9 @@ class PromptToolkitBridge:
 
         self._in_flight = None
         self._committed = prepared.generations
+        # The renderer's screen now matches what the terminal received. A managed write
+        # restores this rather than the advance a later, uncommitted preparation would make.
+        self._committed_screen = self._renderer._last_screen
         self._redraw_pending = False
         return True
 
@@ -405,8 +862,11 @@ class PromptToolkitBridge:
             output.flush()
             self._display.reconfigure()
         except Exception as error:  # noqa: BLE001 - cleanup failing is itself the answer
-            self._reserved_emission_stopped = True
-            self._pending_error = error
+            # Through the same door as every other abandonment, so the owner is told and can
+            # give the rows back. Setting the flag here directly would stop emission while
+            # leaving the reservation installed and the renderer bound -- and the later call
+            # that would have notified now returns early, having found it already stopped.
+            self.stop_reserved_emission(error)
             return False
         return True
 
@@ -432,12 +892,25 @@ class PromptToolkitBridge:
                 # this call queues for the terminal, and recovery would then write cursor and
                 # mode sequences into a terminal nothing is allowed to emit to any more.
                 raise ReservedModeFailureError("reserved emission has stopped; release before rendering again")
+            if self._render_suppressed:
+                # A guest may leave an unfinished output line at any column. The empty
+                # command display needs its terminal modes restored, not a prompt origin.
+                self._establish(policy, None)
+                return
             # The origin is read *here*, not before the wait. Recovery can queue behind
             # another writer for as long as that writer holds the terminal, and what it does
             # in the meantime -- emitting output, moving the prompt, resizing -- is exactly
             # what changes where the prompt now starts. An origin read beforehand describes a
             # terminal somebody else still owned.
             origin = self._usable_prompt_anchor()
+            if origin is None:
+                # Read inside the same transaction, for the same reason: the console is asked
+                # where the cursor is *now*, and now has to be while nobody else can move it.
+                origin = self._native_prompt_origin()
+                if origin is not None:
+                    # Remembered as a reply's row would be: the next recovery that finds the
+                    # terminal unchanged can start from it instead of asking again.
+                    self._prompt_anchor = origin
             if origin is None:
                 can_report = self._display.output.responds_to_cpr
             else:
@@ -450,7 +923,7 @@ class PromptToolkitBridge:
         # would repaint the prompt over committed output.
         self.request_cursor_position()
 
-    def _establish(self, policy: TerminalModePolicy, origin: int) -> None:
+    def _establish(self, policy: TerminalModePolicy, origin: int | None) -> None:
         """Put the terminal into the known state, from inside the transaction.
 
         Recovery is marked complete here rather than after the lock is given back: whoever
@@ -458,10 +931,11 @@ class PromptToolkitBridge:
         already been done.
 
         :param policy: the mode policy to establish
-        :param origin: the physical row to place the cursor on
+        :param origin: the prompt's physical row, or ``None`` to preserve the command cursor
         """
         output = self._display.output
-        output.write_raw(f"\x1b[{origin};1H")
+        if origin is not None:
+            output.write_raw(f"\x1b[{origin};1H")
         # Upstream enables bracketed paste on every render and latches a flag beside the
         # emission, so the policy here is not conditional: it is on, and the flag is made
         # to agree with an enable that actually reached the terminal.
@@ -479,7 +953,8 @@ class PromptToolkitBridge:
         self._needs_resynchronization = False
         self._resynchronization_reason = None
         self._in_flight = None
-        self._initialize_renderer(policy, origin)
+        if origin is not None:
+            self._initialize_renderer(policy, origin)
 
     def _usable_rows(self) -> int:
         """How many rows the application may use right now.
@@ -508,6 +983,27 @@ class PromptToolkitBridge:
             self._prompt_anchor = None
             return None
         return anchor
+
+    def _native_prompt_origin(self) -> int | None:
+        """Read the prompt's origin from a backend that reports the cursor synchronously.
+
+        Windows never answers a cursor-position report -- its output says so by design -- but
+        the console API says where the cursor is, at once. That is the same fact a report
+        would carry, so it is held to the same rule: a row inside the reserved band is the
+        failure named in the design, not an origin to render from. Recovery cannot ask again
+        and get a different answer, as it can wait for another reply, so here it is refused
+        outright and the owner falls back to compatibility rendering.
+
+        :return: the one-based physical row, or ``None`` if the backend cannot report it
+        :raises ReservedModeFailureError: if the reported row is outside the usable region
+        """
+        row = self._display.terminal.cursor_row()
+        if row is None:
+            return None
+        usable = self._usable_rows()
+        if not 1 <= row <= usable:
+            raise ReservedModeFailureError(f"the terminal reports the cursor on row {row}, outside the usable rows 1-{usable}")
+        return row
 
     def _desired_policy(self) -> TerminalModePolicy:
         """Evaluate the current owner's mode policy, off the terminal lock.
@@ -586,7 +1082,9 @@ class PromptToolkitBridge:
 
         Replies carry no generation on the wire, so they are correlated by order against the
         requests this bridge made. A reply from before a geometry change describes a screen
-        that no longer exists and must not satisfy the request made after it.
+        that no longer exists and must not satisfy the request made after it. Requests whose
+        screen has since been cleared away are kept in the queue but marked: their replies are
+        still coming and still have to be consumed in order, and none of them can be believed.
 
         A reply is stale when anything about the terminal has changed since the request went
         out -- a resize, an owner change, or managed output that moved the cursor the terminal
@@ -618,7 +1116,7 @@ class PromptToolkitBridge:
             # Popped whatever the outcome: replies correlate by order, so dropping one without
             # taking it off the queue would answer every later request with its predecessor.
             generations = self._pending_cpr.popleft()
-            if generations != self.generations():
+            if generations is None or generations != self.generations():
                 self._settle_renderer_cpr()
                 return False
 
@@ -629,8 +1127,20 @@ class PromptToolkitBridge:
                 return False
 
             self._prompt_anchor = row
-            self._renderer.report_absolute_cursor_row(row)
+            report = self._originals.get("report_absolute_cursor_row", self._renderer.report_absolute_cursor_row)
+            report(row)
             return True
+
+    def _invalidate_pending_cursor_reports(self) -> None:
+        """Mark every outstanding request unbelievable, without forgetting that it is coming.
+
+        Used where the screen changed underneath the requests themselves. Emptying the queue
+        would not stop the replies: they are already in the terminal's hands, and the next one
+        to arrive would be matched against whatever request came *after* the change -- the
+        oldest reply answering the newest question. The entries stay, marked, so each reply is
+        still consumed in order and each one is refused.
+        """
+        self._pending_cpr = deque([None] * len(self._pending_cpr))
 
     def _settle_renderer_cpr(self) -> None:
         """Resolve one of the renderer's own pending reports, if it has any.

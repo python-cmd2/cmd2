@@ -9,6 +9,7 @@ a wide character is never split across the right edge.
 import io
 import re
 import threading
+from typing import Any
 
 import pytest
 from prompt_toolkit.data_structures import Size
@@ -17,9 +18,10 @@ from prompt_toolkit.output import ColorDepth
 from prompt_toolkit.output.vt100 import Vt100_Output
 from prompt_toolkit.styles import BaseStyle, DummyStyle, DynamicStyle, Style
 
+from cmd2 import toolbar_painter
 from cmd2.terminal_display import TerminalDisplay
 from cmd2.terminal_transaction import TerminalLock, current_transaction, held_higher_level_locks
-from cmd2.toolbar_painter import Cell, ToolbarFrame, ToolbarPainter, measure_toolbar_height
+from cmd2.toolbar_painter import Cell, ToolbarFrame, ToolbarPainter
 
 
 def text_of(frame: ToolbarFrame, row: int = 0) -> str:
@@ -33,6 +35,68 @@ def styles_of(frame: ToolbarFrame, row: int = 0) -> list[str]:
 
 
 class TestShape:
+    @pytest.mark.parametrize(
+        ("content", "width", "height", "expected"),
+        [
+            ("\nSTATUS", 8, 1, ["       …"]),
+            ("STATUS\nnext", 8, 1, ["STATUS …"]),
+            ("abcd", 4, 1, ["abcd"]),
+            ("abcde", 4, 1, ["abc…"]),
+            ("abcdef\nxy", 4, 2, ["abc…", "xy  "]),
+            ("a\nb\nc\nd", 4, 3, ["a   ", "b   ", "c  …"]),
+            ("abc\n\nx", 4, 1, ["abc…"]),
+            ("广", 1, 1, ["…"]),
+            ("a广x", 3, 1, ["a …"]),
+            ("e\u0301abc", 3, 1, ["e\u0301a…"]),
+            ("abx\u0301", 3, 1, ["abx\u0301"]),
+            ("abcde\u0301\nz", 4, 2, ["abc…", "z   "]),
+            ("\tX\ny", 4, 2, ["   …", "y   "]),
+            ("abcdefgh x", 8, 1, ["abcdefg…"]),
+        ],
+    )
+    def test_truncation_is_visible_and_does_not_wrap(self, content, width, height, expected) -> None:
+        frame = ToolbarFrame.build(content, width=width, height=height)
+        assert [text_of(frame, row) for row in range(height)] == expected
+        assert all(len(row) == width for row in frame.rows)
+
+    @pytest.mark.parametrize(
+        ("content", "width", "height", "expected"),
+        [
+            ("abcdefgh\t", 8, 1, ["abcdefgh"]),
+            ("abcdefgh  ", 8, 1, ["abcdefgh"]),
+            ("abc".ljust(12), 8, 1, ["abc     "]),
+            ("status".center(10), 8, 1, ["  status"]),
+            ("abcdefgh \u0301", 8, 1, ["abcdefgh"]),
+            ("Ready\n", 8, 1, ["Ready   "]),
+            ("abc\n", 4, 1, ["abc "]),
+            ("abc\n   ", 4, 1, ["abc "]),
+            ("abc\n\t\n", 4, 1, ["abc "]),
+            ("abc\n\u200b", 4, 1, ["abc "]),
+        ],
+    )
+    def test_omitted_whitespace_is_not_truncation(self, content, width, height, expected) -> None:
+        """Only content the user would have seen earns the indicator.
+
+        Padding to the column count with ``ljust``, a trailing tab, and the newline that ends
+        ``Console.export_text()`` all overflow by cells nobody can see. Marking those replaces
+        a real character with an ellipsis to announce that nothing was lost.
+        """
+        frame = ToolbarFrame.build(content, width=width, height=height)
+        assert [text_of(frame, row) for row in range(height)] == expected
+
+    def test_an_omitted_line_holding_only_escape_fragments_is_not_truncation(self) -> None:
+        """Escape fragments are never drawn, so a line made of them omits nothing visible."""
+        content = [("", "abc\n"), ("[ZeroWidthEscape]", "\x1b[6n")]
+        frame = ToolbarFrame.build(content, width=4, height=1)
+        assert text_of(frame) == "abc "
+
+    def test_a_combining_mark_after_a_dropped_character_is_dropped_with_it(self) -> None:
+        """Its base is gone, so attaching it to the last retained cell would mark the wrong one."""
+        frame = ToolbarFrame.build("abcdefghi\u0301", width=8, height=1)
+        assert text_of(frame) == "abcdefg…"
+        frame = ToolbarFrame.build("abcdefgh \u0301", width=8, height=1)
+        assert frame.rows[0][7].char == "h"
+
     def test_a_frame_is_always_exactly_its_declared_size(self) -> None:
         frame = ToolbarFrame.build("hi", width=10, height=2)
         assert len(frame.rows) == 2
@@ -44,16 +108,16 @@ class TestShape:
         assert text_of(frame) == "hi   "
         assert styles_of(frame) == ["class:toolbar"] * 5
 
-    def test_content_wider_than_the_terminal_wraps(self) -> None:
+    def test_content_wider_than_the_terminal_is_clipped(self) -> None:
         frame = ToolbarFrame.build("abcdef", width=3, height=2)
-        assert text_of(frame, 0) == "abc"
-        assert text_of(frame, 1) == "def"
+        assert text_of(frame, 0) == "ab…"
+        assert text_of(frame, 1) == "   "
 
     def test_content_taller_than_the_band_is_truncated(self) -> None:
         """Growing past the band is a geometry transition, never a write outside it."""
         frame = ToolbarFrame.build("one\ntwo\nthree", width=10, height=2)
         assert text_of(frame, 0) == "one       "
-        assert text_of(frame, 1) == "two       "
+        assert text_of(frame, 1) == "two      …"
 
     def test_an_explicit_newline_starts_a_row(self) -> None:
         frame = ToolbarFrame.build("a\nb", width=3, height=2)
@@ -102,25 +166,56 @@ class TestCellWidths:
         assert text_of(frame) == "广  "
 
     def test_a_wide_character_is_never_split_at_the_right_edge(self) -> None:
-        """Half a wide character at the edge is what wraps a row into the one below it."""
+        """A wide character that does not fit is clipped whole and marked; nothing wraps."""
         frame = ToolbarFrame.build("a广", width=2, height=2)
-        assert text_of(frame, 0) == "a "
-        assert frame.rows[1][0].char == "广"
+        assert text_of(frame, 0) == "a…"
+        assert text_of(frame, 1) == "  "
 
-    def test_the_pad_before_a_wrapped_wide_character_uses_the_default_style(self) -> None:
+    def test_the_truncation_indicator_uses_the_default_style(self) -> None:
         frame = ToolbarFrame.build([("bold", "a广")], width=2, height=2, default_style="base")
         assert styles_of(frame, 0) == ["bold", "base"]
+
+    def test_the_truncation_indicator_is_a_module_constant(self, monkeypatch) -> None:
+        """U+2026 is ambiguous-width; a terminal that draws it two columns wide needs a substitute."""
+        monkeypatch.setattr(toolbar_painter, "TRUNCATION_INDICATOR", "~")
+        frame = ToolbarFrame.build("abcde", width=4, height=1)
+        assert text_of(frame) == "abc~"
 
     def test_a_combining_character_joins_the_cell_before_it(self) -> None:
         frame = ToolbarFrame.build("e\u0301x", width=4, height=1)
         assert frame.rows[0][0].char == "e\u0301"
         assert frame.rows[0][1].char == "x"
 
-    def test_a_leading_combining_character_gets_its_own_cell(self) -> None:
-        """There is nothing to combine with; dropping it would silently lose content."""
-        frame = ToolbarFrame.build("\u0301a", width=4, height=1)
-        assert frame.rows[0][0].char == "\u0301"
-        assert frame.rows[0][1].char == "a"
+    def test_a_leading_combining_character_is_drawn_on_a_space(self) -> None:
+        """There is nothing to combine with, and a cell drawn in zero columns would put every
+        later cell one column right of where the terminal shows it.
+        """
+        frame = ToolbarFrame.build("\u0301xy", width=3, height=1)
+        assert [cell.char for cell in frame.rows[0]] == [" \u0301", "x", "y"]
+        assert all(cell.width == 1 for cell in frame.rows[0])
+
+    @pytest.mark.parametrize(
+        ("content", "expected"),
+        [
+            ("a\x1b[2Jb", "a^[[2Jb "),
+            ("a\x07b", "a^Gb    "),
+            ("a\x85b", "a<85>b  "),
+            ("a\x7fb", "a^?b    "),
+            ("a\x00b", "a^@b    "),
+        ],
+    )
+    def test_control_characters_are_shown_in_caret_notation(self, content, expected) -> None:
+        """Raw control from a plain string would otherwise be executed inside the band.
+
+        The renderer shows ``^[`` for an escape; the painter shows the same thing, so the two
+        modes agree and a stray sequence in a callback cannot clear the screen.
+        """
+        frame = ToolbarFrame.build(content, width=8, height=1)
+        assert text_of(frame) == expected
+
+    def test_control_characters_carry_the_renderer_s_style_class(self) -> None:
+        frame = ToolbarFrame.build([("bold", "a\x1bb")], width=4, height=1)
+        assert styles_of(frame) == ["bold", "bold class:control-character", "bold class:control-character", "bold"]
 
     def test_a_tab_advances_to_the_next_tab_stop(self) -> None:
         frame = ToolbarFrame.build("a\tb", width=12, height=1)
@@ -130,29 +225,6 @@ class TestCellWidths:
         """A stray CR would move the cursor within the band rather than print."""
         frame = ToolbarFrame.build("a\rb", width=4, height=1)
         assert text_of(frame) == "ab  "
-
-
-class TestMeasurement:
-    def test_a_short_toolbar_is_one_row(self) -> None:
-        assert measure_toolbar_height("hi", width=10) == 1
-
-    def test_wrapping_is_counted(self) -> None:
-        assert measure_toolbar_height("abcdef", width=3) == 2
-
-    def test_newlines_are_counted(self) -> None:
-        assert measure_toolbar_height("a\nb\nc", width=10) == 3
-
-    def test_empty_content_still_measures_one_row(self) -> None:
-        """An empty toolbar is an intentional visibility change, not a zero-row reservation."""
-        assert measure_toolbar_height("", width=10) == 1
-
-    def test_measurement_matches_the_frame_it_would_build(self) -> None:
-        content = [("bold", "wide 广 content that wraps around")]
-        height = measure_toolbar_height(content, width=12)
-        frame = ToolbarFrame.build(content, width=12, height=height)
-        # Nothing was truncated: the last row is where the content ended.
-        assert measure_toolbar_height(content, width=12) == len(frame.rows)
-        assert text_of(frame, height - 1).strip() != ""
 
 
 class TestValidation:
@@ -169,10 +241,6 @@ class TestValidation:
         assert Cell("广", "").width == 2
         assert Cell("", "", is_continuation=True).width == 0
 
-    def test_measuring_needs_a_positive_width(self) -> None:
-        with pytest.raises(ValueError, match="width"):
-            measure_toolbar_height("hi", width=0)
-
     def test_a_frame_reports_its_own_size(self) -> None:
         frame = ToolbarFrame.build("hi", width=6, height=2)
         assert (frame.height, frame.width) == (2, 6)
@@ -180,12 +248,12 @@ class TestValidation:
     def test_an_empty_frame_reports_zero_width(self) -> None:
         assert ToolbarFrame(rows=()).width == 0
 
-    def test_a_tab_wraps_when_it_reaches_the_edge(self) -> None:
-        """The expansion is cells, so it wraps like any other run of them."""
+    def test_a_tab_is_clipped_when_it_reaches_the_edge(self) -> None:
+        """Tab expansion cannot spill into the next reserved row."""
         frame = ToolbarFrame.build("a\tb", width=4, height=3)
-        assert text_of(frame, 0) == "a   "
+        assert text_of(frame, 0) == "a  …"
         assert text_of(frame, 1) == "    "
-        assert text_of(frame, 2) == "b   "
+        assert text_of(frame, 2) == "    "
 
     def test_a_combining_mark_after_a_wide_character_joins_that_character(self) -> None:
         """Attaching it to the continuation cell instead shifts every later column."""
@@ -314,6 +382,14 @@ class TestPainting:
         written = harness.written()
         for erase in ("\x1b[K", "\x1b[0K", "\x1b[2K", "\x1b[J", "\x1b[M"):
             assert erase not in written
+
+    def test_a_control_character_never_reaches_the_terminal_raw(self) -> None:
+        """The frame test proves the layout; this proves the wire, which is what matters."""
+        harness = Harness(columns=12)
+        harness.paint("a\x1b[2Jb")
+        written = harness.written()
+        assert "\x1b[2J" not in written
+        assert "a^[[2Jb" in harness.visible()
 
     def test_a_shorter_frame_pads_its_tail_rather_than_erasing_it(self) -> None:
         harness = Harness()
@@ -617,3 +693,121 @@ class TestBackpressure:
         # The writer blocked inside leaf I/O, holding no higher-level lock -- which is what
         # keeps the rest of cmd2 able to make progress while the terminal is backed up.
         assert stream.locks_held_while_blocked == ()
+
+
+class PartialWriteStream(io.StringIO):
+    """Writes a prefix of one flushed batch and then fails, as a real terminal can.
+
+    A test that replaces ``paint`` entirely never emits anything, so it cannot see what a
+    half-written batch leaves behind. The backend buffers a whole paint and flushes it in one
+    ``write``, so cutting that write short is what puts the terminal into the state this is
+    about: autowrap off, cursor in the band, nothing restored.
+    """
+
+    def __init__(self, fail_on_write: int, keep: int = 12) -> None:
+        super().__init__()
+        self._writes = 0
+        self._fail_on_write = fail_on_write
+        self._keep = keep
+
+    def isatty(self) -> bool:
+        return True
+
+    def write(self, text: str) -> int:
+        self._writes += 1
+        if self._writes == self._fail_on_write:
+            super().write(text[: self._keep])
+            raise OSError("terminal went away")
+        return super().write(text)
+
+
+class TestPartialPaint:
+    def make(self, fail_on_write: int = 2) -> tuple[ToolbarPainter, PartialWriteStream, Any]:
+        """Build a painter over a terminal that fails part-way through one flushed batch.
+
+        Count relative to the completed acquisition, so changes to startup flushing
+        cannot make a paint regression fail in margin installation instead.
+        """
+        stream = PartialWriteStream(fail_on_write=-1)
+        screen = {"rows": 24, "columns": 5}
+        output = Vt100_Output(stream, lambda: Size(rows=screen["rows"], columns=screen["columns"]))
+        display = ResizableDisplay(output, screen)
+        assert display.acquire() is True
+        stream._fail_on_write = stream._writes + fail_on_write - 1
+        painter = ToolbarPainter(
+            display=display,
+            lock=TerminalLock(),
+            style=DummyStyle(),
+            color_depth=ColorDepth.DEPTH_8_BIT,
+        )
+        return painter, stream, display
+
+    def test_a_partial_paint_restores_wrap_and_cursor_state(self) -> None:
+        """Leaving autowrap off would make the next ordinary line wrap where it should not."""
+        painter, stream, _display = self.make()
+        prepared = painter.prepare(lambda: "hi")
+        assert prepared is not None
+        with pytest.raises(OSError, match="terminal went away"):
+            painter.paint(prepared)
+
+        written = stream.getvalue()
+        assert "\x1b[?7l" in written  # the paint really did start emitting
+        assert written.endswith("\x1b[?7h\x1b8")  # and the cleanup really did finish it
+
+    def test_a_partial_paint_discards_the_baseline(self) -> None:
+        """Some cells were overwritten and some were not; what the band shows is unknown."""
+        painter, _stream, _display = self.make(fail_on_write=3)
+        first = painter.prepare(lambda: "hi")
+        assert first is not None
+        assert painter.paint(first) is True
+        assert painter.last_frame is not None
+
+        second = painter.prepare(lambda: "zz")
+        assert second is not None
+        with pytest.raises(OSError, match="terminal went away"):
+            painter.paint(second)
+        assert painter.last_frame is None
+
+    def test_the_next_paint_after_a_failure_is_a_full_one(self) -> None:
+        """A diff against the discarded baseline would skip the cells that never arrived."""
+        painter, stream, _display = self.make(fail_on_write=3)
+        first = painter.prepare(lambda: "hi")
+        assert first is not None
+        painter.paint(first)
+
+        second = painter.prepare(lambda: "zz")
+        assert second is not None
+        with pytest.raises(OSError, match="terminal went away"):
+            painter.paint(second)
+
+        stream.truncate(0)
+        stream.seek(0)
+        again = painter.prepare(lambda: "hi")
+        assert again is not None
+        assert painter.paint(again) is True
+        # The whole band, from its first column: not just the cells that differ from "hi".
+        assert "\x1b[24;1Hhi   " in re.sub(r"\x1b\[[0-9;]*m", "", stream.getvalue())
+
+    def test_a_failure_before_any_paint_bytes_restores_nothing(self) -> None:
+        """The initial flush drains another writer; this paint has saved no cursor yet.
+
+        DECRC would return to whatever was saved last -- the margin change's cursor, from
+        before the command that has been writing since -- and later output would then overwrite
+        what is already on the screen.
+        """
+        painter, stream, display = self.make(fail_on_write=2)
+        prepared = painter.prepare(lambda: "hi")
+        assert prepared is not None
+
+        # Something else has buffered output, so the paint's opening flush has work to do.
+        display.terminal.output.write("hello")
+        stream.truncate(0)
+        stream.seek(0)
+
+        with pytest.raises(OSError, match="terminal went away"):
+            painter.paint(prepared)
+
+        written = stream.getvalue()
+        assert "\x1b8" not in written
+        assert "\x1b[?7h" not in written
+        assert painter.last_frame is None

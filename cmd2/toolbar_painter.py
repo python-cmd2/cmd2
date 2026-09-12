@@ -21,14 +21,26 @@ band and into the application's rows.
 mouse map, so a handler here would never be called; rendering the visible part is the honest
 subset rather than advertising support that does not exist.
 
+**Lines are clipped with an ellipsis.** Newlines advance to the next reserved row;
+horizontal overflow never wraps. Omitted columns or rows are indicated at the right edge,
+but only when something visible was omitted: trailing whitespace and a trailing newline
+overflow by nothing the user could have seen.
+
 **Carriage returns are dropped and tabs are expanded.** Both are cursor motion in a context
 where the painter owns the cursor.
+
+**Control characters are shown, not sent.** An escape becomes ``^[`` and a C1 control
+becomes ``<85>``, exactly as the renderer shows them, so a stray sequence in a plain string
+is displayed inside the band rather than executed there.
 """
 
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from prompt_toolkit.formatted_text import to_formatted_text
+from prompt_toolkit.formatted_text.utils import split_lines
+from prompt_toolkit.layout.screen import Char
 from prompt_toolkit.output import ColorDepth
 from prompt_toolkit.utils import get_cwidth
 
@@ -38,7 +50,7 @@ from .terminal_transaction import TerminalLock, assert_no_terminal_transaction
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Callable, Mapping
 
-    from prompt_toolkit.formatted_text import AnyFormattedText
+    from prompt_toolkit.formatted_text import AnyFormattedText, StyleAndTextTuples
     from prompt_toolkit.styles import Attrs, BaseStyle
 
     from .terminal_display import TerminalDisplay
@@ -48,8 +60,23 @@ if TYPE_CHECKING:  # pragma: no cover
 #: does not model.
 TAB_WIDTH = 8
 
+#: What marks omitted content in the rightmost column of a row. U+2026 is East-Asian-ambiguous
+#: width: prompt-toolkit measures it as one column, and so does every terminal cmd2 is
+#: qualified on, but a terminal configured to draw ambiguous characters two columns wide would
+#: draw this one over the edge. There is no portable way to detect that configuration, so the
+#: glyph is a constant an application can replace rather than a value the painter guesses.
+TRUNCATION_INDICATOR = "…"
+
 #: Fragments whose style contains this carry raw terminal control rather than text.
 _ZERO_WIDTH_ESCAPE = "[ZeroWidthEscape]"
+
+#: The style class the renderer gives a control character's caret notation, so that a theme
+#: styling ``^[`` in a prompt styles it the same way in the band.
+_CONTROL_STYLE = "class:control-character"
+
+#: Characters that occupy a column without showing anything. A tab is expanded to these and a
+#: carriage return is dropped, so past the right edge all three are the same: nothing lost.
+_BLANK = " \t\r"
 
 
 @dataclass(frozen=True)
@@ -103,13 +130,17 @@ class ToolbarFrame:
 
         Content that does not fill the frame is padded with default-styled spaces: the pad is
         what overwrites a longer previous frame, so it is content rather than absence of it.
-        Content taller than the band is truncated here -- growing the toolbar is a geometry
-        transition, and writing the extra rows would put them outside the reservation.
+        Each logical line is clipped to the terminal width without wrapping. A right-edge
+        ellipsis marks omitted columns, or omitted lines on the last reserved row -- but only
+        when what was omitted would have been visible. Trailing spaces, a trailing tab and a
+        trailing newline overflow by nothing anyone can see, and marking them would replace a
+        real character to announce that nothing was lost. Growing the toolbar is a geometry
+        transition, never a consequence of content overflow.
 
         :param content: the formatted text to lay out
         :param width: the terminal width in columns
         :param height: the height of the reserved band in rows
-        :param default_style: the style for padding cells
+        :param default_style: the style for padding and truncation-indicator cells
         :return: the frame
         :raises ValueError: if ``width`` or ``height`` is not positive
         """
@@ -118,92 +149,136 @@ class ToolbarFrame:
         if height < 1:
             raise ValueError(f"a frame needs a positive height, got {height}")
 
-        rows = _layout(content, width, default_style)
-        blank = tuple(Cell(" ", default_style) for _ in range(width))
+        # One pad cell shared by every blank column. Cells are immutable and compared by
+        # value, and this runs on every refresh, where constructing one per column was most
+        # of the cost of laying out a short toolbar.
+        pad = Cell(" ", default_style)
+        lines = list(split_lines(to_formatted_text(content)))
+        rows: list[list[Cell]] = []
+        for line in lines[:height]:
+            row, clipped = _clip_line(line, width, pad)
+            if clipped:
+                _mark_truncated(row, default_style)
+            rows.append(row)
+        if any(_has_visible_text(line) for line in lines[height:]):
+            _mark_truncated(rows[-1], default_style)
         while len(rows) < height:
-            rows.append(list(blank))
-        return cls(rows=tuple(tuple(row) for row in rows[:height]))
+            rows.append([pad] * width)
+        return cls(rows=tuple(tuple(row) for row in rows))
 
 
-def measure_toolbar_height(content: "AnyFormattedText", width: int) -> int:
-    """Measure how many rows content needs at a given width.
+def _mark_truncated(row: list[Cell], default_style: str) -> None:
+    """Mark omitted content in the rightmost column without splitting a wide character.
 
-    This is what sizes the reservation, so it counts wrapping and explicit newlines the same
-    way :meth:`ToolbarFrame.build` lays them out. Empty content still measures one row: an
-    empty toolbar is an intentional visibility change, not a request for no reservation.
-
-    :param content: the formatted text to measure
-    :param width: the terminal width in columns
-    :return: the number of rows required, at least one
-    :raises ValueError: if ``width`` is not positive
+    :param row: a padded, nonempty row to modify
+    :param default_style: the style for the indicator and any cleared wide-character cell
     """
-    if width < 1:
-        raise ValueError(f"measuring needs a positive width, got {width}")
-    return max(1, len(_layout(content, width, "")))
+    if row[-1].is_continuation:
+        row[-2] = Cell(" ", default_style)
+    row[-1] = Cell(TRUNCATION_INDICATOR, default_style)
 
 
-def _layout(content: "AnyFormattedText", width: int, default_style: str) -> list[list[Cell]]:
-    """Lay content out into as many full-width rows as it needs.
+def _displayed(char: str, style: str) -> tuple[str, str]:
+    """Decide what the terminal is shown for one character of content.
 
-    :param content: the formatted text to lay out
-    :param width: the terminal width in columns
-    :param default_style: the style for padding cells
-    :return: the rows, each padded to ``width`` cells
+    Control characters are shown in the caret notation the renderer uses -- ``^[`` for an
+    escape, ``<85>`` for a C1 control -- rather than written to the terminal, where an escape
+    would be executed inside the band. A C1 control is a sequence introducer on many
+    terminals, so it is as dangerous as ``ESC`` and mapped the same way.
+
+    :param char: the character from the content
+    :param style: the fragment's style
+    :return: the text to draw and the style to draw it in
     """
-    rows: list[list[Cell]] = []
-    row: list[Cell] = []
+    mapped = Char.display_mappings.get(char)
+    if mapped is None:
+        return char, style
+    return mapped, f"{style} {_CONTROL_STYLE}".strip()
 
-    def finish_row() -> None:
-        """Pad the row in progress and start a new one."""
-        row.extend(Cell(" ", default_style) for _ in range(width - len(row)))
-        rows.append(list(row))
-        row.clear()
 
-    for fragment in to_formatted_text(content):
+def _has_visible_text(line: "StyleAndTextTuples") -> bool:
+    """Decide whether a logical line would show anything at all.
+
+    :param line: the line's fragments
+    :return: whether any character occupies a column with something in it
+    """
+    for fragment in line:
         style, text = fragment[0], fragment[1]
         if _ZERO_WIDTH_ESCAPE in style:
             continue
         for char in text:
-            if char == "\n":
-                finish_row()
+            if char in _BLANK:
                 continue
+            shown, _ = _displayed(char, style)
+            if any(piece not in _BLANK and get_cwidth(piece) > 0 for piece in shown):
+                return True
+    return False
+
+
+def _clip_line(line: "StyleAndTextTuples", width: int, pad: Cell) -> tuple[list[Cell], bool]:
+    """Lay one logical line out as a padded row, stopping at the first visible character lost.
+
+    :param line: the line's fragments
+    :param width: the terminal width in columns
+    :param pad: the cell that fills columns the content does not reach
+    :return: the row, and whether visible content was clipped from it
+    """
+    row: list[Cell] = []
+    # Whether a character has been dropped past the right edge. A combining mark that
+    # follows one belongs to it, not to whatever cell happens to be last.
+    dropped = False
+
+    for fragment in line:
+        style, text = fragment[0], fragment[1]
+        if _ZERO_WIDTH_ESCAPE in style:
+            continue
+        for char in text:
             if char == "\r":
                 continue
             if char == "\t":
+                available = width - len(row)
+                if available <= 0:
+                    dropped = True
+                    continue
                 spaces = TAB_WIDTH - (len(row) % TAB_WIDTH)
-                for _ in range(spaces):
-                    if len(row) == width:
-                        finish_row()
-                    row.append(Cell(" ", style))
+                row.extend([Cell(" ", style)] * min(spaces, available))
                 continue
 
-            char_width = get_cwidth(char)
-            if char_width == 0 and row:
-                # A combining mark belongs to the character it follows; it occupies no column
-                # of its own, so it joins that cell rather than becoming one. After a wide
-                # character the cell to the left is that character's right half, and the mark
-                # belongs to the half that carries the text -- attaching it to the
-                # continuation cell would give the mark a column of its own and shift every
-                # later cell one place right of where it is on the screen.
-                base = len(row) - 1
-                if row[base].is_continuation:
-                    base -= 1
-                previous = row[base]
-                row[base] = Cell(previous.char + char, previous.style, previous.is_continuation)
-                continue
-            columns = max(1, char_width)
-            if len(row) + columns > width:
-                # Padding rather than splitting: half a wide character at the right edge is
-                # what makes the terminal wrap the row itself, which would put toolbar cells
-                # in a row the frame does not own.
-                finish_row()
-            row.append(Cell(char, style))
-            if columns == 2:
-                row.append(Cell("", style, is_continuation=True))
+            shown, cell_style = _displayed(char, style)
+            for piece in shown:
+                piece_width = get_cwidth(piece)
+                if piece_width == 0:
+                    if dropped:
+                        # Its base is gone; attaching it to the last retained cell would
+                        # decorate a character it was never part of.
+                        continue
+                    if row:
+                        base = len(row) - 1
+                        if row[base].is_continuation:
+                            base -= 1
+                        previous = row[base]
+                        row[base] = Cell(previous.char + piece, previous.style, previous.is_continuation)
+                    else:
+                        # Nothing to combine with. Drawn on a space so that it occupies the
+                        # one column the terminal gives it; a cell of its own would be
+                        # modelled at a column the terminal never advances past.
+                        row.append(Cell(" " + piece, cell_style))
+                    continue
+                columns = max(1, piece_width)
+                if len(row) + columns > width:
+                    dropped = True
+                    if piece in _BLANK:
+                        continue
+                    # Visible content is lost from here on, and nothing after it can be
+                    # shown, so there is no reason to look at the rest of the line.
+                    row.extend([pad] * (width - len(row)))
+                    return row, True
+                row.append(Cell(piece, cell_style))
+                if columns == 2:
+                    row.append(Cell("", cell_style, is_continuation=True))
 
-    if row:
-        finish_row()
-    return rows
+    row.extend([pad] * (width - len(row)))
+    return row, False
 
 
 @dataclass(frozen=True)
@@ -266,7 +341,7 @@ class ToolbarPainter:
         :param lock: the terminal transaction lock shared by all cmd2-controlled output
         :param style: the style rules used to resolve fragment styles
         :param color_depth: the color depth to render attributes at
-        :param default_style: the style for padding cells
+        :param default_style: the style for padding and truncation-indicator cells
         :param autowrap_after_paint: the committed autowrap policy to restore afterwards.
             Upstream's renderer leaves autowrap enabled between frames, which is the default
             here; a bridge that has committed a different policy passes it instead.
@@ -374,32 +449,78 @@ class ToolbarPainter:
                 return False
 
             top_row = geometry.physical_rows - geometry.reserved_rows + 1
-            # Anything another writer left buffered goes out first, so the band is painted
-            # after the output it was meant to follow rather than in the middle of it.
-            self._output.flush()
-            # DECSC saves the cursor *and* the current attributes, and DECRC restores both, so
-            # the renderer's next write lands where and how it expects.
-            self._output.write_raw(cursor_save_sequence())
-            self._output.disable_autowrap()
-            for row_index, column, cells in runs:
-                self._output.write_raw(_cursor_position_sequence(top_row + row_index, column + 1))
-                style: str | None = None
-                for cell in cells:
-                    if cell.is_continuation:
-                        continue
-                    if cell.style != style:
-                        self._output.set_attributes(prepared.attrs[cell.style], prepared.color_depth)
-                        style = cell.style
-                    self._output.write(cell.char)
-            if self._autowrap_after_paint:
-                self._output.enable_autowrap()
-            self._output.write_raw(cursor_restore_sequence())
-            self._output.flush()
+            # Whether *this* paint has saved the cursor yet. The opening flush belongs to
+            # whoever wrote before us, and a failure there is not a partial paint.
+            saved_cursor = False
+            try:
+                # Anything another writer left buffered goes out first, so the band is painted
+                # after the output it was meant to follow rather than in the middle of it.
+                self._output.flush()
+                # DECSC saves the cursor *and* the current attributes, and DECRC restores
+                # both, so the renderer's next write lands where and how it expects.
+                self._output.write_raw(cursor_save_sequence())
+                saved_cursor = True
+                self._output.disable_autowrap()
+                for row_index, column, cells in runs:
+                    self._output.write_raw(_cursor_position_sequence(top_row + row_index, column + 1))
+                    style: str | None = None
+                    for cell in cells:
+                        if cell.is_continuation:
+                            continue
+                        if cell.style != style:
+                            self._output.set_attributes(prepared.attrs[cell.style], prepared.color_depth)
+                            style = cell.style
+                        self._output.write(cell.char)
+                if self._autowrap_after_paint:
+                    self._output.enable_autowrap()
+                self._output.write_raw(cursor_restore_sequence())
+                self._output.flush()
+            except BaseException:
+                self._recover_from_failed_paint(saved_cursor)
+                raise
 
             self._last_frame = frame
             self._last_attrs = prepared.attrs
             self._last_band = band
             return True
+
+    def _recover_from_failed_paint(self, saved_cursor: bool) -> None:
+        """Undo what a half-finished paint left on the terminal.
+
+        The backend buffers a paint and flushes it as one write, so a failure part-way through
+        that write leaves the terminal holding a prefix: the cursor saved and moved into the
+        band, autowrap off, some cells replaced and some not. None of that is undone by
+        unwinding the Python call -- the sequences are already on the wire.
+
+        Two things follow. The wrap mode and cursor are put back, because leaving autowrap off
+        makes the next ordinary line of output wrap where it should not, and leaving the cursor
+        in the band makes the next write land in the toolbar. And the baseline is discarded:
+        the band is now showing something no frame describes, so the next paint has to be a
+        full one rather than a diff against a frame that was never finished.
+
+        None of it applies when the paint failed before saving the cursor. The opening flush
+        drains whatever another writer left buffered, and a failure there belongs to that
+        output, not to this paint: the terminal's saved position is still the one some earlier
+        operation put there -- the margin change's, most likely -- and restoring it would move
+        the cursor backwards over output written since, which the next write would overwrite.
+        An old saved position is not a recovery origin.
+
+        The restoration is itself a write to a terminal that has just failed one, so its own
+        failure is suppressed -- the original is the one worth propagating.
+
+        :param saved_cursor: whether this paint got as far as saving the cursor
+        """
+        self.invalidate()
+        if not saved_cursor:
+            return
+        with suppress(Exception):
+            if self._autowrap_after_paint:
+                self._output.enable_autowrap()
+            # DECRC returns to whatever was last saved. After a partial batch that is either
+            # this paint's own save or the one the margin change made, so the cursor lands
+            # somewhere known rather than wherever the truncated write stopped.
+            self._output.write_raw(cursor_restore_sequence())
+            self._output.flush()
 
 
 def _cursor_position_sequence(row: int, column: int) -> str:

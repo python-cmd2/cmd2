@@ -165,6 +165,7 @@ from .parsing import (
     StatementParser,
     shlex_split,
 )
+from .reserved_toolbar import ReservedToolbar, native_toolbar_container
 from .rich_utils import (
     Cmd2BaseConsole,
     Cmd2ExceptionConsole,
@@ -174,6 +175,7 @@ from .rich_utils import (
 )
 from .styles import Cmd2Style
 from .theme import get_pt_theme
+from .toolbar_mode import ToolbarMode, _select_toolbar_mode, _validate_toolbar_mode
 from .types import (
     BoundCommandFunc,
     BoundCompleter,
@@ -376,9 +378,9 @@ class Cmd:
         allow_redirection: bool = True,
         auto_load_commands: bool = False,
         auto_suggest: bool = True,
+        bottom_toolbar_mode: ToolbarMode = ToolbarMode.OFF,
         complete_in_thread: bool = True,
         command_sets: Iterable[CommandSet[Any]] | None = None,
-        enable_bottom_toolbar: bool = False,
         enable_rprompt: bool = False,
         include_ipy: bool = False,
         include_py: bool = False,
@@ -420,8 +422,18 @@ class Cmd:
                              This allows CommandSets with custom constructor parameters to be
                              loaded.  This also allows the a set of CommandSets to be provided
                              when `auto_load_commands` is set to False
-        :param enable_bottom_toolbar: if ``True``, enables a bottom toolbar at the main prompt and during commands.
-                                      Override ``get_bottom_toolbar()`` to define its content.
+        :param bottom_toolbar_mode: how the bottom toolbar is rendered, as a
+                                    [cmd2.ToolbarMode][] or its name.
+                                    ``ToolbarMode.OFF``, the default, disables it. Other modes
+                                    enable it at the main prompt and during commands; override
+                                    ``get_bottom_toolbar()`` to define its content.
+                                    ``ToolbarMode.LEGACY`` redraws it with the prompt.
+                                    ``ToolbarMode.RESERVED`` keeps it in terminal rows
+                                    withheld from scrolling and raises ``ValueError`` where
+                                    that is not available; ``ToolbarMode.AUTO`` uses reserved
+                                    rendering only on qualified terminals and falls back
+                                    silently. Reserved rendering is experimental and not yet a
+                                    supported configuration.
         :param enable_rprompt: if ``True``, enables a right prompt while at the main prompt.
                                Override ``get_rprompt()`` to define its content.
         :param include_ipy: should the "ipy" command be included for an embedded IPython shell
@@ -547,12 +559,19 @@ class Cmd:
         self._persistent_history_length = persistent_history_length
         self._initialize_history(persistent_history_file)
 
+        # How the bottom toolbar is rendered. Validated here rather than at the first prompt
+        # so that a typo fails where it was written.
+        self._bottom_toolbar_mode = _validate_toolbar_mode(bottom_toolbar_mode)
+        self._reserved_toolbar: ReservedToolbar | None = None
+        # A command display whose thread did not stop when it was asked to. It still owns the
+        # terminal, so nothing may be handed the terminal until it lets go.
+        self._display_holding_terminal: command_toolbar.CommandToolbar | None = None
+
         # Create the main PromptSession
         self.main_session = self._create_main_session(
             auto_suggest=auto_suggest,
             complete_in_thread=complete_in_thread,
             completekey=completekey,
-            enable_bottom_toolbar=enable_bottom_toolbar,
             enable_rprompt=enable_rprompt,
             refresh_interval=refresh_interval,
         )
@@ -653,7 +672,7 @@ class Cmd:
 
         # The embedded pager shares the main toolbar. Applications can opt back
         # into their configured external pager by setting this to False.
-        self.use_builtin_pager = enable_bottom_toolbar
+        self.use_builtin_pager = self._bottom_toolbar_mode is not ToolbarMode.OFF
 
         # Set the pager(s) for use when displaying output using a pager
         if sys.platform.startswith("win"):
@@ -805,7 +824,6 @@ class Cmd:
         auto_suggest: bool,
         complete_in_thread: bool,
         completekey: str,
-        enable_bottom_toolbar: bool,
         enable_rprompt: bool,
         refresh_interval: float,
     ) -> PromptSession[str]:
@@ -818,7 +836,7 @@ class Cmd:
         # Base configuration
         kwargs: dict[str, Any] = {
             "auto_suggest": AutoSuggestFromHistory() if auto_suggest else None,
-            "bottom_toolbar": self.get_bottom_toolbar if enable_bottom_toolbar else None,
+            "bottom_toolbar": self.get_bottom_toolbar if self._bottom_toolbar_mode is not ToolbarMode.OFF else None,
             "color_depth": pt_resolve_color_depth(),
             "complete_style": CompleteStyle.MULTI_COLUMN,
             "complete_in_thread": complete_in_thread,
@@ -1509,6 +1527,18 @@ class Cmd:
         )
 
     @property
+    def bottom_toolbar_mode(self) -> ToolbarMode:
+        """How the bottom toolbar is rendered.
+
+        Read-only after construction: the reservation is established once for the lifetime of
+        the command loop, so changing this while one is running would leave the terminal and
+        the setting describing different things.
+
+        :return: the mode this application was constructed with
+        """
+        return self._bottom_toolbar_mode
+
+    @property
     def allow_style(self) -> ru.AllowStyle:
         """Property needed to support do_set when it reads allow_style."""
         return ru.ALLOW_STYLE
@@ -2093,14 +2123,18 @@ class Cmd:
     def get_bottom_toolbar(self) -> AnyFormattedText:
         """Get the bottom toolbar content.
 
-        This method is called by prompt-toolkit at the main prompt and during commands if ``enable_bottom_toolbar``
-        was set to ``True`` during initialization. Because prompt-toolkit executes this callback
+        This method is called by prompt-toolkit at the main prompt and during commands if ``bottom_toolbar_mode``
+        was set to a mode other than ``ToolbarMode.OFF`` during initialization. Because prompt-toolkit executes this callback
         on every UI refresh (such as on every keypress or at scheduled refresh intervals), keeping
         this function highly optimized is critical to ensuring the CLI remains responsive.
 
         Override this if you want a bottom toolbar displaying contextual information useful for
         your application. This could be information like the application name, current state,
         or even a real-time clock.
+
+        Reserved rendering uses one row and clips each logical line without wrapping. An
+        ellipsis in the rightmost column indicates omitted text or lines after a newline.
+        Widths are measured in terminal columns; wide characters are never split.
 
         During command execution this callback runs in a background UI thread. Protect shared
         state with a lock when necessary. The built-in pager shares this toolbar. It is suspended
@@ -2110,6 +2144,31 @@ class Cmd:
         """
         return None
 
+    def _require_terminal_ownership(self) -> None:
+        """Refuse to use the terminal while a display that would not stop still holds it.
+
+        A display that timed out on shutdown is disabled for the rest of the session, but that
+        only stops another one from starting. Its thread is still inside the application:
+        rendering, and reading the same input. Handing that terminal to a guest, or prompting
+        on it, would put two readers on one device and interleave their output.
+
+        The check heals itself. The thread may finish late -- a render callback that finally
+        returned, a subprocess that finally exited -- and once it has, the terminal is ours
+        again and this stops refusing.
+
+        :raises RuntimeError: while the surviving display still holds the terminal
+        """
+        display = self._display_holding_terminal
+        if display is None:
+            return
+        if display.complete_abandoned_shutdown():
+            # Its thread has ended, so the teardown its timed-out pause could not do has been
+            # finished here. Clearing the reference without that would hand the next prompt an
+            # application still dressed as the command display.
+            self._display_holding_terminal = None
+            return
+        raise RuntimeError("the bottom toolbar's display has not released the terminal")
+
     @contextlib.contextmanager
     def suspend_bottom_toolbar(self) -> Iterator[None]:
         """Temporarily hide the command toolbar and give exclusive access to the terminal.
@@ -2117,12 +2176,73 @@ class Cmd:
         Use this context manager around application-specific calls to ``input()``, other
         terminal UIs, or subprocesses that inherit the terminal. cmd2 automatically suspends
         its toolbar for its own input prompts, external pagers, and shell commands.
+
+        In reserved mode this also gives the reserved rows back, because a program that
+        inherits the terminal knows nothing about a scroll region and would find its output
+        confined to rows it never asked for. The rows are taken again afterwards.
         """
+        with self._quiesce_bottom_toolbar():
+            reserved = self._reserved_toolbar
+
+            if reserved is None:
+                yield
+            else:
+                # Inside the pause, not around it: the renderer has to be quiet before the
+                # margins go, or a frame could land in rows that are no longer reserved.
+                with reserved.suspended():
+                    yield
+
+    @contextlib.contextmanager
+    def _quiesce_bottom_toolbar(self) -> Iterator[None]:
+        """Stop the command display without giving the terminal away.
+
+        This is the other half of the distinction the reserved row makes necessary. Pausing
+        the renderer and the input reader is one thing; handing the physical terminal to
+        something else is another, and the ordinary end of a command needs only the first --
+        the toolbar has to still be there when the next prompt appears.
+        """
+        self._require_terminal_ownership()
         if self._command_toolbar is None:
             yield
         else:
             with self._command_toolbar.suspend():
                 yield
+
+    @property
+    def reserved_toolbar(self) -> "ReservedToolbar | None":
+        """The reserved-row toolbar owning the terminal, or ``None`` in legacy mode."""
+        return self._reserved_toolbar
+
+    @contextlib.contextmanager
+    def _reserved_toolbar_context(self) -> Iterator[None]:
+        """Own the reserved-row toolbar for the lifetime of one command loop.
+
+        The mode is chosen here rather than at construction because the answer depends on the
+        session in use *now*: a caller may have replaced ``main_session`` since, and the
+        terminal it renders to is what decides whether a reservation is possible.
+
+        A refused reservation is not a refused loop. Below the two-row floor there is nothing
+        to reserve and the toolbar renders natively, which is why the object is kept even when
+        it is inactive -- the terminal can grow back.
+        """
+        mode, _reason = _select_toolbar_mode(
+            self._bottom_toolbar_mode,
+            self.main_session.app.output,
+            toolbar_enabled=self.main_session.bottom_toolbar is not None,
+            interactive=self._is_tty_session(self.main_session),
+            layout_supported=native_toolbar_container(self.main_session) is not None,
+        )
+        if mode is not ToolbarMode.RESERVED:
+            yield
+            return
+
+        toolbar = ReservedToolbar(self.main_session, lambda: self.main_session.bottom_toolbar)
+        self._reserved_toolbar = toolbar
+        try:
+            with toolbar:
+                yield
+        finally:
+            self._reserved_toolbar = None
 
     @contextlib.contextmanager
     def _command_toolbar_context(self) -> Iterator[None]:
@@ -3185,7 +3305,7 @@ class Cmd:
 
         return stop
 
-    @command_toolbar.suspend_toolbar
+    @command_toolbar.quiesce_toolbar
     def _run_cmdfinalization_hooks(self, stop: bool, statement: Statement | None) -> bool:
         """Run the command finalization hooks."""
         if self._initial_termios_settings is not None and self.stdin.isatty():  # type: ignore[unreachable]
@@ -3655,7 +3775,6 @@ class Cmd:
         # a DummyOutput.
         return not isinstance(session.input, DummyInput)
 
-    @command_toolbar.suspend_toolbar
     def _read_raw_input(
         self,
         prompt: Callable[[], ANSI | str] | ANSI | str,
@@ -3667,6 +3786,34 @@ class Cmd:
         If input is coming from a TTY, it uses `prompt_toolkit` to render a
         UI with completion and `patch_stdout` protection. Otherwise it performs
         a direct line read from `stdin`.
+
+        The command display is stopped either way, but only some prompts give the terminal
+        away with it. The main prompt is the one the reservation exists for: it renders
+        through the reserved output, and the toolbar has to still be there while the user is
+        typing -- that is what "stable across ordinary commands" means. Any other session is
+        an application prompt cmd2 has not bound to the reservation, so it gets the terminal
+        to itself, rows included.
+
+        :param prompt: the prompt text or a callable that returns the prompt.
+        :param session: the PromptSession instance to use for reading.
+        :param prompt_kwargs: additional arguments passed directly to session.prompt().
+        :return: the stripped input string.
+        :raises EOFError: if the input stream is closed or the user signals EOF (e.g., Ctrl+D)
+        """
+        owns_the_reservation = session is self.main_session
+        with self._quiesce_bottom_toolbar() if owns_the_reservation else self.suspend_bottom_toolbar():
+            reserved = self._reserved_toolbar
+            if owns_the_reservation and reserved is not None and reserved.bridge is not None:
+                reserved.bridge.finish_command_output()
+            return self._read_raw_input_now(prompt, session, **prompt_kwargs)
+
+    def _read_raw_input_now(
+        self,
+        prompt: Callable[[], ANSI | str] | ANSI | str,
+        session: PromptSession[str],
+        **prompt_kwargs: Any,
+    ) -> str:
+        """Read one line, with the display already stopped by the caller.
 
         :param prompt: the prompt text or a callable that returns the prompt.
         :param session: the PromptSession instance to use for reading.
@@ -6043,9 +6190,12 @@ class Cmd:
         if self.intro:
             self.poutput(self.intro)
 
-        # And then call _cmdloop() to enter the main loop
+        # And then call _cmdloop() to enter the main loop. The reservation is established
+        # here, after the intro has been printed: it must not be installed around output that
+        # belongs to the terminal's ordinary scrollback.
         try:
-            self._cmdloop()
+            with self._reserved_toolbar_context():
+                self._cmdloop()
         finally:
             # Restore original signal handlers however the loop ended. Leaving cmd2's
             # handlers installed would outlive the application in its host process.

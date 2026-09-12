@@ -4,6 +4,7 @@ import io
 import os
 import subprocess
 import sys
+import threading
 from collections.abc import Callable
 from contextlib import redirect_stderr
 from typing import (
@@ -291,3 +292,28 @@ def toolbar_app():
                 refresh_interval=0.01,
             )
             yield app, pipe, output
+
+
+class ContendedLock:
+    """A real reentrant lock that reports a competing acquisition without a sleep."""
+
+    def __init__(self) -> None:
+        self._lock = threading.RLock()
+        self.contended = threading.Event()
+
+    def acquire(self) -> bool:
+        if self._lock.acquire(blocking=False):
+            return True
+        self.contended.set()
+        assert self._lock.acquire(timeout=5), "owner never released the lock"
+        return True
+
+    def release(self) -> None:
+        self._lock.release()
+
+    def __enter__(self):
+        self.acquire()
+        return self
+
+    def __exit__(self, *args):
+        self.release()

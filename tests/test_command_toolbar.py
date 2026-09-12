@@ -1,5 +1,6 @@
 """Command toolbar lifecycle and terminal integration tests."""
 
+import contextlib
 import sys
 import threading
 import time
@@ -16,9 +17,9 @@ from prompt_toolkit.keys import Keys
 from prompt_toolkit.layout import HSplit, Layout, Window
 from prompt_toolkit.shortcuts import PromptSession
 
-from cmd2 import Cmd, command_toolbar
+from cmd2 import Cmd, ToolbarMode, command_toolbar
 
-from .conftest import RecordingOutput, Terminal
+from .conftest import ContendedLock, RecordingOutput, Terminal
 
 
 def test_command_toolbar_refresh_and_output(toolbar_app, monkeypatch) -> None:
@@ -29,11 +30,21 @@ def test_command_toolbar_refresh_and_output(toolbar_app, monkeypatch) -> None:
 
     def toolbar():
         threads.append(threading.current_thread())
-        if state[0] == "AFTER":
-            refreshed.set()
         return state[0]
 
+    def after_render(ui):
+        # Content evaluation precedes drawing. Wait for the completed frame, and
+        # inspect its cells: BEFORE and AFTER share the R in column five, so a
+        # correct incremental redraw may emit only AFTE rather than the whole word.
+        screen = ui.renderer._last_screen
+        if screen is not None:
+            size = ui.output.get_size()
+            band = "".join(screen.data_buffer[size.rows - 1][x].char for x in range(size.columns))
+            if band.rstrip() == "AFTER":
+                refreshed.set()
+
     app.main_session.bottom_toolbar = toolbar
+    app.main_session.app.after_render += after_render
     monkeypatch.setattr(sys, "stdout", output)
     original_stderr = sys.stderr
     with app._command_toolbar_context():
@@ -47,7 +58,6 @@ def test_command_toolbar_refresh_and_output(toolbar_app, monkeypatch) -> None:
 
     assert "command output\n" in output.getvalue()
     assert "standard output" in output.getvalue()
-    assert "AFTER" in output.getvalue()
     assert all(thread is not threading.main_thread() and not thread.is_alive() for thread in threads)
     assert app.stdout is output
     assert sys.stdout is output
@@ -88,10 +98,11 @@ def test_command_toolbar_redirection_survives_suspension(toolbar_app, tmp_path) 
     assert app.stdout is output
 
 
-def test_command_toolbar_pipe_output(toolbar_app) -> None:
+def test_command_toolbar_pipe_output(toolbar_app, running_pipe_process) -> None:
+    # The child needs only sys; -S skips site initialization while retaining real pipe I/O.
     app, _, output = toolbar_app
     with app._command_toolbar_context():
-        app.onecmd_plus_hooks(f'help | "{sys.executable}" -c "import sys; print(sys.stdin.read().upper())"')
+        app.onecmd_plus_hooks(f'help | "{sys.executable}" -S -c "import sys; print(sys.stdin.read().upper())"')
     assert "CMD2 COMMANDS" in output.getvalue()
 
 
@@ -109,7 +120,7 @@ class FileTerminal:
 
 
 @pytest.mark.parametrize("builtin_pager", [False, True])
-def test_command_toolbar_pipe_process_inherits_terminal(toolbar_app, tmp_path, builtin_pager) -> None:
+def test_command_toolbar_pipe_process_inherits_terminal(toolbar_app, tmp_path, builtin_pager, running_pipe_process) -> None:
     app, _, _ = toolbar_app
     app.use_builtin_pager = builtin_pager
     destination = tmp_path / "terminal.txt"
@@ -127,7 +138,9 @@ def test_command_toolbar_pipe_process_inherits_terminal(toolbar_app, tmp_path, b
     with destination.open("w+") as handle:
         app.stdout = FileTerminal(handle)
         with mock.patch.object(app, "onecmd", side_effect=command), app._command_toolbar_context():
-            app.onecmd_plus_hooks(f'custom | "{sys.executable}" -c "import sys; sys.stdout.write(sys.stdin.read().upper())"')
+            app.onecmd_plus_hooks(
+                f'custom | "{sys.executable}" -S -c "import sys; sys.stdout.write(sys.stdin.read().upper())"'
+            )
             # The terminal goes back to the toolbar once the pipe process has exited.
             assert app._command_toolbar.app.is_running
             assert app.stdout.proxy is not None
@@ -259,7 +272,7 @@ class CprOutput(RecordingOutput):
         return True
 
 
-def test_command_toolbar_flushes_writes_waiting_on_cursor_reports() -> None:
+def test_command_toolbar_flushes_writes_waiting_on_cursor_reports(monkeypatch) -> None:
     app = Cmd(allow_cli_args=False)
     output = Terminal()
     app.stdout = output
@@ -271,6 +284,15 @@ def test_command_toolbar_flushes_writes_waiting_on_cursor_reports() -> None:
             bottom_toolbar="STATUS",
             refresh_interval=0.01,
         )
+        # Keep a real unanswered request, but expire its shutdown wait promptly.
+        # This test checks that queued output survives expiry, not the timeout duration.
+        renderer = app.main_session.app.renderer
+        wait_for_cpr = renderer.wait_for_cpr_responses
+
+        async def expire_cpr() -> None:
+            await wait_for_cpr(timeout=0.01)
+
+        monkeypatch.setattr(renderer, "wait_for_cpr_responses", expire_cpr)
         # Terminal writes wait for a pending cursor position report, so stopping the
         # display must not cancel them out from under the text.
         with app._command_toolbar_context():
@@ -279,31 +301,35 @@ def test_command_toolbar_flushes_writes_waiting_on_cursor_reports() -> None:
     assert "last words\n" in output.getvalue()
 
 
-def test_command_toolbar_suspension_waits_for_in_flight_writes(toolbar_app) -> None:
+def test_command_toolbar_suspension_waits_for_in_flight_writes(toolbar_app, monkeypatch) -> None:
     app, _, output = toolbar_app
     writing = threading.Event()
+    observed = ContendedLock()
+    original_init = command_toolbar.CommandToolbar.__init__
+
+    def init(display, *args, **kwargs):
+        original_init(display, *args, **kwargs)
+        display._lock = observed
+
+    monkeypatch.setattr(command_toolbar.CommandToolbar, "__init__", init)
 
     with app._command_toolbar_context():
         proxy = app._command_toolbar._proxy
         proxy_write = proxy.write
 
         def slow_write(data: str) -> int:
-            # Widen the window in which suspending could close this proxy. A closed
-            # proxy accepts writes and discards them, so the output would vanish.
+            # Do not finish the write until suspension actually tries to take its lock.
             writing.set()
-            time.sleep(0.1)
+            assert observed.contended.wait(5), "pause did not wait for the writer"
             return proxy_write(data)
 
         proxy.write = slow_write
-        thread = threading.Thread(target=lambda: app.poutput("in flight"))
-        thread.start()
-        assert writing.wait(2)
-
-        # A command reaches this at every finalization boundary while its own
-        # threads are still printing.
-        with app.suspend_bottom_toolbar():
-            pass
-        thread.join()
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            pending = pool.submit(app.poutput, "in flight")
+            assert writing.wait(5)
+            with app.suspend_bottom_toolbar():
+                pass
+            pending.result(timeout=5)
 
     assert "in flight\n" in output.getvalue()
 
@@ -409,7 +435,7 @@ def test_command_toolbar_exit_after_result_is_set(toolbar_app) -> None:
     assert app.main_session.app.layout is app.main_session.layout
 
 
-def test_command_toolbar_ui_call_propagates_failures(toolbar_app) -> None:
+def test_command_toolbar_ui_call_propagates_failures(toolbar_app, monkeypatch) -> None:
     app, _, _ = toolbar_app
 
     def fail(exception: BaseException) -> None:
@@ -429,7 +455,37 @@ def test_command_toolbar_ui_call_propagates_failures(toolbar_app) -> None:
             toolbar._call_in_ui(lambda: fail(TimeoutError("slow ui call")))
 
         # A callback that outlives the poll interval keeps waiting instead of giving up.
-        assert toolbar._call_in_ui(lambda: time.sleep(0.2) or "finished") == "finished"
+        entered = threading.Event()
+        release = threading.Event()
+
+        class PendingFuture(Future):
+            polled = False
+
+            def result(self, timeout=None):
+                if not self.polled:
+                    self.polled = True
+                    assert timeout is not None
+                    assert entered.wait(5)
+                    raise FutureTimeoutError
+                return super().result(timeout=5)
+
+        def finish():
+            entered.set()
+            assert release.wait(5)
+            return "finished"
+
+        check_running = toolbar._check_running
+
+        def checked():
+            check_running()
+            release.set()
+
+        monkeypatch.setattr(command_toolbar, "Future", PendingFuture)
+        monkeypatch.setattr(toolbar, "_check_running", checked)
+        try:
+            assert toolbar._call_in_ui(finish) == "finished"
+        finally:
+            release.set()
 
 
 def test_command_toolbar_ui_call_returns_a_result_that_lands_during_the_poll(toolbar_app, monkeypatch) -> None:
@@ -477,13 +533,23 @@ def test_command_toolbar_ui_call_after_display_stopped(toolbar_app) -> None:
             toolbar._call_in_ui(lambda: None)
 
 
-def test_command_toolbar_ui_call_reports_display_failure(toolbar_app, capsys) -> None:
+def test_command_toolbar_ui_call_reports_display_failure(toolbar_app, capsys, monkeypatch) -> None:
     app, _, _ = toolbar_app
     with app._command_toolbar_context():
         toolbar = app._command_toolbar
         loop = toolbar.app.loop
         schedule = loop.call_soon_threadsafe
         failed = threading.Event()
+
+        class FailedDisplayFuture(Future):
+            def result(self, timeout=None):
+                assert timeout is not None
+                toolbar._thread.join(5)
+                assert not toolbar._thread.is_alive()
+                assert not self.done()
+                raise FutureTimeoutError
+
+        monkeypatch.setattr(command_toolbar, "Future", FailedDisplayFuture)
 
         def die(*args, **kwargs):
             # The display dies instead of running the queued callback, so the future
@@ -604,7 +670,7 @@ def test_cmdloop_restores_signal_handlers_when_the_loop_fails(toolbar_app, monke
 
 @pytest.mark.parametrize("enabled", [False, True])
 def test_command_toolbar_headless(enabled) -> None:
-    app = Cmd(allow_cli_args=False, enable_bottom_toolbar=enabled)
+    app = Cmd(allow_cli_args=False, bottom_toolbar_mode=ToolbarMode.AUTO if enabled else ToolbarMode.OFF)
     with mock.patch("cmd2.command_toolbar.CommandToolbar") as toolbar, app._command_toolbar_context():
         toolbar.assert_not_called()
 
@@ -778,7 +844,7 @@ def test_external_pager_suspends_shared_application(toolbar_app, monkeypatch) ->
         assert app._command_toolbar.is_active
 
 
-def test_builtin_pager_eof_restores_prompt(toolbar_app) -> None:
+def test_builtin_pager_eof_restores_prompt(toolbar_app, monkeypatch) -> None:
     app, pipe, output = toolbar_app
     layout = app.main_session.app.layout
 
@@ -787,6 +853,23 @@ def test_builtin_pager_eof_restores_prompt(toolbar_app) -> None:
             pipe.close()
 
     app.main_session.app.after_render += close_input
+    original_pager = command_toolbar.Pager
+
+    def pager(*args, **kwargs):
+        instance = original_pager(*args, **kwargs)
+
+        def expired(timeout=None):
+            assert timeout is not None
+            display = app._command_toolbar
+            display._thread.join(5)
+            assert not display._thread.is_alive()
+            assert not instance.closed.is_set()
+            return False
+
+        monkeypatch.setattr(instance.closed, "wait", expired)
+        return instance
+
+    monkeypatch.setattr(command_toolbar, "Pager", pager)
     with pytest.raises(EOFError), app._command_toolbar_context():
         app._command_toolbar.page("line\n" * 100, chop=False)
     assert app.main_session.app.layout is layout
@@ -806,3 +889,313 @@ def test_builtin_pager_does_not_capture_redirected_output(toolbar_app, monkeypat
         pager.assert_not_called()
     assert "Cmd2 Commands" in target.read_text(encoding="utf-8")
     assert "Cmd2 Commands" not in output.getvalue()
+
+
+@pytest.fixture
+def expire_startup(monkeypatch):
+    """Expire only this display's readiness wait, after its real render has started.
+
+    The five-second waits are failure watchdogs, not simulated startup delays. Keep
+    blocked workers alive for ownership assertions and join them before fixture teardown.
+    """
+    displays = []
+    releases = []
+
+    def install(app, *, block=True):
+        entered = threading.Event()
+        release = threading.Event()
+        releases.append(release)
+        original_init = command_toolbar.CommandToolbar.__init__
+
+        def toolbar():
+            entered.set()
+            if block:
+                assert release.wait(5), "test never released the display"
+            return "STATUS"
+
+        def init(display, *args, **kwargs):
+            original_init(display, *args, **kwargs)
+            displays.append(display)
+
+            def expired(timeout=None):
+                assert entered.wait(5), "display never entered its render callback"
+                assert timeout is not None, "startup must bound its readiness wait"
+                return False
+
+            monkeypatch.setattr(display._ready, "wait", expired)
+
+        app.main_session.bottom_toolbar = toolbar
+        monkeypatch.setattr(command_toolbar.CommandToolbar, "__init__", init)
+        if block:
+            monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.01)
+        return release
+
+    yield install
+    for release in releases:
+        release.set()
+    for display in displays:
+        if display._thread is not None:
+            display._thread.join(5)
+            assert not display._thread.is_alive()
+
+
+def test_command_toolbar_startup_does_not_wait_forever(toolbar_app, monkeypatch, expire_startup, capsys) -> None:
+    """A display that never reports itself started must not hold the command thread.
+
+    The readiness signal comes from the display's own thread, so anything that stops it
+    arriving -- a render that never completes, a frame skipped forever -- would otherwise
+    block the command that is waiting to run.
+    """
+    app, _, _ = toolbar_app
+    expire_startup(app, block=False)
+    monkeypatch.setattr(command_toolbar.CommandToolbar, "_display_started", lambda *args: None)
+    monkeypatch.setattr(command_toolbar.CommandToolbar, "_display_started_without_app", lambda *args: None)
+
+    ran = []
+    with app._command_toolbar_context():
+        ran.append(True)
+
+    assert ran == [True]
+    assert "did not start" in capsys.readouterr().err
+
+
+def test_command_toolbar_startup_timeout_does_not_block_on_cleanup(toolbar_app, expire_startup, capsys) -> None:
+    """A blocked render callback must not hold the command thread through teardown either.
+
+    The readiness wait being bounded is only half of it: the display thread is still inside
+    the callback, so the join that follows has to be bounded too. This blocks the callback for
+    real rather than suppressing the readiness signal, which is what the earlier test did and
+    why it could not see this.
+    """
+    app, _, _ = toolbar_app
+    blocked = expire_startup(app)
+
+    ran = []
+    try:
+        started = time.monotonic()
+        with app._command_toolbar_context():
+            ran.append(True)
+        elapsed = time.monotonic() - started
+
+        assert ran == [True]
+        # Both bounded waits, and nothing unbounded between them.
+        assert elapsed < 5
+        assert "did not start" in capsys.readouterr().err
+    finally:
+        blocked.set()
+
+
+def _block_the_display(app, blocked: threading.Event) -> None:
+    """Wedge the running display inside a render callback it cannot leave.
+
+    Waits until the callback has actually been entered. Asking for a redraw only *schedules*
+    one, so returning before it runs leaves a race: the pause that follows may reach the
+    display's event loop first, in which case it exits cleanly and there is no wedged thread
+    to test against.
+    """
+    entered = threading.Event()
+
+    def blocking_toolbar() -> str:
+        entered.set()
+        blocked.wait(timeout=10)
+        return "STATUS"
+
+    app.main_session.bottom_toolbar = blocking_toolbar
+    app._command_toolbar.app.invalidate()
+    assert entered.wait(timeout=5), "the display never reached the blocking callback"
+
+
+def test_command_toolbar_suspension_does_not_hand_over_a_terminal_it_still_owns(toolbar_app, monkeypatch) -> None:
+    """A pause that timed out did not stop anything, and must not pretend otherwise."""
+    app, _, _ = toolbar_app
+    blocked = threading.Event()
+    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.01)
+    entered = []
+
+    try:
+        # The command context's own teardown fails the same way, for the same reason: the
+        # display never stopped. That is the established contract for a stop that fails.
+        with contextlib.suppress(RuntimeError), app._command_toolbar_context():
+            display = app._command_toolbar
+            assert display is not None
+            _block_the_display(app, blocked)
+
+            with pytest.raises(RuntimeError, match="did not stop"), app.suspend_bottom_toolbar():
+                entered.append(True)
+
+            # The guest never ran: the display still owns the application and the terminal.
+            assert entered == []
+            assert display.app.is_running is True
+    finally:
+        blocked.set()
+
+
+def test_command_toolbar_that_would_not_stop_is_not_used_again(toolbar_app, monkeypatch) -> None:
+    """The surviving thread outlives this display object, so the refusal has to as well."""
+    app, _, _ = toolbar_app
+    blocked = threading.Event()
+    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.01)
+
+    try:
+        with contextlib.suppress(RuntimeError), app._command_toolbar_context():
+            _block_the_display(app, blocked)
+            with contextlib.suppress(RuntimeError), app.suspend_bottom_toolbar():
+                pass
+
+        assert app._command_toolbar_disabled is True
+
+        # A later command must not start a second display over the one still running.
+        with app._command_toolbar_context():
+            assert app._command_toolbar is None
+    finally:
+        blocked.set()
+
+
+def test_command_toolbar_that_would_not_stop_keeps_the_application(toolbar_app, monkeypatch) -> None:
+    """Its layout and bindings are still in use; restoring them would pull them out from under it."""
+    app, _, _ = toolbar_app
+    blocked = threading.Event()
+    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.01)
+
+    try:
+        with contextlib.suppress(RuntimeError), app._command_toolbar_context():
+            display = app._command_toolbar
+            assert display is not None
+            layout = display.app.layout
+            _block_the_display(app, blocked)
+
+            with contextlib.suppress(RuntimeError), app.suspend_bottom_toolbar():
+                pass
+
+            assert display.app.layout is layout
+    finally:
+        blocked.set()
+
+
+def test_a_surviving_display_blocks_later_handoffs(toolbar_app, expire_startup) -> None:
+    """Disabling future displays is not enough: the old one still owns the terminal."""
+    app, _, _ = toolbar_app
+    blocked = expire_startup(app)
+    entered = []
+
+    try:
+        with app._command_toolbar_context():
+            pass
+
+        # The command display is gone as an object, but its thread is not.
+        assert app._command_toolbar is None
+        with pytest.raises(RuntimeError, match="terminal"), app.suspend_bottom_toolbar():
+            entered.append(True)
+        assert entered == []
+    finally:
+        blocked.set()
+
+
+def test_a_surviving_display_blocks_the_prompt(toolbar_app, expire_startup) -> None:
+    """Two readers on one terminal is not a state to keep prompting in."""
+    app, _, _ = toolbar_app
+    blocked = expire_startup(app)
+
+    try:
+        with app._command_toolbar_context():
+            pass
+
+        with pytest.raises(RuntimeError, match="terminal"):
+            app._read_raw_input("> ", app.main_session)
+    finally:
+        blocked.set()
+
+
+def test_the_refusal_lifts_when_the_display_finally_exits(toolbar_app, expire_startup) -> None:
+    """The thread may yet finish, and the session should not stay broken if it does.
+
+    Lifting the refusal is not the whole of it. The pause that timed out never restored the
+    application it had borrowed, so the prompt that comes next would render with the command
+    display's layout and key bindings unless that teardown is finished first.
+    """
+    app, _, _ = toolbar_app
+    blocked = expire_startup(app)
+
+    prompt_layout = app.main_session.app.layout
+    prompt_bindings = app.main_session.app.key_bindings
+    prompt_erase = app.main_session.app.erase_when_done
+
+    with app._command_toolbar_context():
+        pass
+    surviving = app._display_holding_terminal
+    assert surviving is not None
+    assert app.main_session.app.layout is not prompt_layout
+
+    blocked.set()
+    surviving._thread.join(timeout=5)
+
+    with app.suspend_bottom_toolbar():
+        pass
+
+    assert app._display_holding_terminal is None
+    assert app.main_session.app.layout is prompt_layout
+    assert app.main_session.app.key_bindings is prompt_bindings
+    assert app.main_session.app.erase_when_done == prompt_erase
+
+
+def test_a_surviving_display_stops_another_from_starting(toolbar_app, expire_startup) -> None:
+    app, _, _ = toolbar_app
+    blocked = expire_startup(app)
+
+    try:
+        with app._command_toolbar_context():
+            pass
+        with app._command_toolbar_context():
+            assert app._command_toolbar is None
+    finally:
+        blocked.set()
+
+
+def test_installing_the_legacy_proxy_twice_keeps_the_first(toolbar_app) -> None:
+    """Falling back to legacy routing on a display that already routes through a proxy must
+    not replace a proxy whose worker is mid-write; the newcomer is closed instead."""
+    app, _pipe, _output = toolbar_app
+    with app._command_toolbar_context():
+        display = app._command_toolbar
+        assert display is not None
+        proxy = display._proxy
+        assert proxy is not None
+        display._install_legacy_proxy()
+        assert display._proxy is proxy
+        assert all(stream.proxy is proxy for stream in display._streams)
+
+
+def test_legacy_proxy_uses_the_display_session_output_without_an_ambient_session(toolbar_app) -> None:
+    """The fallback can be scheduled onto the loop from a context that never entered the
+    display's app session. The proxy must still resolve its output from that session -- not
+    create a fresh one, which on a console-less platform raises -- so it is built with the
+    session active regardless of the caller's context."""
+    from prompt_toolkit.application.current import AppSession, _current_app_session
+
+    app, _pipe, _output = toolbar_app
+    with app._command_toolbar_context():
+        display = app._command_toolbar
+        assert display is not None
+        session_output = display._app_session.output
+        display._pause()  # drop the proxy so _install_legacy_proxy rebuilds it
+        # Stand in a context with no display session, the way an off-loop callback would.
+        token = _current_app_session.set(AppSession())
+        try:
+            display._install_legacy_proxy()
+        finally:
+            _current_app_session.reset(token)
+        assert display._proxy is not None
+        assert display._proxy._output is session_output
+
+
+def test_restoring_the_legacy_display_on_a_stopped_display_changes_nothing(toolbar_app) -> None:
+    """The fallback can be scheduled just before the display stops; by the time it runs
+    there is no display to switch, and it must not install routing into a closed one."""
+    app, _pipe, _output = toolbar_app
+    with app._command_toolbar_context():
+        display = app._command_toolbar
+        assert display is not None
+    layout = app.main_session.app.layout
+    display._restore_legacy_display()
+    assert display._proxy is None
+    assert app.main_session.app.layout is layout

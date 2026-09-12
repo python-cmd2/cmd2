@@ -92,7 +92,7 @@ class Geometry:
     #: True viewport height, read from the unwrapped backend.
     physical_rows: int
 
-    #: Terminal width. Toolbar height is measured against this, so a width change is a new
+    #: Terminal width. The band is laid out against this, so a width change is a new
     #: generation even when the height is unchanged.
     columns: int
 
@@ -194,6 +194,26 @@ class PhysicalTerminal:
             return None
         return (info.srWindow.Left, info.srWindow.Top, info.dwSize.X, info.dwSize.Y)
 
+    def cursor_row(self) -> int | None:
+        """Read the cursor's physical row from a backend that can say without being asked.
+
+        Windows serves the cursor from the console API, in the same call and in viewport
+        coordinates, which is why its output never answers a cursor-position report. The VT
+        backends have no such call and raise ``NotImplementedError``; there the row has to be
+        requested from the terminal and arrives later, as a reply.
+
+        Both reads come from the unwrapped backend, so the result is a *physical* row: the
+        adapter's rows-below answer stops at the usable bottom, and would place the cursor
+        one reservation too high.
+
+        :return: the one-based physical row, or ``None`` where the backend cannot report it
+        """
+        try:
+            rows_below = self._output.get_rows_below_cursor_position()
+        except NotImplementedError:
+            return None
+        return self.physical_size().rows - rows_below + 1
+
     def measure(self, generation: int, reserved_rows: int) -> Geometry:
         """Take a fresh geometry snapshot.
 
@@ -226,6 +246,39 @@ class PhysicalTerminal:
         # now rather than whenever something else happens to flush.
         self._output.flush()
 
+    def make_room_for_region(self, geometry: Geometry) -> None:
+        """Keep the cursor and preceding output above the band before narrowing margins.
+
+        Full-screen margins must still be installed. Indexing down by the band's height
+        scrolls only when the cursor is near the bottom. Moving back up by the same amount
+        then leaves it at its original row, or at the last usable row if scrolling occurred.
+        IND preserves the column and is independent of the tty's newline translation.
+
+        This needs no CPR, so it also works before the application's input reader starts.
+        The cursor saved by the margin change must be this adjusted position, not the old
+        physical row which may now belong to the band. Flush the adjustment before the
+        margin operation, so a failure there cannot strand it in the backend's buffer.
+
+        :param geometry: the eligible geometry whose band needs room
+        """
+        rows = geometry.reserved_rows
+        self._output.write_raw("\x1bD" * rows + f"\x1b[{rows}A")
+        self._output.flush()
+
+    def erase_rows(self, first: int, last: int) -> None:
+        """Clear whole physical rows, preserving the cursor.
+
+        Used to wipe the old toolbar's rows when a resize leaves them inside the screen. The
+        erase is by line, so it does not depend on the scroll margins, and the cursor is saved
+        and restored around it so the caller's position survives.
+
+        :param first: the one-based first row to clear
+        :param last: the one-based last row to clear, inclusive
+        """
+        moves = "".join(f"\x1b[{row};1H\x1b[2K" for row in range(first, last + 1))
+        self._output.write_raw(f"{cursor_save_sequence()}{moves}{cursor_restore_sequence()}")
+        self._output.flush()
+
     def install_region(self, geometry: Geometry) -> None:
         """Install the scroll region described by ``geometry``.
 
@@ -234,9 +287,22 @@ class PhysicalTerminal:
         """
         self.write_margin_change(scroll_region_sequence(geometry.physical_rows, geometry.reserved_rows))
 
-    def release_region(self) -> None:
-        """Restore full-screen scroll margins."""
-        self.write_margin_change(reset_scroll_region_sequence())
+    def release_region(self, geometry: Geometry | None = None) -> None:
+        """Restore full-screen margins, removing owned toolbar cells before they can scroll.
+
+        :param geometry: the region being released, if one was successfully installed
+        """
+        sequence = reset_scroll_region_sequence()
+        if geometry is not None:
+            # A resize or viewport move can invalidate the owned band before teardown.
+            # If measurement fails, still reset the margins; do not guess where to erase.
+            with suppress(Exception):
+                if self.measure(geometry.generation, geometry.reserved_rows) == geometry:
+                    # ED deliberately reaches the physical bottom here: these are the rows
+                    # being returned, not application output. The save/restore below also
+                    # preserves the prompt's cursor and attributes around the erase.
+                    sequence = f"\x1b[{geometry.usable_rows + 1};1H\x1b[0m\x1b[J" + sequence
+        self.write_margin_change(sequence)
 
 
 class TerminalDisplay:
@@ -319,6 +385,7 @@ class TerminalDisplay:
             geometry = self._measure()
             if not geometry.is_eligible:
                 return False
+            self._terminal.make_room_for_region(geometry)
             self._terminal.install_region(geometry)
         except BaseException:
             # Give the lease back *first*. Cleanup can fail too -- a terminal that could not
@@ -365,8 +432,8 @@ class TerminalDisplay:
         self._handoff_active = False
         if self._geometry is None:
             return
-        self._geometry = None
-        self._terminal.release_region()
+        geometry, self._geometry = self._geometry, None
+        self._terminal.release_region(geometry)
 
     def reconfigure(self) -> bool:
         """Resample the terminal and re-establish the reservation for the new geometry.
@@ -386,6 +453,7 @@ class TerminalDisplay:
             # program currently owning it. The resize is not lost: the return path measures
             # afresh rather than restoring whatever was installed before the handoff.
             return False
+        previous = self._geometry
         geometry = self._measure()
         if not geometry.is_eligible or not self._terminal.supports_reservation:
             if self._geometry is not None:
@@ -393,6 +461,27 @@ class TerminalDisplay:
                 self._adapter = None
                 self._terminal.release_region()
             return False
+        if previous is None:
+            # The guest may have scrolled to the physical bottom, just as the shell
+            # that launched us may have done before the initial acquisition.
+            self._terminal.make_room_for_region(geometry)
+        elif geometry.physical_size != previous.physical_size:
+            # A resize. The terminal may have reset its margins or kept the old ones; either
+            # way the old region no longer describes the screen, so start from full-screen
+            # margins -- which is also what making room needs, so that an index at the bottom
+            # scrolls the whole screen rather than an obsolete region.
+            self._terminal.release_region()
+            if geometry.physical_rows > previous.physical_rows:
+                # The terminal grew, so the rows the old band occupied are now inside the
+                # screen and still hold its stale text. They never scrolled -- the band sits
+                # outside the scroll region -- so they hold nothing but the old toolbar and
+                # are safe to clear before the new region is installed.
+                self._terminal.erase_rows(previous.usable_rows + 1, previous.physical_rows)
+            # A terminal that shrank may have left the cursor, and the output on its row, in
+            # the rows the new band will take. Making room scrolls that output up into the
+            # usable region and moves the cursor with it, column intact, before the band is
+            # installed over those rows and painted.
+            self._terminal.make_room_for_region(geometry)
         self._terminal.install_region(geometry)
         self._geometry = geometry
         if self._adapter is None:
@@ -417,8 +506,8 @@ class TerminalDisplay:
         self._handoff_active = True
         if self._geometry is None:
             return
-        self._geometry = None
-        self._terminal.release_region()
+        geometry, self._geometry = self._geometry, None
+        self._terminal.release_region(geometry)
 
     def reacquire_region_after_handoff(self) -> None:
         """Re-establish the reservation after a program hands the terminal back.
