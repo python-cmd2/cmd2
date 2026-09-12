@@ -220,12 +220,25 @@ def test_proc_reader_send_sigint(pr_none) -> None:
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
-def test_proc_reader_does_not_resignal_its_own_group(pr_none) -> None:
-    with mock.patch("os.getpgid", return_value=os.getpgrp()), mock.patch("os.killpg") as killpg:
-        pr_none.send_sigint()
-    killpg.assert_not_called()
-    pr_none.terminate()
-    pr_none.wait()
+@pytest.mark.parametrize("group_exited", [False, True])
+def test_proc_reader_forwards_to_its_own_group(pr_none, group_exited) -> None:
+    original_handler = signal.getsignal(signal.SIGINT)
+
+    def forward(group_id, signum):
+        assert group_id == os.getpgrp()
+        assert signum == signal.SIGINT
+        assert signal.getsignal(signal.SIGINT) == signal.SIG_IGN
+        if group_exited:
+            raise ProcessLookupError
+
+    try:
+        with mock.patch("os.getpgid", return_value=os.getpgrp()), mock.patch("os.killpg", side_effect=forward) as killpg:
+            pr_none.send_sigint()
+        killpg.assert_called_once_with(os.getpgrp(), signal.SIGINT)
+        assert signal.getsignal(signal.SIGINT) == original_handler
+    finally:
+        pr_none.terminate()
+        pr_none.wait()
 
 
 def test_proc_reader_terminate(pr_none) -> None:

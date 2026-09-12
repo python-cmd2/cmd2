@@ -19,7 +19,7 @@ import pytest
 pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX job control")
 
 
-@pytest.mark.parametrize("finish", ["q", "\x03"])
+@pytest.mark.parametrize("finish", ["q", "\x03", "process_sigint"])
 def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish) -> None:
     import fcntl
     import pty
@@ -140,7 +140,12 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish) -> None
             send("fg\n")
             wait_until(lambda start=start: "PAGER_RESUMED\r\n" in transcript[start:])
             assert os.tcgetpgrp(master) == job_group
-        send(finish)
+        if finish == "process_sigint":
+            # Signal cmd2 alone, as with `kill -INT <cmd2-pid>`. Its pipeline
+            # shares the terminal group but must receive a forwarded SIGINT.
+            os.kill(job_group, signal.SIGINT)
+        else:
+            send(finish)
         wait_until(lambda: screen.display[-1].startswith("STATUS") and "TEST>" in "\n".join(screen.display))
         start = len(transcript)
         send("help quit\n")

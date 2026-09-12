@@ -573,10 +573,16 @@ class ProcReader:
             # the whole process group to make sure it propagates further than the shell
             try:
                 group_id = os.getpgid(self._proc.pid)
-                # Terminal-attached pipelines share our foreground group and already
-                # received the keyboard signal. Forwarding to it would invoke cmd2's
-                # handler recursively. Captured pipelines still need forwarding.
-                if group_id != os.getpgrp():
+                if group_id == os.getpgrp():
+                    # A process-directed SIGINT may not have reached the pipeline.
+                    # Ignore our own forwarded signal to avoid recursive handling,
+                    # then restore the handler even if the group has exited.
+                    original_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
+                    try:
+                        os.killpg(group_id, signal.SIGINT)
+                    finally:
+                        signal.signal(signal.SIGINT, original_handler)
+                else:
                     os.killpg(group_id, signal.SIGINT)
             except ProcessLookupError:
                 return
