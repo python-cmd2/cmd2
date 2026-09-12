@@ -686,6 +686,14 @@ class TestPager:
             assert seen == {"toolbar": True, "pager": True, "stayed_in_pager": True}
             assert reserved.bridge is None
             assert len(display.app.layout.container.children) == 3
+            # The fallback deferred during paging is finished once the pager closes: legacy
+            # routing is in place -- the proxy installed, the reserved serializers gone -- so
+            # later command output keeps the toolbar rather than scrolling it away.
+            assert display._proxy is not None
+            assert all(stream.serializer is None for stream in display._streams)
+            harness.app.poutput("after the pager")
+            assert wait_for(lambda: any("after the pager" in row for row in terminal.screen.display))
+            assert terminal.screen.display[-1].startswith("STATUS")
             harness.app.main_session.bottom_toolbar = "RECOVERED"
             display.app.invalidate()
             assert wait_for(lambda: terminal.screen.display[-1].startswith("RECOVERED"))

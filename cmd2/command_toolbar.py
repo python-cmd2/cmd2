@@ -14,6 +14,7 @@ from concurrent.futures import TimeoutError as FutureTimeoutError
 from typing import TYPE_CHECKING, Any, TextIO, TypeVar, cast
 
 from prompt_toolkit.application import Application, create_app_session
+from prompt_toolkit.application.current import _current_app_session, get_app_session
 from prompt_toolkit.enums import EditingMode
 from prompt_toolkit.filters import Condition, to_filter
 from prompt_toolkit.input.typeahead import get_typeahead, store_typeahead
@@ -204,6 +205,15 @@ class CommandToolbar:
         self._serialized = False
         self._lock = threading.RLock()
         self._pausing = False
+        # The app session the display runs in, captured once it is entered. Output routed for
+        # the legacy fallback is built against it, so a fallback scheduled onto the loop from a
+        # context that never entered the session does not fall back to creating a new output --
+        # which, on a Windows runner with no real console, raises.
+        self._app_session: Any = None
+        # Whether the built-in pager is on screen, and whether a reservation abandoned while it
+        # was owe a legacy fallback once it closes. Both are read on the display's loop.
+        self._paging = False
+        self._legacy_fallback_pending = False
 
         session = cmd.main_session
         self.app = session.app
@@ -308,6 +318,8 @@ class CommandToolbar:
                 reserved.stopped_handler = self._reservation_stopped
                 stack.callback(setattr, reserved, "stopped_handler", previous_handler)
             stack.enter_context(create_app_session(input=self.app.input, output=self.app.output))
+            self._app_session = get_app_session()
+            stack.callback(setattr, self, "_app_session", None)
             # Only replace terminal streams. In particular, preserve redirected stderr
             # and self.stdout when a nested command has redirected its output to a file.
             for obj, name in ((self.cmd, "stdout"), (sys, "stdout"), (sys, "stderr")):
@@ -389,7 +401,17 @@ class CommandToolbar:
         """Route output through the native toolbar's erase-and-redraw proxy."""
         # The worker already combines queued writes. A batching sleep would also
         # delay close(), which runs at each command finalization boundary.
-        proxy = _ContextStdoutProxy(raw=True, sleep_between_writes=0)
+        #
+        # Built with the display's session active. The proxy resolves its output from the
+        # current app session; a fallback can be scheduled onto the loop from a context that
+        # never entered that session, where the proxy would otherwise create a fresh output
+        # and, on a console-less Windows runner, raise.
+        token = _current_app_session.set(self._app_session) if self._app_session is not None else None
+        try:
+            proxy = _ContextStdoutProxy(raw=True, sleep_between_writes=0)
+        finally:
+            if token is not None:
+                _current_app_session.reset(token)
         with self._lock:
             if self._proxy is not None:
                 proxy.close()
@@ -420,6 +442,7 @@ class CommandToolbar:
         command. Routing and the redraw of a display that *is* running need its loop.
         """
         self._layout = self._legacy_layout()
+        self._legacy_fallback_pending = True
         if self.app.loop is not None and self.app.is_running:
             self.app.loop.call_soon_threadsafe(self._restore_legacy_display)
 
@@ -437,15 +460,18 @@ class CommandToolbar:
         """Switch a running display over to legacy routing and layout, on its own loop."""
         if self._pausing or not self.app.is_running or self.app.is_done:
             return
-        self._install_legacy_proxy()
-        self.app.erase_when_done = True
-        if self.app.full_screen:
-            # The pager is on screen. Its exit applies the display's layout and resets the
-            # renderer; doing either here would quit the alternate screen under it and flash
-            # the command output through. Routing is switched now, and a redraw shows the
-            # native toolbar on the pager's bottom row; the rest waits for the pager's exit.
+        if self._paging:
+            # The pager is on screen. Installing the erase-and-redraw proxy or resetting the
+            # renderer now would run run_in_terminal under the pager and quit its alternate
+            # screen, flashing the command output through. The native toolbar is already
+            # unhidden, so a redraw shows it on the pager's bottom row; the rest waits for the
+            # pager's exit, which finishes the fallback with the terminal back on the main
+            # screen.
             self.app.invalidate()
             return
+        self._legacy_fallback_pending = False
+        self._install_legacy_proxy()
+        self.app.erase_when_done = True
         self._apply_display_layout()
         self.app.renderer.reset()
         self.app.renderer.request_absolute_cursor_position()
@@ -717,6 +743,7 @@ class CommandToolbar:
             """
             nonlocal restored
             restored = True
+            self._paging = False
             self._apply_display_layout()
             self.app.key_bindings, self.app.editing_mode, self.app.full_screen = previous
             self.app.renderer.full_screen = self.app.full_screen
@@ -724,6 +751,7 @@ class CommandToolbar:
         def enter() -> None:
             nonlocal entered
             entered = True
+            self._paging = True
             # The pager has a full screen of its own to draw, so the render suppression that
             # keeps ordinary command frames from touching the terminal has to come off for the
             # duration -- otherwise the pager swaps in its layout and nothing is ever painted.
@@ -771,6 +799,10 @@ class CommandToolbar:
                 # the full-screen flag and editing mode would carry into the next prompt.
                 if not restored:
                     restore()
+        # A reservation abandoned while the pager was open deferred its legacy fallback until
+        # the pager closed; now that it has, on the main screen, finish it.
+        if self._legacy_fallback_pending and self.thread_is_alive:
+            self._call_in_ui(self._restore_legacy_display)
 
     @contextlib.contextmanager
     def suspend(self) -> Iterator[None]:

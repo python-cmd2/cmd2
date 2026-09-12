@@ -1165,6 +1165,29 @@ def test_installing_the_legacy_proxy_twice_keeps_the_first(toolbar_app) -> None:
         assert all(stream.proxy is proxy for stream in display._streams)
 
 
+def test_legacy_proxy_uses_the_display_session_output_without_an_ambient_session(toolbar_app) -> None:
+    """The fallback can be scheduled onto the loop from a context that never entered the
+    display's app session. The proxy must still resolve its output from that session -- not
+    create a fresh one, which on a console-less platform raises -- so it is built with the
+    session active regardless of the caller's context."""
+    from prompt_toolkit.application.current import AppSession, _current_app_session
+
+    app, _pipe, _output = toolbar_app
+    with app._command_toolbar_context():
+        display = app._command_toolbar
+        assert display is not None
+        session_output = display._app_session.output
+        display._pause()  # drop the proxy so _install_legacy_proxy rebuilds it
+        # Stand in a context with no display session, the way an off-loop callback would.
+        token = _current_app_session.set(AppSession())
+        try:
+            display._install_legacy_proxy()
+        finally:
+            _current_app_session.reset(token)
+        assert display._proxy is not None
+        assert display._proxy._output is session_output
+
+
 def test_restoring_the_legacy_display_on_a_stopped_display_changes_nothing(toolbar_app) -> None:
     """The fallback can be scheduled just before the display stops; by the time it runs
     there is no display to switch, and it must not install routing into a closed one."""
