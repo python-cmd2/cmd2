@@ -60,6 +60,7 @@ class BasicApp(cmd2.Cmd):
             bottom_toolbar_mode=cmd2.ToolbarMode.AUTO,
             enable_rprompt=True,
             include_ipy=True,
+            include_py=True,
             persistent_history_file="cmd2_history.dat",
             refresh_interval=0.5,  # refresh the UI twice a second to keep the bottom toolbar timestamp current
             shortcuts=shortcuts,
