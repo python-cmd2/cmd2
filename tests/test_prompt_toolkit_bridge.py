@@ -714,6 +714,30 @@ class TestReviewRegressions:
         assert harness.renderer._last_screen is committed
         assert harness.bridge.needs_resynchronization is False
 
+    def test_output_ending_in_a_control_sequence_after_its_newline_is_finished(self) -> None:
+        """A reset emitted after the newline does not make the line unfinished."""
+        harness = Harness()
+        harness.bridge.note_managed_write(data="line\n\x1b[0m")
+        assert harness.bridge.has_unfinished_command_output is False
+        harness.bridge.note_managed_write(data="line\n\x1b]0;title\x07")
+        assert harness.bridge.has_unfinished_command_output is False
+
+    def test_a_write_of_only_control_leaves_the_verdict_unchanged(self) -> None:
+        """Nothing visible was written, so nothing about the line in progress changed."""
+        harness = Harness()
+        harness.bridge.note_managed_write(data="PARTIAL")
+        assert harness.bridge.has_unfinished_command_output is True
+        harness.bridge.note_managed_write(data="\x1b[0m")
+        assert harness.bridge.has_unfinished_command_output is True
+        harness.bridge.note_managed_write(data="\n")
+        assert harness.bridge.has_unfinished_command_output is False
+
+    def test_a_bare_carriage_return_keeps_the_line_unfinished(self) -> None:
+        harness = Harness()
+        harness.bridge.note_managed_write(data="progress 50%")
+        harness.bridge.note_managed_write(data="\r")
+        assert harness.bridge.has_unfinished_command_output is True
+
     def test_a_managed_write_can_supply_the_new_prompt_origin(self) -> None:
         """The layer that emitted the output is the one that knows where it ended."""
         harness = Harness()
@@ -1164,6 +1188,27 @@ class TestRenderInterception:
         with set_app(harness.app):
             harness.renderer.render(harness.app, harness.app.layout)
         assert harness.bridge.redraw_pending is True
+
+    @pytest.mark.parametrize("operation", ["erase", "clear"])
+    def test_a_real_erase_forgets_unfinished_output(self, operation) -> None:
+        """After the screen is erased there is no line in progress at the cursor."""
+        harness = self.bound()
+        # clear() asks for a cursor report through the event loop, which this harness lacks.
+        harness.renderer.request_absolute_cursor_position = lambda: None  # type: ignore[method-assign]
+        harness.bridge.note_managed_write(data="PARTIAL")
+        assert harness.bridge.has_unfinished_command_output is True
+        with set_app(harness.app):
+            getattr(harness.renderer, operation)()
+        assert harness.bridge.has_unfinished_command_output is False
+
+    def test_a_suppressed_resize_erase_keeps_the_unfinished_verdict(self) -> None:
+        """The suppressed path skips the erase to keep the line, so the verdict stands."""
+        harness = self.bound()
+        harness.bridge.note_managed_write(data="PARTIAL")
+        harness.bridge.set_render_suppressed(True)
+        with set_app(harness.app):
+            harness.renderer.erase()
+        assert harness.bridge.has_unfinished_command_output is True
 
     def test_an_erase_is_emitted_inside_a_transaction(self) -> None:
         harness = self.bound()

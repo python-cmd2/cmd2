@@ -130,6 +130,30 @@ class TestBinding:
         finally:
             harness.close()
 
+    def test_an_unqualified_backend_binds_nothing(self) -> None:
+        """Capability is exact class identity, so a subclass is not qualified. Below the floor
+        a lease and a bridge are kept for the resize that may make a reservation possible;
+        an unqualified backend can never reserve, so nothing is bound at all."""
+
+        class OtherOutput(Vt100_Output):
+            pass
+
+        stream = TtyStringIO()
+        backend = OtherOutput(stream, lambda: Size(rows=24, columns=80))
+        with create_pipe_input() as pipe:
+            session: PromptSession[str] = PromptSession(input=pipe, output=backend, bottom_toolbar="STATUS")
+            toolbar = ReservedToolbar(session, lambda: session.bottom_toolbar)
+            # The session's own renderer writes cursor-shape sequences on creation; what
+            # matters is that starting and stopping the toolbar adds nothing to them.
+            before = stream.getvalue()
+            assert toolbar.start() is False
+            assert session.app.output is backend
+            assert session.app.renderer.output is backend
+            assert toolbar.bridge is None
+            assert toolbar.is_active is False
+            toolbar.stop()
+            assert stream.getvalue() == before
+
     def test_a_terminal_too_short_to_reserve_keeps_a_resize_bridge(self) -> None:
         """Below the floor the full-size adapter retains a retry path and cleans up normally."""
         harness = Harness(rows=2)

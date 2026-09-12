@@ -24,6 +24,7 @@ bookkeeping. It is a narrow initialization contract tied to a qualified prompt-t
 and :mod:`tests.test_prompt_toolkit_bridge` holds it to that version by name.
 """
 
+import re
 from collections import deque
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
@@ -41,6 +42,13 @@ if TYPE_CHECKING:  # pragma: no cover
     from prompt_toolkit.renderer import Renderer
 
     from .terminal_display import TerminalDisplay
+
+
+#: Trailing control that moves nothing the user can see: carriage returns, CSI sequences such
+#: as an SGR reset, and OSC sequences such as a window title. Stripped before deciding whether
+#: output ended on a fresh line, so a reset emitted after the newline does not count as text
+#: on a new line, and a write made only of control says nothing about the line at all.
+_TRAILING_CONTROL = re.compile(r"(?:\r|\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\))+\Z")
 
 
 class ReservedModeFailureError(RuntimeError):
@@ -263,7 +271,9 @@ class PromptToolkitBridge:
         """
         self._terminal_generation += 1
         if data:
-            self._unfinished_command_output = not data.rstrip("\r").endswith("\n")
+            visible = _TRAILING_CONTROL.sub("", data)
+            if visible:
+                self._unfinished_command_output = not visible.endswith("\n")
         self._prompt_anchor = prompt_anchor
         # Only the frame in flight goes; it was prepared against the cursor and content this
         # write moved, so committing it would emit a stale frame. The renderer's baseline is
@@ -273,6 +283,22 @@ class PromptToolkitBridge:
         self._in_flight = None
         self._renderer._last_screen = self._committed_screen
         self._request_redraw()
+
+    @property
+    def has_unfinished_command_output(self) -> bool:
+        """Whether the last visible command output stopped part-way through a line."""
+        return self._unfinished_command_output
+
+    def forget_unfinished_command_output(self) -> None:
+        """Drop the verdict about a line in progress: the cursor is no longer where it left it.
+
+        A guest program that took the terminal, or an erase that cleared the screen, has moved
+        the cursor since. The line the verdict described may well be finished by now, and
+        adding a newline for it would push the next prompt down by a blank line. Output the
+        guest itself left unfinished is not seen here -- it bypasses the serializer -- and is
+        the guest's to finish, as it was before the reservation existed.
+        """
+        self._unfinished_command_output = False
 
     def finish_command_output(self) -> None:
         """Start the next prompt on a fresh line if command output left one unfinished.
@@ -674,6 +700,8 @@ class PromptToolkitBridge:
                 # recovering at the old prompt row and erasing the callback's output.
                 self._prompt_anchor = None
                 self._invalidate_pending_cursor_reports()
+                # The screen below the cursor is gone, and with it any line in progress.
+                self._unfinished_command_output = False
                 self.require_resynchronization("the renderer erased the screen")
 
     def _clear_through_bridge(self) -> None:
@@ -699,6 +727,7 @@ class PromptToolkitBridge:
             finally:
                 self._prompt_anchor = None
                 self._invalidate_pending_cursor_reports()
+                self._unfinished_command_output = False
                 self.require_resynchronization("the renderer cleared the screen")
 
     # -- prepare and commit ----------------------------------------------------------------

@@ -4,9 +4,12 @@
     - Background output printed above an active reserved prompt through `run_in_terminal()` or
       `patch_stdout()` is preserved when the prompt redraws.
     - Reserved rendering preserves unfinished command output when the main prompt returns by
-      starting the prompt on a fresh line.
+      starting the prompt on a fresh line. Trailing control sequences do not count as unfinished
+      output, and a line another program finished during a terminal handoff is not given an extra
+      blank line.
     - Falling back from reserved rendering during a command restores the native toolbar layout and
-      stdout proxy, so a recovered toolbar remains visible during the command.
+      stdout proxy, so a recovered toolbar remains visible during the command, including when the
+      fallback happens while the command has handed the terminal to another program.
     - Resuming the reserved command display after a terminal handoff preserves the cursor column of
       unfinished guest output, so later command output continues the same line.
     - A reserved toolbar started in a terminal below the minimum height now activates when the

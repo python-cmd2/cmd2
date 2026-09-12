@@ -1149,3 +1149,30 @@ def test_a_surviving_display_stops_another_from_starting(toolbar_app, expire_sta
             assert app._command_toolbar is None
     finally:
         blocked.set()
+
+
+def test_installing_the_legacy_proxy_twice_keeps_the_first(toolbar_app) -> None:
+    """Falling back to legacy routing on a display that already routes through a proxy must
+    not replace a proxy whose worker is mid-write; the newcomer is closed instead."""
+    app, _pipe, _output = toolbar_app
+    with app._command_toolbar_context():
+        display = app._command_toolbar
+        assert display is not None
+        proxy = display._proxy
+        assert proxy is not None
+        display._install_legacy_proxy()
+        assert display._proxy is proxy
+        assert all(stream.proxy is proxy for stream in display._streams)
+
+
+def test_restoring_the_legacy_display_on_a_stopped_display_changes_nothing(toolbar_app) -> None:
+    """The fallback can be scheduled just before the display stops; by the time it runs
+    there is no display to switch, and it must not install routing into a closed one."""
+    app, _pipe, _output = toolbar_app
+    with app._command_toolbar_context():
+        display = app._command_toolbar
+        assert display is not None
+    layout = app.main_session.app.layout
+    display._restore_legacy_display(display._layout)
+    assert display._proxy is None
+    assert app.main_session.app.layout is layout

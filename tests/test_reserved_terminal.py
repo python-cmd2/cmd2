@@ -342,6 +342,9 @@ class TestResize:
                     task = asyncio.current_task()
                 except RuntimeError:
                     task = None
+                # Identified by the name of prompt-toolkit's own polling coroutine,
+                # Application._poll_output_size in the qualified 3.0.53. It is upstream
+                # internal, so this is one of the places a version bump has to revisit.
                 if task is not None and task.get_coro().__name__ == "_poll_output_size":
                     polled.set()
                 return size
@@ -422,6 +425,22 @@ class TestPartialLines:
             visible = history + terminal.screen.display
             assert sum("IMPORTANT PARTIAL" in row for row in visible) == 1
             assert any("TEST> next" in row for row in visible)
+
+    def test_a_handoff_forgets_unfinished_output_so_the_prompt_is_not_pushed_down(self, terminal_harness) -> None:
+        """A partial write followed by a guest that finishes the line: the guest moved the
+        cursor to a fresh line, so the prompt must not add another one on the strength of a
+        verdict about output the guest has since completed."""
+        harness, terminal = terminal_harness
+        with harness.app._reserved_toolbar_context():
+            with harness.app._command_toolbar_context():
+                harness.app.stdout.write("PARTIAL")
+                harness.app.stdout.flush()
+                with harness.app.suspend_bottom_toolbar():
+                    harness.app.stdout.write("done\n")
+                    harness.app.stdout.flush()
+            read_prompt(harness, terminal)
+            assert terminal.screen.display[0].startswith("PARTIALdone")
+            assert terminal.screen.display[1].startswith("TEST> next")
 
     def test_guest_partial_output_survives_command_resume(self, terminal_harness) -> None:
         harness, terminal = terminal_harness
@@ -571,6 +590,28 @@ class TestPager:
             harness.app.poutput("legacy output")
             assert wait_for(lambda: any("legacy output" in row for row in terminal.screen.display))
             assert terminal.screen.margins is None
+
+    def test_abandoning_reservation_while_suspended_restores_the_legacy_display(self, terminal_harness) -> None:
+        """The reservation can stop while the display is paused for a guest. There is no UI
+        loop to switch the live layout on then, but the display must still come back as the
+        legacy one -- filler, native toolbar, proxy -- rather than the empty reserved layout
+        with no bridge behind it."""
+        harness, terminal = terminal_harness
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            reserved = harness.app.reserved_toolbar
+            display = harness.app._command_toolbar
+            with harness.app.suspend_bottom_toolbar():
+                reserved.stop()
+            assert reserved.bridge is None
+            assert len(display._layout.container.children) == 3
+            assert display._proxy is not None
+            assert all(stream.serializer is None for stream in display._streams)
+            harness.app.main_session.bottom_toolbar = "RECOVERED"
+            display.app.invalidate()
+            assert wait_for(lambda: any(row.startswith("RECOVERED") for row in terminal.screen.display))
+            harness.app.poutput("legacy output")
+            assert wait_for(lambda: any("legacy output" in row for row in terminal.screen.display))
+        assert terminal.screen.margins is None
 
     def test_the_pager_draws_its_content_over_the_reserved_toolbar(self, terminal_harness) -> None:
         harness, terminal = terminal_harness

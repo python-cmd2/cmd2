@@ -164,6 +164,12 @@ class ReservedToolbar:
             raise RuntimeError("cannot locate the session's bottom toolbar window")
 
         display = TerminalDisplay(app.output, reserved_rows=self._reserved_rows)
+        if not display.terminal.supports_reservation:
+            # Mode selection refuses an unqualified backend before this runs, so this is for
+            # a caller using the class directly. Nothing is bound: a terminal below the floor
+            # keeps a lease and a bridge for the resize that may make a reservation possible,
+            # but an unqualified backend can never reserve, whatever its size.
+            return False
         display.acquire()
 
         self._display = display
@@ -290,6 +296,7 @@ class ReservedToolbar:
             self._painter.invalidate()
         if self._bridge is not None:
             self._bridge.forget_prompt_anchor()
+            self._bridge.forget_unfinished_command_output()
             self._bridge.require_resynchronization(reason)
 
     def refresh(self) -> bool:

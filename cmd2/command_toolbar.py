@@ -229,9 +229,9 @@ class CommandToolbar:
         # Legacy rendering still needs the filler to push its scrolling toolbar to the bottom.
         reserved = cmd.reserved_toolbar
         if reserved is not None and reserved.bridge is not None:
-            self._layout = Layout(HSplit([Window(height=0)]))
+            self._layout = self._reserved_layout()
         else:
-            self._layout = Layout(HSplit([Window(height=0), Window(), self.toolbar]))
+            self._layout = self._legacy_layout()
         self._display_stack: contextlib.ExitStack | None = None
         bindings = KeyBindings()
 
@@ -398,15 +398,36 @@ class CommandToolbar:
                 stream.serializer = None
                 stream.proxy = proxy
 
-    def _reservation_stopped(self) -> None:
-        """Restore legacy layout and routing on the UI loop after safe physical release."""
-        if self.app.loop is not None and self.app.is_running:
-            self.app.loop.call_soon_threadsafe(self._restore_legacy_display)
+    @staticmethod
+    def _reserved_layout() -> Layout:
+        """Build the command display's layout for reserved rendering: nothing of its own."""
+        return Layout(HSplit([Window(height=0)]))
 
-    def _restore_legacy_display(self) -> None:
-        """Replace the empty reserved display once its bridge has been removed."""
+    def _legacy_layout(self) -> Layout:
+        """Build the command display's layout for legacy rendering: a filler and the toolbar."""
+        return Layout(HSplit([Window(height=0), Window(), self.toolbar]))
+
+    def _reservation_stopped(self) -> None:
+        """Fall back to the legacy display once the reservation has been physically released.
+
+        The layout swap happens here, unconditionally: it needs no UI loop, and the next
+        resume reads it. The reservation can stop while the display is paused for a guest,
+        when there is no running loop to switch the live layout on -- swapping only from the
+        loop callback would bring the display back as the empty reserved layout with no
+        bridge behind it, and the native toolbar would never appear for the rest of the
+        command. Routing and the redraw of a display that *is* running need its loop.
+        """
         previous_layout = self._layout
-        self._layout = Layout(HSplit([Window(height=0), Window(), self.toolbar]))
+        self._layout = self._legacy_layout()
+        if self.app.loop is not None and self.app.is_running:
+            self.app.loop.call_soon_threadsafe(self._restore_legacy_display, previous_layout)
+
+    def _restore_legacy_display(self, previous_layout: Layout) -> None:
+        """Switch a running display over to legacy routing and layout, on its own loop.
+
+        :param previous_layout: the reserved layout the display was started with, replaced on
+            the application only if it is still the one in use
+        """
         if self._pausing or not self.app.is_running or self.app.is_done:
             return
         self._install_legacy_proxy()
