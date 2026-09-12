@@ -98,6 +98,19 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish) -> None
                 return
         pytest.fail(f"terminal condition timed out:\n{transcript}")
 
+    def stopped(*pids: int) -> bool:
+        """Whether every process is stopped, not merely deprived of the terminal.
+
+        The shell takes the terminal back as soon as its child stops, but a grandchild still
+        blocked in a one-byte terminal read is woken by the stop signal and, if a keystroke
+        has arrived by then, consumes it before it stops. Typing has to wait for the whole job.
+        """
+        listing = subprocess.run(
+            ["ps", "-o", "stat=", "-p", ",".join(map(str, pids))], capture_output=True, text=True, check=False
+        )
+        states = listing.stdout.split()
+        return len(states) == len(pids) and all(state.startswith("T") for state in states)
+
     job_group = None
     try:
         wait_until(lambda: "OUTER> " in transcript)
@@ -107,9 +120,11 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish) -> None
         send(f"help -v | {shlex.quote(sys.executable)} {shlex.quote(str(pager))}\n")
         # Whole lines only: a traceback naming the marker must not satisfy the wait.
         wait_until(lambda: "PAGER_READY\r\n" in transcript)
+        pager_process = int(pager_pid.read_text())
         for rows in (12, 24):
             send("\x1a")
             wait_until(lambda: os.tcgetpgrp(master) == process.pid)
+            wait_until(lambda: stopped(job_group, pager_process))
             start = len(transcript)
             # A child left running can steal these keystrokes from the shell.
             send("printf 'SHELL_%s\\n' OWNS_INPUT\n")
