@@ -249,6 +249,53 @@ def test_proc_reader_terminate(pr_none) -> None:
         assert ret_code == -signal.SIGTERM
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+@pytest.mark.parametrize("already_exited", [False, True])
+def test_proc_reader_terminate_terminal_job(already_exited) -> None:
+    proc = mock.Mock(stdout=None, stderr=None)
+    reader = cu.ProcReader(proc, sys.stdout, sys.stderr)
+    reader._terminal_fd = 10
+    with mock.patch("os.kill", side_effect=ProcessLookupError if already_exited else None) as kill:
+        reader.terminate()
+    kill.assert_called_once_with(proc.pid, signal.SIGTERM)
+    # Only the job watcher may reap this process; Popen.terminate() would poll it.
+    proc.terminate.assert_not_called()
+    proc.poll.assert_not_called()
+    proc.wait.assert_not_called()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+@pytest.mark.parametrize("stop_signal", ["SIGTTIN", "SIGTTOU"])
+def test_proc_reader_resumes_terminal_access_after_borrow(stop_signal) -> None:
+    proc = mock.Mock(pid=123, stdout=None, stderr=None, returncode=None)
+    reader = cu.ProcReader(proc, sys.stdout, sys.stderr)
+    reader._terminal_fd = 10
+    reader._original_group = 456
+    stopped_status = (getattr(signal, stop_signal) << 8) | 0x7F
+    with (
+        mock.patch("os.waitpid", side_effect=[(proc.pid, stopped_status), (proc.pid, 0)]),
+        mock.patch("os.tcgetpgrp", return_value=proc.pid),
+        mock.patch.object(reader, "_set_foreground_group") as foreground,
+        mock.patch.object(reader._terminal_available, "wait", return_value=True) as available,
+        mock.patch("os.killpg") as killpg,
+        mock.patch("signal.raise_signal") as stop,
+    ):
+        reader._wait_for_job(10)
+    available.assert_called_once_with()
+    killpg.assert_called_once_with(proc.pid, signal.SIGCONT)
+    stop.assert_not_called()
+    foreground.assert_called_once_with(10, reader._original_group)
+    assert proc.returncode == 0
+    assert reader._process_done.is_set()
+
+
+def test_proc_reader_wait_for_exit_without_terminal() -> None:
+    proc = mock.Mock(stdout=None, stderr=None)
+    reader = cu.ProcReader(proc, sys.stdout, sys.stderr)
+    reader.wait_for_exit(timeout=0.2)
+    proc.wait.assert_called_once_with(0.2)
+
+
 @pytest.fixture
 def context_flag():
     return cu.ContextFlag()
