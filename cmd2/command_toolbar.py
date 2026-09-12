@@ -410,10 +410,16 @@ class CommandToolbar:
         Off for ordinary command output, which the empty command display must not repaint; on
         again for the pager, whose full screen must render, and for the main prompt once the
         display has given the terminal back.
+
+        The bridge is reached directly rather than through ``_reserved_bridge()``, which
+        returns nothing while the reservation is inactive. A terminal that shrank below the
+        two-row floor mid-command has an inactive reservation but a live bridge, and clearing
+        suppression when the command ends must still reach it -- otherwise the main prompt
+        stays suppressed and invisible once the terminal grows back.
         """
-        bridge = self._reserved_bridge()
-        if bridge is not None:
-            bridge.set_render_suppressed(suppressed)
+        reserved = self.cmd.reserved_toolbar
+        if reserved is not None and reserved.bridge is not None:
+            reserved.bridge.set_render_suppressed(suppressed)
 
     def _app_exited(self) -> None:
         """Give the terminal back to the streams when the display stops on its own.

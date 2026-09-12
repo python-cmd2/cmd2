@@ -320,6 +320,22 @@ class TestPartialLines:
             assert terminal.screen.display[usable - 2].startswith("PARTIALEND")
             assert terminal.screen.display[-1].startswith("STATUS")
 
+    def test_partial_output_survives_a_resize(self, terminal_harness) -> None:
+        """A resize during a command reflows the region but must not erase a line in progress;
+        the next write continues it."""
+        harness, terminal = terminal_harness
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            ui = harness.app._command_toolbar.app
+            harness.app.stdout.write("PARTIAL")
+            harness.app.stdout.flush()
+            resize(harness, terminal, 12, 80)
+            ui.loop.call_soon_threadsafe(ui._on_resize)
+            assert wait_for(lambda: terminal.screen.margins == pyte.screens.Margins(0, 10))
+            harness.app.stdout.write("END\n")
+            harness.app.stdout.flush()
+            assert terminal.screen.display[0].startswith("PARTIALEND")
+            assert terminal.screen.display[-1].startswith("STATUS")
+
     def test_partial_output_survives_the_command_display_shutdown(self, terminal_harness) -> None:
         """Leaving the command context stops the empty display, whose shutdown must not erase
         the command output still on the line."""

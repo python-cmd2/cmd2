@@ -567,7 +567,13 @@ class PromptToolkitBridge:
             else:
                 self._display.reconfigure()
         self.forget_prompt_anchor()
-        self.note_geometry_change()
+        # A prompt owes recovery: its origin has to be re-established from the terminal, and
+        # its frame repainted. A command does not -- it owns the cursor and is still writing
+        # to it, so a homing recovery would move the cursor off the line in progress. The
+        # region has been reinstalled and the toolbar repaints itself against the new
+        # geometry; the command's output and cursor are left exactly where they are.
+        if not self._render_suppressed:
+            self.note_geometry_change()
 
     def _fire_after_render_through_bridge(self) -> None:
         """Tell the application a frame was rendered, but only if one actually was.
@@ -630,6 +636,12 @@ class PromptToolkitBridge:
         # the old toolbar row up into the output. Reinstalling the region for the new size
         # first -- which also clears the old band -- keeps the erase bounded.
         self._reconfigure_if_resized()
+        if self._render_suppressed:
+            # The command display owns the terminal and draws nothing of its own, so this
+            # erase would only clear command output -- including a line left in progress. The
+            # region has been reinstalled for the new size and the toolbar repaints itself;
+            # the command's output stays, and its cursor with it.
+            return
         self._last_emission_committed = False
         with self._lock.transaction("erase"):
             try:

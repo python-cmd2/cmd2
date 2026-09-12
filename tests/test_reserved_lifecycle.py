@@ -235,6 +235,27 @@ class TestCommandOutputRouting:
         finally:
             harness.close()
 
+    def test_suppression_is_cleared_even_when_the_reservation_went_inactive(self) -> None:
+        """A terminal shrunk below the two-row floor mid-command has an inactive reservation
+        but a live bridge. Clearing render suppression when the command ends must still reach
+        that bridge, or the main prompt stays suppressed and invisible once the terminal grows
+        back."""
+        harness = Harness(mode="reserved", rows=24)
+        try:
+            with harness.app._reserved_toolbar_context():
+                bridge = harness.app.reserved_toolbar.bridge
+                assert bridge is not None
+                with harness.app._command_toolbar_context():
+                    assert bridge._render_suppressed is True
+                    # Shrink below the floor: the reservation releases but the bridge stays.
+                    harness.size = Size(rows=2, columns=80)
+                    assert harness.app.reserved_toolbar.display.reconfigure() is False
+                    assert harness.app.reserved_toolbar.is_active is False
+                # The command has ended: suppression must be off despite the inactive lease.
+                assert bridge._render_suppressed is False
+        finally:
+            harness.close()
+
     def test_command_output_tells_the_bridge_inside_the_write(self) -> None:
         """The Stage 3 contract: the bridge learns of the output as part of the emitting
         transaction, so its generation advances and any remembered origin is forgotten."""
