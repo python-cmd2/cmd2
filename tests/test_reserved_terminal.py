@@ -7,12 +7,15 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace
+from typing import Any
+from unittest import mock
 
 import pyte
 import pytest
 from prompt_toolkit.application import run_in_terminal
 from prompt_toolkit.data_structures import Size
 
+from cmd2 import command_toolbar
 from cmd2.reserved_toolbar import ReservedToolbar
 from cmd2.utils import StdSim
 
@@ -560,6 +563,50 @@ class TestPartialLines:
             assert terminal.screen.display[-1].startswith("STATUS")
 
 
+PAGER_BODY = "\n".join(f"row {index:03d}" for index in range(200))
+
+
+def run_pager(harness, terminal, while_open=None) -> bool:
+    """Page a body taller than the screen on the command display, then quit the pager.
+
+    ``while_open`` runs on the driving thread once the pager has painted its first screen.
+    The quit key is sent either way, so a pager that never draws fails the caller's
+    assertion instead of hanging the blocking ``page()`` call forever.
+
+    :return: whether the pager drew its first screen
+    """
+    display = harness.app._command_toolbar
+    shown = threading.Event()
+    created: list[Any] = []
+    real_pager = command_toolbar.Pager
+
+    def make_pager(*args: Any, **kwargs: Any) -> Any:
+        pager = real_pager(*args, **kwargs)
+        created.append(pager)
+        return pager
+
+    def drive() -> None:
+        try:
+            if wait_for(lambda: terminal.screen.display[0].startswith("row 000")):
+                shown.set()
+                if while_open is not None:
+                    while_open()
+        finally:
+            harness.pipe.send_text("q")
+            # A pager that no longer answers its quit key -- its layout swapped out from
+            # under it, say -- would leave page() blocked forever. Close it by hand so the
+            # test fails on the assertion instead of hanging.
+            if created and not wait_for(created[0].closed.is_set, timeout=3):
+                created[0].closed.set()
+                raise AssertionError("the pager did not close on its quit key")
+
+    with mock.patch.object(command_toolbar, "Pager", make_pager), ThreadPoolExecutor() as executor:
+        future = executor.submit(drive)
+        display.page(PAGER_BODY, chop=False)
+        future.result(timeout=5)
+    return shown.is_set()
+
+
 class TestPager:
     """The built-in pager renders a full screen of its own, so its frames must not be
     suppressed the way an ordinary command's empty frames are."""
@@ -621,21 +668,22 @@ class TestPager:
         with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
             reserved = harness.app.reserved_toolbar
             display = harness.app._command_toolbar
-            body = "\n".join(f"row {index:03d}" for index in range(200))
+            seen: dict[str, bool] = {}
 
-            def drive() -> None:
-                try:
-                    if wait_for(lambda: terminal.screen.display[0].startswith("row 000")):
-                        display.app.loop.call_soon_threadsafe(reserved.stop)
-                        wait_for(lambda: reserved.bridge is None)
-                finally:
-                    harness.pipe.send_text("q")
+            def stop_mid_page() -> None:
+                emitted_before = len(terminal.getvalue())
+                display.app.loop.call_soon_threadsafe(reserved.stop)
+                assert wait_for(lambda: reserved.bridge is None)
+                # The fallback must not drop out of the pager: its screen stays up, and the
+                # native toolbar is visible on its bottom row while it is open. The emulator
+                # does not model the alternate screen, so the flash a renderer reset would
+                # cause is checked on the wire: the sequence that quits it is never sent.
+                seen["toolbar"] = wait_for(lambda: terminal.screen.display[-1].startswith("STATUS"))
+                seen["pager"] = terminal.screen.display[0].startswith("row 000")
+                seen["stayed_in_pager"] = "\x1b[?1049l" not in terminal.getvalue()[emitted_before:]
 
-            with ThreadPoolExecutor() as executor:
-                future = executor.submit(drive)
-                display.page(body, chop=False)
-                future.result(timeout=5)
-
+            assert run_pager(harness, terminal, while_open=stop_mid_page)
+            assert seen == {"toolbar": True, "pager": True, "stayed_in_pager": True}
             assert reserved.bridge is None
             assert len(display.app.layout.container.children) == 3
             harness.app.main_session.bottom_toolbar = "RECOVERED"
@@ -646,29 +694,51 @@ class TestPager:
     def test_the_pager_draws_its_content_over_the_reserved_toolbar(self, terminal_harness) -> None:
         harness, terminal = terminal_harness
         with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
-            display = harness.app._command_toolbar
-            body = "\n".join(f"row {index:03d}" for index in range(200))
-            shown = threading.Event()
-
-            def drive() -> None:
-                # Wait until the pager has painted its first screen, then quit it. Quit either
-                # way, so a pager that never draws fails the assertion instead of hanging the
-                # blocking page() call forever.
-                try:
-                    if wait_for(lambda: terminal.screen.display[0].startswith("row 000")):
-                        shown.set()
-                finally:
-                    harness.pipe.send_text("q")
-
-            with ThreadPoolExecutor() as executor:
-                future = executor.submit(drive)
-                display.page(body, chop=False)
-                future.result(timeout=5)
-
-            assert shown.is_set(), "the pager never drew its content"
+            assert run_pager(harness, terminal), "the pager never drew its content"
             # The toolbar is suppressed again for ordinary output once the pager has closed.
             assert harness.app.reserved_toolbar.bridge._render_suppressed is True
         assert terminal.screen.margins is None
+
+    def test_pager_teardown_restores_the_display_even_if_leaving_raises(self, terminal_harness, monkeypatch) -> None:
+        """If the display cannot run the pager's exit on its own loop -- here the exit's erase
+        raises -- page() must still put the display back itself. Left as the pager's, the
+        full-screen flag and editing mode would carry into the next main prompt."""
+        harness, terminal = terminal_harness
+        created: list[Any] = []
+        real_pager = command_toolbar.Pager
+
+        def make_pager(*args: Any, **kwargs: Any) -> Any:
+            pager = real_pager(*args, **kwargs)
+            created.append(pager)
+            return pager
+
+        monkeypatch.setattr(command_toolbar, "Pager", make_pager)
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            display = harness.app._command_toolbar
+            bindings = display.app.key_bindings
+            editing_mode = display.app.editing_mode
+
+            def erase_fails() -> None:
+                raise ValueError("erase failed")
+
+            def drive() -> None:
+                assert wait_for(lambda: terminal.screen.display[0].startswith("row 000"))
+                # The exit's first act is an erase; make it raise, then end the pager without
+                # its quit key so the exit runs from page()'s own teardown.
+                monkeypatch.setattr(display.app.renderer, "erase", erase_fails)
+                created[0].closed.set()
+
+            with ThreadPoolExecutor() as executor:
+                future = executor.submit(drive)
+                with pytest.raises(ValueError, match="erase failed"):
+                    display.page(PAGER_BODY, chop=False)
+                future.result(timeout=5)
+
+            assert display.app.full_screen is False
+            assert display.app.renderer.full_screen is False
+            assert display.app.layout is display._layout
+            assert display.app.key_bindings is display._bindings or display.app.key_bindings is bindings
+            assert display.app.editing_mode is editing_mode
 
     def test_output_that_fits_is_printed_without_a_pager(self, terminal_harness) -> None:
         harness, terminal = terminal_harness

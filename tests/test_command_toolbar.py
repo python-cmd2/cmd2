@@ -1173,6 +1173,6 @@ def test_restoring_the_legacy_display_on_a_stopped_display_changes_nothing(toolb
         display = app._command_toolbar
         assert display is not None
     layout = app.main_session.app.layout
-    display._restore_legacy_display(display._layout)
+    display._restore_legacy_display()
     assert display._proxy is None
     assert app.main_session.app.layout is layout

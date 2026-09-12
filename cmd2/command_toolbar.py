@@ -341,7 +341,9 @@ class CommandToolbar:
         # a line the last command left in progress. Its final frame is a suppressed no-op
         # instead, which leaves that output alone.
         erase_when_done = self._reserved_bridge() is None
-        for name, value in (("layout", self._layout), ("key_bindings", self._bindings), ("erase_when_done", erase_when_done)):
+        stack.callback(setattr, self.app, "layout", self.app.layout)
+        self._apply_display_layout()
+        for name, value in (("key_bindings", self._bindings), ("erase_when_done", erase_when_done)):
             stack.callback(setattr, self.app, name, getattr(self.app, name))
             setattr(self.app, name, value)
         self.app.after_render += self._display_started
@@ -417,23 +419,34 @@ class CommandToolbar:
         bridge behind it, and the native toolbar would never appear for the rest of the
         command. Routing and the redraw of a display that *is* running need its loop.
         """
-        previous_layout = self._layout
         self._layout = self._legacy_layout()
         if self.app.loop is not None and self.app.is_running:
-            self.app.loop.call_soon_threadsafe(self._restore_legacy_display, previous_layout)
+            self.app.loop.call_soon_threadsafe(self._restore_legacy_display)
 
-    def _restore_legacy_display(self, previous_layout: Layout) -> None:
-        """Switch a running display over to legacy routing and layout, on its own loop.
+    def _apply_display_layout(self) -> None:
+        """Put the display's own layout on the application.
 
-        :param previous_layout: the reserved layout the display was started with, replaced on
-            the application only if it is still the one in use
+        The one place that assignment is made from ``_layout``. The display's layout can
+        change while a command runs -- the reservation being abandoned switches it to the
+        legacy one -- and everything that hands the application back to the display, whether
+        a resume or the pager's exit, comes through here and so picks up whichever it is now.
         """
+        self.app.layout = self._layout
+
+    def _restore_legacy_display(self) -> None:
+        """Switch a running display over to legacy routing and layout, on its own loop."""
         if self._pausing or not self.app.is_running or self.app.is_done:
             return
         self._install_legacy_proxy()
-        if self.app.layout is previous_layout:
-            self.app.layout = self._layout
         self.app.erase_when_done = True
+        if self.app.full_screen:
+            # The pager is on screen. Its exit applies the display's layout and resets the
+            # renderer; doing either here would quit the alternate screen under it and flash
+            # the command output through. Routing is switched now, and a redraw shows the
+            # native toolbar on the pager's bottom row; the rest waits for the pager's exit.
+            self.app.invalidate()
+            return
+        self._apply_display_layout()
         self.app.renderer.reset()
         self.app.renderer.request_absolute_cursor_position()
         self.app.invalidate()
@@ -550,7 +563,7 @@ class CommandToolbar:
                     # Bounded, so a render callback blocked inside the display cannot hold the
                     # thread that is tearing it down.
                     self._thread.join(timeout=_SHUTDOWN_TIMEOUT)
-                    if self._thread.is_alive():
+                    if self.thread_is_alive:
                         self._abandon_stuck_display()
                 self._finish_pause()
         finally:
@@ -669,7 +682,7 @@ class CommandToolbar:
                 return value
 
     def _check_running(self) -> None:
-        if self._thread is None or not self._thread.is_alive():
+        if not self.thread_is_alive:
             if self._error is not None:
                 raise self._error
             raise EOFError
@@ -691,12 +704,22 @@ class CommandToolbar:
             filter=Condition(lambda: suspend_to_background_supported() and to_filter(self.cmd.main_session.enable_suspend)()),
         )(self._suspend_binding)
         layout = Layout(HSplit([pager.container, self.toolbar]), focused_element=pager.text)
-        # The layout is deliberately not saved here. The display's layout can change while the
-        # pager is open -- a reservation abandoned mid-page switches it to the legacy one -- and
-        # restoring the layout saved on entry would put the obsolete reserved layout back,
-        # leaving no toolbar. Pager exit reads the display's current layout instead.
         previous = (self.app.key_bindings, self.app.editing_mode, self.app.full_screen)
         entered = False
+        restored = False
+
+        def restore() -> None:
+            """Give the application back to the display, whichever thread is doing it.
+
+            Plain attribute assignments, so this is safe from the display's loop and from the
+            command thread alike. The layout is not restored from a saved copy: the display's
+            layout can change while the pager is open, and the accessor applies the current one.
+            """
+            nonlocal restored
+            restored = True
+            self._apply_display_layout()
+            self.app.key_bindings, self.app.editing_mode, self.app.full_screen = previous
+            self.app.renderer.full_screen = self.app.full_screen
 
         def enter() -> None:
             nonlocal entered
@@ -718,9 +741,7 @@ class CommandToolbar:
                 return
             entered = False
             self.app.renderer.erase()
-            self.app.layout = self._layout
-            self.app.key_bindings, self.app.editing_mode, self.app.full_screen = previous
-            self.app.renderer.full_screen = self.app.full_screen
+            restore()
             self.app.renderer.request_absolute_cursor_position()
             # Back to ordinary command output, whose frames are suppressed again so the toolbar
             # stays put. Command finalization and the next prompt lift this in turn.
@@ -740,13 +761,16 @@ class CommandToolbar:
             while not pager.closed.wait(0.1):
                 self._check_running()
         finally:
-            if self._thread is not None and self._thread.is_alive():
-                self._call_in_ui(leave)
-            else:
-                # The application's shutdown already reset the renderer.
-                self.app.layout = self._layout
-                self.app.key_bindings, self.app.editing_mode, self.app.full_screen = previous
-                self.app.renderer.full_screen = self.app.full_screen
+            try:
+                if self.thread_is_alive:
+                    self._call_in_ui(leave)
+            finally:
+                # Restored here if the exit never ran: the display had already shut down (its
+                # shutdown reset the renderer itself), or the display died between the check
+                # and the callback, or the exit raised before restoring. Left as the pager's,
+                # the full-screen flag and editing mode would carry into the next prompt.
+                if not restored:
+                    restore()
 
     @contextlib.contextmanager
     def suspend(self) -> Iterator[None]:
