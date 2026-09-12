@@ -2183,7 +2183,11 @@ class Cmd:
         inherits the terminal knows nothing about a scroll region and would find its output
         confined to rows it never asked for. The rows are taken again afterwards.
         """
-        with self._quiesce_bottom_toolbar():
+        reader = self._cur_pipe_proc_reader
+        with (
+            reader.borrow_terminal() if reader is not None else contextlib.nullcontext(),
+            self._quiesce_bottom_toolbar(),
+        ):
             reserved = self._reserved_toolbar
 
             if reserved is None:
@@ -3531,9 +3535,8 @@ class Cmd:
             subproc_stdin = open(read_fd, encoding="utf-8")  # noqa: SIM115
             new_stdout: TextIO = cast(TextIO, open(write_fd, "w", encoding="utf-8"))  # noqa: SIM115
 
-            # Captured pipelines use isolated groups for ordered Ctrl-C forwarding.
-            # Terminal-attached POSIX pipelines must instead belong to our foreground
-            # job, so Ctrl-Z and the shell's fg stop/resume every terminal reader together.
+            # Isolate pipeline signals from cmd2. Terminal pipelines receive the
+            # foreground terminal; ProcReader relays their job-control stops.
             kwargs: dict[str, Any] = {}
             if sys.platform == "win32":
                 kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
@@ -3553,10 +3556,18 @@ class Cmd:
             )
             pipe_stderr = None if isinstance(sys.stderr, utils.StdSim) else command_toolbar.pipe_target(sys.stderr)
 
+            terminal_fd = None
             if sys.platform != "win32":
-                kwargs["start_new_session"] = not any(
-                    stream is not None and stream.isatty() for stream in (pipe_stdout, pipe_stderr)
-                )
+                for stream in (pipe_stdout, pipe_stderr):
+                    if stream is not None and stream.isatty():
+                        with contextlib.suppress(OSError, ValueError):
+                            if os.tcgetpgrp(stream.fileno()) == os.getpgrp():
+                                terminal_fd = stream.fileno()
+                                break
+                if terminal_fd is None:
+                    kwargs["start_new_session"] = True
+                else:
+                    kwargs["process_group"] = 0
 
             with contextlib.ExitStack() as terminal_stack:
                 # The toolbar can neither draw nor hold the keyboard while a pipe process owns
@@ -3572,21 +3583,36 @@ class Cmd:
                     shell=True,
                     **kwargs,
                 )
+                if terminal_fd is not None:
+                    import signal
+
+                    # The producer may still write diagnostics while the consumer owns
+                    # the terminal. Block SIGTTOU after Popen so the child retains normal
+                    # job-control behavior, and restore our mask with the handoff.
+                    previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTTOU})
+                    terminal_stack.callback(signal.pthread_sigmask, signal.SIG_SETMASK, previous_mask)
+                    cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr, terminal_fd=terminal_fd)
 
                 # Popen was called with shell=True so the user can chain pipe commands and redirect their output
                 # like: !ls -l | grep user | wc -l > out.txt. But this makes it difficult to know if the pipe process
                 # started OK, since the shell itself always starts. Therefore, we will wait a short time and check
                 # if the pipe process is still running.
                 with contextlib.suppress(subprocess.TimeoutExpired):
-                    proc.wait(0.2)
+                    if cmd_pipe_proc_reader is None:
+                        proc.wait(0.2)
+                    else:
+                        cmd_pipe_proc_reader.wait_for_exit(0.2)
 
                 # Check if the pipe process already exited
                 if proc.returncode is not None:
+                    if cmd_pipe_proc_reader is not None:
+                        cmd_pipe_proc_reader.wait()
                     subproc_stdin.close()
                     new_stdout.close()
                     raise RedirectionError(f"Pipe process exited with code {proc.returncode} before command could run")
                 redir_saved_state.redirecting = True
-                cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
+                if cmd_pipe_proc_reader is None:
+                    cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
 
                 self.stdout = new_stdout
 
@@ -3807,7 +3833,11 @@ class Cmd:
         """
         reserved = self._reserved_toolbar
         owns_the_reservation = session is self.main_session or (reserved is not None and reserved.can_manage(session))
-        with self._quiesce_bottom_toolbar() if owns_the_reservation else self.suspend_bottom_toolbar():
+        reader = self._cur_pipe_proc_reader
+        with (
+            reader.borrow_terminal() if reader is not None else contextlib.nullcontext(),
+            self._quiesce_bottom_toolbar() if owns_the_reservation else self.suspend_bottom_toolbar(),
+        ):
             if owns_the_reservation and reserved is not None and reserved.bridge is not None:
                 reserved.bridge.finish_command_output()
                 with reserved.prompt_session(session):

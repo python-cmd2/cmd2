@@ -133,7 +133,10 @@ def test_pipeline_process_group_selection(toolbar_app, tmp_path, monkeypatch, ru
             assert options["creationflags"] == subprocess.CREATE_NEW_PROCESS_GROUP
             assert "start_new_session" not in options
         else:
-            assert options["start_new_session"] == (not (stdout_tty or stderr_tty))
+            # A stream claiming isatty() is insufficient: these files do not
+            # refer to our controlling terminal, so no foreground handoff is safe.
+            assert options["start_new_session"]
+            assert "process_group" not in options
 
 
 @pytest.mark.parametrize("builtin_pager", [False, True])
