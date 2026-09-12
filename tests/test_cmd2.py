@@ -865,7 +865,11 @@ def test_pipe_to_shell_and_redirect(redirection_app, running_pipe_process) -> No
     os.remove(filename)
 
 
-def test_pipe_to_shell_error(redirection_app, mocker, capsys) -> None:
+@pytest.mark.parametrize(
+    "terminal",
+    [False, pytest.param(True, marks=pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control"))],
+)
+def test_pipe_to_shell_error(redirection_app, mocker, capsys, terminal) -> None:
     """An already-exited pipe process must be reported before the command runs.
 
     A real nonexistent command may take longer than the startup probe under load.
@@ -876,12 +880,35 @@ def test_pipe_to_shell_error(redirection_app, mocker, capsys) -> None:
     process = popen.return_value
     process.returncode = 127
     process.wait.return_value = 127
+    if terminal:
+        target = mocker.Mock()
+        target.isatty.return_value = True
+        target.fileno.return_value = 10
+        mocker.patch("cmd2.command_toolbar.pipe_target", return_value=target)
+        mocker.patch("os.tcgetpgrp", return_value=os.getpgrp())
+        sigmask = mocker.patch("signal.pthread_sigmask", return_value=set())
+        reader = mocker.patch("cmd2.utils.ProcReader").return_value
 
-    out, err = run_cmd(redirection_app, "print_output | foobarbaz.this_does_not_exist")
+    if terminal:
+        # run_cmd captures stderr in a StdSim, which deliberately disables terminal handoff.
+        redirection_app.onecmd_plus_hooks("print_output | foobarbaz.this_does_not_exist")
+        out, error_text = capsys.readouterr()
+        err = error_text.splitlines()
+    else:
+        out, err = run_cmd(redirection_app, "print_output | foobarbaz.this_does_not_exist")
     assert not out
     assert "Pipe process exited with code 127 before command could run" in " ".join(err)
     assert capsys.readouterr().out == ""
-    process.wait.assert_called_once()
+    if terminal:
+        reader.wait_for_exit.assert_called_once_with(0.2)
+        reader.wait.assert_called_once_with()
+        process.wait.assert_not_called()
+        assert sigmask.call_args_list == [
+            mock.call(signal.SIG_BLOCK, {signal.SIGTTOU}),
+            mock.call(signal.SIG_SETMASK, set()),
+        ]
+    else:
+        process.wait.assert_called_once()
     assert popen.call_args.kwargs["stdin"].closed
 
 

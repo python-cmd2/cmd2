@@ -2,6 +2,7 @@
 
 import asyncio
 import io
+import signal
 import sys
 import threading
 import time
@@ -14,6 +15,8 @@ import pyte
 import pytest
 from prompt_toolkit.application import run_in_terminal
 from prompt_toolkit.data_structures import Size
+from prompt_toolkit.shortcuts import PromptSession
+from prompt_toolkit.shortcuts.choice_input import ChoiceInput
 
 from cmd2 import command_toolbar
 from cmd2.reserved_toolbar import ReservedToolbar
@@ -297,6 +300,76 @@ class TestResize:
     attached, so the poll on ``output.get_size()`` is the only way a resize arrives there.
     """
 
+    @pytest.mark.parametrize("terminal_harness", [2, 3], indirect=True)
+    @pytest.mark.parametrize("text", ["", "typed"])
+    def test_minimum_height_reacquisition_through_idle_polling(self, terminal_harness, monkeypatch, text) -> None:
+        """Fallback can erase a cached band before growth returns to exactly the same size."""
+        harness, terminal = terminal_harness
+        ui = harness.app.main_session.app
+        ui.terminal_size_polling_interval = 0.01
+        task = None
+        polls = 0
+        errors = []
+
+        async def until(predicate):
+            async with asyncio.timeout(5):
+                while not predicate():  # noqa: ASYNC110 - observe upstream state without driving a redraw
+                    await asyncio.sleep(0.01)
+
+        async def transitions():
+            try:
+                if text:
+                    harness.pipe.send_text(text)
+                    await until(lambda: ui.current_buffer.text == text)
+                for rows, columns in ((3, 80), (2, 80), (3, 80), (4, 40), (24, 100), (3, 80), (2, 80), (3, 80)):
+                    baseline = polls
+                    # Let upstream establish/settle its size baseline before changing it.
+                    await until(lambda baseline=baseline: polls >= baseline + 2)
+                    if harness.size != Size(rows=rows, columns=columns):
+                        resize(harness, terminal, rows, columns)
+                    toolbar = harness.app.reserved_toolbar
+                    await until(lambda toolbar=toolbar, rows=rows: toolbar.is_active == (rows >= 3))
+                    if rows >= 3:
+                        await until(lambda toolbar=toolbar, rows=rows: toolbar.display.geometry.physical_rows == rows)
+                        await until(lambda: terminal.screen.display[-1].startswith("STATUS"))
+                    await until(lambda: any(row.startswith("TEST> " + text) for row in terminal.screen.display))
+                    assert ui.current_buffer.text == text
+                    assert ui.current_buffer.cursor_position == len(text)
+            except Exception as error:  # noqa: BLE001 - report outside prompt-toolkit's event loop
+                errors.append(error)
+            finally:
+                harness.pipe.send_text("\n")
+
+        def ready(app):
+            nonlocal task
+            if task is None:
+                task = ui.create_background_task(transitions())
+
+        ui.after_render += ready
+        try:
+            with harness.app._reserved_toolbar_context():
+                get_size = ui.output.get_size
+
+                def observe_size():
+                    nonlocal polls
+                    try:
+                        current = asyncio.current_task()
+                    except RuntimeError:
+                        current = None
+                    if current is not None and current.get_coro().__name__ == "_poll_output_size":
+                        polls += 1
+                    return get_size()
+
+                monkeypatch.setattr(ui.output, "get_size", observe_size)
+                assert harness.app._read_raw_input("TEST> ", harness.app.main_session) == text
+                assert task is not None
+                task.result()
+                if errors:
+                    raise errors[0]
+        finally:
+            ui.after_render -= ready
+        assert terminal.screen.margins is None
+
     @pytest.mark.parametrize("terminal_harness", [2], indirect=True)
     def test_initially_short_prompt_grows_and_accepts_visible_input(self, terminal_harness) -> None:
         harness, terminal = terminal_harness
@@ -326,6 +399,45 @@ class TestResize:
             watchdog.cancel()
             watchdog.join()
             ui.after_render -= ready
+
+    @pytest.mark.parametrize("terminal_harness", [3], indirect=True)
+    @pytest.mark.parametrize("partial", ["", "PARTIAL"])
+    def test_quiet_command_reacquires_the_same_band(self, terminal_harness, monkeypatch, partial) -> None:
+        """The command poll restores the whole band without disturbing unfinished output."""
+        harness, terminal = terminal_harness
+        harness.app.main_session.app.terminal_size_polling_interval = 0.01
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            toolbar = harness.app.reserved_toolbar
+            output = harness.app._command_toolbar.app.output
+            get_size = output.get_size
+            polls = 0
+
+            def observe_size():
+                nonlocal polls
+                try:
+                    current = asyncio.current_task()
+                except RuntimeError:
+                    current = None
+                if current is not None and current.get_coro().__name__ == "_poll_output_size":
+                    polls += 1
+                return get_size()
+
+            monkeypatch.setattr(output, "get_size", observe_size)
+            harness.app.stdout.write(partial)
+            harness.app.stdout.flush()
+            for rows in (2, 3, 4, 3, 2, 3):
+                baseline = polls
+                assert wait_for(lambda baseline=baseline: polls >= baseline + 2)
+                resize(harness, terminal, rows, 80)
+                assert wait_for(lambda rows=rows: toolbar.is_active == (rows >= 3))
+                if rows >= 3:
+                    assert wait_for(lambda rows=rows: toolbar.display.geometry.physical_rows == rows)
+                    assert wait_for(lambda: terminal.screen.display[-1].startswith("STATUS"))
+                if partial:
+                    assert any(row.startswith(partial) for row in terminal.screen.display)
+            harness.app.poutput(" COMPLETE")
+            assert any(row.startswith(partial + " COMPLETE") for row in terminal.screen.display)
+        assert terminal.screen.margins is None
 
     @pytest.mark.parametrize("terminal_harness", [2], indirect=True)
     def test_initially_short_terminal_acquires_during_a_quiet_command(self, terminal_harness, monkeypatch) -> None:
@@ -609,7 +721,284 @@ def run_pager(harness, terminal, while_open=None) -> bool:
     return shown.is_set()
 
 
+class TestNestedPrompts:
+    def test_abandoning_reservation_during_nested_input_restores_both_owners(self, terminal_harness) -> None:
+        harness, terminal = terminal_harness
+        session = PromptSession(input=harness.pipe, output=harness.backend, bottom_toolbar="STATUS")
+        original_render = session.app.renderer.render
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            reserved = harness.app.reserved_toolbar
+
+            def abandon():
+                reserved.stop()
+                harness.pipe.send_text("answer\n")
+
+            assert harness.app._read_raw_input("Nested: ", session, pre_run=abandon) == "answer"
+            assert reserved.bridge is None
+            assert session.app.output is harness.backend
+            assert session.app.renderer.render == original_render
+            assert harness.app._command_toolbar._proxy is not None
+            assert terminal.screen.margins is None
+
+    def test_nested_resize_and_failed_guest_restore_the_main_owner(self, terminal_harness) -> None:
+        harness, terminal = terminal_harness
+        session = PromptSession(input=harness.pipe, output=harness.backend, bottom_toolbar="STATUS")
+        original = session.app.renderer.render
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            main_bridge = harness.app.reserved_toolbar.bridge
+
+            def fail():
+                resize(harness, terminal, 12, 40)
+                session.app._on_resize()
+                raise ValueError("nested failure")
+
+            with pytest.raises(ValueError, match="nested failure"):
+                harness.app._read_raw_input("Nested: ", session, pre_run=fail)
+            assert harness.app.reserved_toolbar.bridge is main_bridge
+            assert session.app.renderer.render == original
+            assert terminal.screen.margins == pyte.screens.Margins(0, 10)
+            assert terminal.screen.display[-1].startswith("STATUS")
+            read_prompt(harness, terminal)
+
+    @pytest.mark.parametrize(
+        ("kind", "keys", "expected"),
+        [("input", "ans\t", "answer"), ("secret", "hidden-value\n", "hidden-value"), ("select", "\x1b[B\r", "two")],
+    )
+    def test_managed_input_keeps_the_band_and_one_reader(self, terminal_harness, kind, keys, expected) -> None:
+        harness, terminal = terminal_harness
+        created = []
+        seen = []
+        accepted = False
+        selected = False
+
+        def ready(app):
+            nonlocal accepted, selected
+            if not seen and app.renderer._min_available_height > 0:
+                seen.append((terminal.screen.margins, terminal.screen.display[-1]))
+                assert not harness.app._command_toolbar.thread_is_alive
+                harness.pipe.send_text(keys + ("" if kind == "input" else "trailing\n"))
+            elif kind == "input" and not selected and app.current_buffer.complete_state is not None:
+                selected = True
+                harness.pipe.send_text("\t")
+            elif kind == "input" and not accepted and app.current_buffer.text.rstrip() == "answer":
+                accepted = True
+                harness.pipe.send_text("\rtrailing\n")
+
+        def make_session(*args, **kwargs):
+            session = PromptSession(*args, **kwargs)
+            created.append(session)
+
+            session.app.after_render += ready
+            return session
+
+        original_create = ChoiceInput._create_application
+
+        def make_choice(choice):
+            app = original_create(choice)
+            app.after_render += ready
+            return app
+
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            before = len(terminal.getvalue())
+            watchdog = threading.Timer(5, harness.pipe.close)
+            watchdog.start()
+            try:
+                with (
+                    mock.patch("cmd2.cmd2.PromptSession", make_session),
+                    mock.patch.object(ChoiceInput, "_create_application", make_choice),
+                ):
+                    if kind == "input":
+                        result = harness.app.read_input("Value: ", choices=["answer"])
+                    elif kind == "secret":
+                        result = harness.app.read_secret("Secret: ")
+                    else:
+                        result = harness.app.select(["one", "two"])
+                assert result.rstrip() == expected
+                assert seen[0][0] == pyte.screens.Margins(0, 22)
+                assert seen[0][1].startswith("STATUS")
+                assert "\x1b[r" not in terminal.getvalue()[before:]
+                assert harness.app._command_toolbar.thread_is_alive
+                assert harness.app._read_raw_input("Next: ", harness.app.main_session) == "trailing"
+                assert not harness.app.reserved_toolbar._nested_bridges
+                if kind == "secret":
+                    assert "hidden-value" not in terminal.getvalue()
+            finally:
+                watchdog.cancel()
+                watchdog.join()
+
+    @pytest.mark.parametrize("keys", ["\x03", "\x04"])
+    def test_nested_input_interrupt_restores_bindings(self, terminal_harness, keys) -> None:
+        harness, terminal = terminal_harness
+        session = PromptSession(input=harness.pipe, output=harness.backend, bottom_toolbar="STATUS")
+        original_output = session.app.output
+        original_render = session.app.renderer.render
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            with pytest.raises((KeyboardInterrupt, EOFError)):
+                harness.app._read_raw_input("Nested: ", session, pre_run=lambda: harness.pipe.send_text(keys))
+            assert session.app.output is original_output
+            assert session.app.renderer.render == original_render
+            assert harness.app._command_toolbar.thread_is_alive
+            assert terminal.screen.margins == pyte.screens.Margins(0, 22)
+            assert terminal.screen.display[-1].startswith("STATUS")
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX job control")
+@pytest.mark.parametrize("owner", ["command", "prompt", "pager"])
+def test_ctrl_z_releases_before_signaling_and_reacquires_after_resume(terminal_harness, monkeypatch, owner) -> None:
+    harness, terminal = terminal_harness
+    harness.app.main_session.enable_suspend = True
+    stopped = threading.Event()
+    seen = []
+
+    def stop_process(pid, sig):
+        # This is the actual key-binding -> run_in_terminal -> signal path. The signal is
+        # replaced so the test runner never suspends itself or its parent process group.
+        seen.append((pid, sig, terminal.screen.margins, harness.app.main_session.app.output.get_size()))
+        assert harness.app.main_session.app._running_in_terminal
+        resize(harness, terminal, 12, 80)
+        stopped.set()
+
+    monkeypatch.setattr("cmd2.reserved_toolbar.os.kill", stop_process)
+    with harness.app._reserved_toolbar_context():
+        original_suspend = harness.app.main_session.app.suspend_to_background
+        if owner in ("command", "pager"):
+            with harness.app._command_toolbar_context():
+                display = harness.app._command_toolbar
+
+                def suspend() -> None:
+                    harness.pipe.send_text("\x1a")
+                    assert stopped.wait(5)
+                    display._call_in_ui(lambda: None)
+
+                if owner == "pager":
+                    assert run_pager(harness, terminal, while_open=suspend)
+                else:
+                    suspend()
+                assert terminal.screen.margins == pyte.screens.Margins(0, 10)
+                assert terminal.screen.display[-1].startswith("STATUS")
+        else:
+            ui = harness.app.main_session.app
+            accepted = False
+
+            def ready(app):
+                nonlocal accepted
+                if stopped.is_set() and not accepted:
+                    accepted = True
+                    harness.pipe.send_text("\n")
+
+            ui.after_render += ready
+            watchdog = threading.Timer(5, harness.pipe.close)
+            watchdog.start()
+            try:
+                assert (
+                    harness.app._read_raw_input(
+                        "TEST> ", harness.app.main_session, pre_run=lambda: harness.pipe.send_text("\x1a")
+                    )
+                    == ""
+                )
+                assert stopped.is_set()
+                assert terminal.screen.margins == pyte.screens.Margins(0, 10)
+            finally:
+                watchdog.cancel()
+                watchdog.join()
+                ui.after_render -= ready
+        assert seen == [(0, signal.SIGTSTP, None, Size(24, 80))]
+    assert terminal.screen.margins is None
+    assert harness.app.main_session.app.suspend_to_background != original_suspend
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX termination handler")
+def test_termination_unwinds_reserved_command_ownership(terminal_harness) -> None:
+    harness, terminal = terminal_harness
+    original_output = harness.app.main_session.app.output
+    displays = []
+
+    def terminate():
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            displays.append(harness.app._command_toolbar)
+            harness.app.termination_signal_handler(signal.SIGTERM, None)
+
+    with pytest.raises(SystemExit) as exit_info:
+        terminate()
+    assert exit_info.value.code == 128 + signal.SIGTERM
+    assert not displays[0].thread_is_alive
+    assert harness.app.main_session.app.output is original_output
+    assert terminal.screen.margins is None
+
+
 class TestPager:
+    @pytest.mark.parametrize("action", ["resume", "output", "external"])
+    def test_retained_startup_bar_is_cleared_before_output_or_external_handoff(self, terminal_harness, action) -> None:
+        harness, terminal = terminal_harness
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            reserved = harness.app.reserved_toolbar
+            with reserved.suspended(defer_band_clear=True):
+                assert terminal.screen.display[-1].startswith("STATUS")
+                if action == "output":
+                    # Blank lines can scroll the retained bar without overwriting its text.
+                    harness.app.stdout.write("\n" * 50)
+                    harness.app.stdout.flush()
+                elif action == "external":
+                    with reserved.suspended():
+                        assert terminal.screen.display[-1].strip() == ""
+                else:
+                    assert reserved.display._deferred_band is not None
+            assert reserved.display._deferred_band is None
+            assert terminal.screen.display[-1].startswith("STATUS")
+            history = ["".join(line[x].data for x in sorted(line)) for line in terminal.screen.history.top]
+            assert not any("STATUS" in row for row in history)
+
+    def test_toolbar_remains_visible_until_the_first_pager_frame_is_prepared(self, terminal_harness, monkeypatch) -> None:
+        harness, terminal = terminal_harness
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            reserved = harness.app.reserved_toolbar
+            display = harness.app._command_toolbar
+            original_prepare = reserved.bridge.prepare
+            seen = []
+
+            def prepare(*args, **kwargs):
+                frame = original_prepare(*args, **kwargs)
+                if display._paging and frame is not None and not seen:
+                    # Observe after the expensive layout work, before commit. Checking only
+                    # the completed pager would miss the blank interval while a file loads.
+                    seen.append(terminal.screen.display[-1])
+                    assert display.app.output.get_size() == Size(24, 80)
+                return frame
+
+            monkeypatch.setattr(reserved.bridge, "prepare", prepare)
+            assert run_pager(harness, terminal)
+            assert seen
+            assert seen[0].startswith("STATUS")
+            assert reserved.display._deferred_band is None
+            assert terminal.screen.display[-1].startswith("STATUS")
+
+    def test_first_pager_frame_uses_full_geometry(self, terminal_harness) -> None:
+        harness, terminal = terminal_harness
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            display = harness.app._command_toolbar
+            sizes = []
+
+            def before_render(app):
+                if display._paging:
+                    sizes.append(app.output.get_size())
+
+            display.app.before_render += before_render
+            try:
+                assert run_pager(harness, terminal)
+                assert sizes
+                assert all(size == Size(24, 80) for size in sizes)
+            finally:
+                display.app.before_render -= before_render
+
+    def test_exact_usable_height_does_not_open_a_pager(self, terminal_harness) -> None:
+        harness, terminal = terminal_harness
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            text = "\n".join(f"line {i}" for i in range(23))
+            with mock.patch.object(command_toolbar, "Pager", side_effect=AssertionError("unnecessary pager")):
+                harness.app._command_toolbar.page(text, chop=False)
+            assert any("line 22" in row for row in terminal.screen.display)
+            assert terminal.screen.display[-1].startswith("STATUS")
+
     """The built-in pager renders a full screen of its own, so its frames must not be
     suppressed the way an ordinary command's empty frames are."""
 
@@ -771,6 +1160,7 @@ class TestPager:
             assert not forced_close.is_set(), "the quit callback failed to release page()"
             assert display.app.full_screen is False
             assert display.app.renderer.full_screen is False
+            assert display.app.renderer._in_alternate_screen is False
             assert display.app.layout is display._layout
             assert display.app.key_bindings is display._bindings or display.app.key_bindings is bindings
             assert display.app.editing_mode is editing_mode
