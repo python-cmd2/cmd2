@@ -505,8 +505,10 @@ class TestPartialLines:
             harness.app.stdout.write("PARTIAL")
             harness.app.stdout.flush()
             resize(harness, terminal, 12, 80)
-            ui.loop.call_soon_threadsafe(ui._on_resize)
-            assert wait_for(lambda: terminal.screen.margins == pyte.screens.Margins(0, 10))
+            # Installing margins precedes the toolbar repaint. Wait for the entire resize
+            # callback before continuing output and inspecting the resulting screen.
+            harness.app._command_toolbar._call_in_ui(ui._on_resize)
+            assert terminal.screen.margins == pyte.screens.Margins(0, 10)
             harness.app.stdout.write("END\n")
             harness.app.stdout.flush()
             assert terminal.screen.display[0].startswith("PARTIALEND")
@@ -522,9 +524,9 @@ class TestPartialLines:
             harness.app.stdout.flush()
             assert (terminal.screen.cursor.x, terminal.screen.cursor.y + 1) == (len("PARTIAL"), 12)
             resize(harness, terminal, 12, 80)
-            ui.loop.call_soon_threadsafe(ui._on_resize)
-            assert wait_for(lambda: terminal.screen.margins == pyte.screens.Margins(0, 10))
-            assert wait_for(lambda: terminal.screen.display[-1].startswith("STATUS"))
+            harness.app._command_toolbar._call_in_ui(ui._on_resize)
+            assert terminal.screen.margins == pyte.screens.Margins(0, 10)
+            assert terminal.screen.display[-1].startswith("STATUS")
             # Row 12 is the band now; the line and its cursor were scrolled up to row 11.
             assert (terminal.screen.cursor.x, terminal.screen.cursor.y + 1) == (len("PARTIAL"), 11)
             assert terminal.screen.display[10].startswith("PARTIAL")
