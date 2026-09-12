@@ -548,14 +548,24 @@ class PromptToolkitBridge:
 
         The prompt origin is forgotten: a resize reflows the screen, so the remembered row is
         no longer where the prompt starts, and recovery re-establishes it from the terminal.
+
+        A terminal that shrank below the two-row floor is released but still leased -- it is
+        temporarily ineligible, not given up. When it grows back, its geometry is ``None`` yet
+        the reservation must be reacquired, so a released-but-leased display is remeasured here
+        too, distinct from a display whose loop has ended and holds no lease at all.
         """
         geometry = self._display.geometry
-        if geometry is None:
-            return
         with self._lock.transaction("resize"):
-            if self._display.terminal.physical_size() == geometry.physical_size:
+            if geometry is None:
+                # Released owner: the loop has ended and there is nothing to reacquire. A
+                # display still holding its lease is only temporarily below the floor, and
+                # reconfigure reinstalls the region once the terminal is eligible again.
+                if self._display.lease_depth == 0 or not self._display.reconfigure():
+                    return
+            elif self._display.terminal.physical_size() == geometry.physical_size:
                 return
-            self._display.reconfigure()
+            else:
+                self._display.reconfigure()
         self.forget_prompt_anchor()
         self.note_geometry_change()
 
@@ -614,6 +624,12 @@ class PromptToolkitBridge:
         if not self._bound:
             self._originals["erase"](leave_alternate_screen)
             return
+        # A resize is the reason the renderer is erasing here (prompt-toolkit erases, requests
+        # the cursor, then redraws). A terminal that resets its scroll margins on resize would
+        # make this bounded erase run against the whole screen, deleting lines and scrolling
+        # the old toolbar row up into the output. Reinstalling the region for the new size
+        # first -- which also clears the old band -- keeps the erase bounded.
+        self._reconfigure_if_resized()
         self._last_emission_committed = False
         with self._lock.transaction("erase"):
             try:

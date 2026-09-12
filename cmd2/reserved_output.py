@@ -80,12 +80,21 @@ class ReservedOutput(Output):
     def get_size(self) -> Size:
         """Report the usable region as the terminal's size.
 
-        :return: the virtual size, one reservation shorter than the physical terminal
+        The height is measured from the backend on each call and the reservation subtracted,
+        rather than returned from the cached geometry. The command display runs on a thread
+        where the window-change signal cannot be delivered, so prompt-toolkit's size poll --
+        which reads this -- is the only notice a resize gives it. A cached size would hide the
+        change until something else remeasured, and the poll would never fire the resize.
+        Column count and the reserved-row count come from the installed geometry; only the
+        physical height is re-read.
+
+        :return: the usable size, one reservation shorter than the physical terminal
         """
         geometry = self._display.geometry
         if geometry is None:
             return self._wrapped.get_size()
-        return geometry.virtual_size
+        physical = self._wrapped.get_size()
+        return Size(rows=max(0, physical.rows - geometry.reserved_rows), columns=physical.columns)
 
     def get_rows_below_cursor_position(self) -> int:
         """Report the distance from the cursor to the bottom of the *usable* region.

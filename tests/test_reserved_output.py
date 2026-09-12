@@ -67,12 +67,14 @@ class TestVirtualGeometry:
         assert adapter.get_size().rows == 23
 
     def test_the_virtual_size_follows_a_resize(self) -> None:
-        output, _stream = make_output(rows=24)
+        """The height is re-read from the backend, so a resize shows through immediately --
+        before any reconfigure -- which is what lets prompt-toolkit's size poll notice it."""
+        output, _stream, screen = make_shrinkable_output(rows=24, columns=80)
         display = TerminalDisplay(output)
         display.acquire()
         adapter = display.output
-        # Publish a taller generation the way reconfigure() does.
-        display._geometry = Geometry(generation=99, physical_rows=40, columns=80, reserved_rows=1)
+        assert adapter.get_size() == Size(rows=23, columns=80)
+        screen.rows = 40
         assert adapter.get_size() == Size(rows=39, columns=80)
 
 

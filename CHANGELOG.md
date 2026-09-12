@@ -16,6 +16,12 @@
     - The built-in pager (used by `Cmd.ppaged()`) again displays its content in reserved toolbar
       mode. It had rendered nothing while still accepting its keys, because the command display's
       renderer frames were being suppressed.
+    - Command output that does not end in a newline is no longer erased when a command finishes in
+      reserved toolbar mode. The command display's shutdown had cleared the line still in progress.
+    - Resizing the terminal during a quiet command is now detected on its own, through
+      prompt-toolkit's terminal-size poll, instead of only when another event forces a redraw.
+    - Growing the terminal back after it had shrunk below the two-row minimum now reacquires the
+      reserved rows. A 24-to-2-to-24 resize sequence had left reserved rendering inactive.
 
 - Breaking Changes
     - Replaced `enable_bottom_toolbar` with `bottom_toolbar_mode` in `Cmd.__init__()`. The default,

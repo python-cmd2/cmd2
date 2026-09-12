@@ -330,7 +330,13 @@ class CommandToolbar:
         self._ready.clear()
         self._error = None
         stack = self._display_stack = contextlib.ExitStack()
-        for name, value in (("layout", self._layout), ("key_bindings", self._bindings), ("erase_when_done", True)):
+        # Legacy rendering erases the display when it stops, so the main prompt can take the
+        # toolbar's rows back. Reserved rendering must not: the display draws nothing of its
+        # own, so its shutdown erase would only clear the command output below it -- including
+        # a line the last command left in progress. Its final frame is a suppressed no-op
+        # instead, which leaves that output alone.
+        erase_when_done = self._reserved_bridge() is None
+        for name, value in (("layout", self._layout), ("key_bindings", self._bindings), ("erase_when_done", erase_when_done)):
             stack.callback(setattr, self.app, name, getattr(self.app, name))
             setattr(self.app, name, value)
         self.app.after_render += self._display_started
@@ -451,7 +457,9 @@ class CommandToolbar:
 
     def _pause(self) -> None:
         self._pausing = True
-        self._set_render_suppressed(False)
+        # Render suppression stays on until the display has fully stopped: its final frame at
+        # shutdown must be the suppressed no-op, not an emitted one that erases the command
+        # output. _finish_pause lifts it, once the terminal is the main prompt's again.
         try:
             try:
                 # Hold off other threads while the proxy drains so their output is never
@@ -491,6 +499,9 @@ class CommandToolbar:
         Only safe once the display's thread has ended: until then it is still using the layout
         and key bindings this puts back.
         """
+        # The display has stopped, so its frames no longer need suppressing. The terminal is
+        # the main prompt's again, and the prompt must render for real.
+        self._set_render_suppressed(False)
         self._thread = None
         # Return the borrowed application to the main prompt, including on proxy failures.
         # The upstream toolbar owned a separate application.

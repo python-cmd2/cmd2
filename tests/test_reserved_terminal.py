@@ -240,10 +240,11 @@ class TestResize:
         with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
             ui = harness.app._command_toolbar.app
             resize(harness, terminal, rows, columns)
-            # The resize is applied on the next render. During a command that is a refresh
-            # tick; the poll cannot see it, because the reserved adapter reports the virtual
-            # size until the region is remeasured. Drive that render here.
-            ui.loop.call_soon_threadsafe(ui.invalidate)
+            # A resize during a command reaches the display through prompt-toolkit's size poll,
+            # which reads the adapter -- now reporting the true physical height (see
+            # test_the_virtual_size_follows_a_resize) -- and calls _on_resize. Drive that
+            # handler once, deterministically, rather than racing the async poll's interval.
+            ui.loop.call_soon_threadsafe(ui._on_resize)
             assert wait_for(lambda: terminal.screen.margins == pyte.screens.Margins(0, rows - 2))
             assert ui.output.get_size() == Size(rows=rows - 1, columns=columns)
             assert wait_for(lambda: terminal.screen.display[-1].startswith("STATUS"))
@@ -317,6 +318,17 @@ class TestPartialLines:
             harness.app.stdout.write("END\n")
             harness.app.stdout.flush()
             assert terminal.screen.display[usable - 2].startswith("PARTIALEND")
+            assert terminal.screen.display[-1].startswith("STATUS")
+
+    def test_partial_output_survives_the_command_display_shutdown(self, terminal_harness) -> None:
+        """Leaving the command context stops the empty display, whose shutdown must not erase
+        the command output still on the line."""
+        harness, terminal = terminal_harness
+        with harness.app._reserved_toolbar_context():
+            with harness.app._command_toolbar_context():
+                harness.app.stdout.write("PARTIAL")
+                harness.app.stdout.flush()
+            assert terminal.screen.display[0].startswith("PARTIAL")
             assert terminal.screen.display[-1].startswith("STATUS")
 
     def test_a_carriage_return_progress_line_ends_on_its_final_value(self, terminal_harness) -> None:

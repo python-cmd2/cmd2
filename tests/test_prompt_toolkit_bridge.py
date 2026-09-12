@@ -724,6 +724,30 @@ class TestReviewRegressions:
         harness.resynchronize()
         assert "\x1b[7;1H" in harness.written()
 
+    def test_a_resize_below_the_floor_and_back_reacquires_the_reservation(self) -> None:
+        """Review finding: a terminal shrunk below the two-row floor is released but still
+        leased. When it grows back, a render must remeasure and reacquire, not give up because
+        the geometry is momentarily gone."""
+        harness = Harness(rows=24)
+        harness.resize(2)
+        assert harness.display.geometry is None
+        assert harness.display.lease_depth == 1
+
+        harness.size = Size(rows=24, columns=40)
+        harness.bridge._reconfigure_if_resized()
+        assert harness.display.is_reserved
+        assert harness.display.geometry is not None
+        assert harness.display.geometry.physical_rows == 24
+        assert harness.bridge.needs_resynchronization is True
+
+    def test_a_render_below_the_floor_holds_without_reacquiring(self) -> None:
+        """While still too short, the remeasure keeps returning nothing rather than raising."""
+        harness = Harness(rows=24)
+        harness.resize(2)
+        assert harness.display.geometry is None
+        harness.bridge._reconfigure_if_resized()
+        assert harness.display.geometry is None
+
     def test_recovery_refuses_an_anchor_outside_the_usable_region(self) -> None:
         """Review finding 5: a shrunken terminal makes a remembered row point into the band."""
         harness = Harness(rows=24)
