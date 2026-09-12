@@ -1,5 +1,7 @@
 [environment]
 python-version = "3.11"
+# Check every platform's branches (rather than the host's) so ty behaves identically on Linux, macOS, and Windows.
+python-platform = "all"
 
 [src]
 include = ["cmd2"]
