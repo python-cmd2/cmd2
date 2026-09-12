@@ -39,13 +39,16 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish) -> None
         # stdin is a pipe. This also works in the broken detached-session case.
         "with os.fdopen(os.dup(sys.stderr.fileno()), 'rb', buffering=0) as terminal:\n"
         "    saved = termios.tcgetattr(terminal)\n"
+        # os.write rather than print: a signal handler that uses buffered stdout raises
+        # "reentrant call inside <_io.BufferedWriter>" when the signal lands mid-write,
+        # which happens when the job is stopped while still reporting readiness.
         "    def resume(*args):\n"
         "        tty.setcbreak(terminal)\n"
-        "        print('PAGER_RESUMED', flush=True)\n"
+        "        os.write(1, b'PAGER_RESUMED\\n')\n"
         "    signal.signal(signal.SIGCONT, resume)\n"
         "    try:\n"
         "        tty.setcbreak(terminal)\n"
-        "        print('PAGER_READY', flush=True)\n"
+        "        os.write(1, b'PAGER_READY\\n')\n"
         "        while os.read(terminal.fileno(), 1) != b'q':\n"
         "            pass\n"
         "    finally:\n"
@@ -102,7 +105,8 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish) -> None
         wait_until(lambda: screen.display[-1].startswith("STATUS"))
         job_group = os.tcgetpgrp(master)
         send(f"help -v | {shlex.quote(sys.executable)} {shlex.quote(str(pager))}\n")
-        wait_until(lambda: "PAGER_READY" in transcript)
+        # Whole lines only: a traceback naming the marker must not satisfy the wait.
+        wait_until(lambda: "PAGER_READY\r\n" in transcript)
         for rows in (12, 24):
             send("\x1a")
             wait_until(lambda: os.tcgetpgrp(master) == process.pid)
@@ -119,7 +123,7 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish) -> None
             wait_until(lambda start=start, rows=rows: re.search(rf"[\r\n]{rows} 80\r\n", transcript[start:]) is not None)
             start = len(transcript)
             send("fg\n")
-            wait_until(lambda start=start: "PAGER_RESUMED" in transcript[start:])
+            wait_until(lambda start=start: "PAGER_RESUMED\r\n" in transcript[start:])
             assert os.tcgetpgrp(master) == job_group
         send(finish)
         wait_until(lambda: screen.display[-1].startswith("STATUS") and "TEST>" in "\n".join(screen.display))
