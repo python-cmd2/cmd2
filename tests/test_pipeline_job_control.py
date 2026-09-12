@@ -3,6 +3,7 @@
 import codecs
 import contextlib
 import os
+import re
 import select
 import shlex
 import shutil
@@ -113,7 +114,9 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish) -> None
             screen.resize(lines=rows, columns=80)
             start = len(transcript)
             send("stty size\n")
-            wait_until(lambda start=start, rows=rows: f"\r\n{rows} 80\r\n" in transcript[start:])
+            # Bash 5.1+ turns bracketed paste off with "\x1b[?2004l\r" before running the
+            # command, so the reply may follow a bare "\r" rather than "\r\n".
+            wait_until(lambda start=start, rows=rows: re.search(rf"[\r\n]{rows} 80\r\n", transcript[start:]) is not None)
             start = len(transcript)
             send("fg\n")
             wait_until(lambda start=start: "PAGER_RESUMED" in transcript[start:])
