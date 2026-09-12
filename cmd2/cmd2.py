@@ -3531,15 +3531,13 @@ class Cmd:
             subproc_stdin = open(read_fd, encoding="utf-8")  # noqa: SIM115
             new_stdout: TextIO = cast(TextIO, open(write_fd, "w", encoding="utf-8"))  # noqa: SIM115
 
-            # Create pipe process in a separate group to isolate our signals from it. If a Ctrl-C event occurs,
-            # our sigint handler will forward it only to the most recent pipe process. This makes sure pipe
-            # processes close in the right order (most recent first).
+            # Captured pipelines use isolated groups for ordered Ctrl-C forwarding.
+            # Terminal-attached POSIX pipelines must instead belong to our foreground
+            # job, so Ctrl-Z and the shell's fg stop/resume every terminal reader together.
             kwargs: dict[str, Any] = {}
             if sys.platform == "win32":
                 kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
             else:
-                kwargs["start_new_session"] = True
-
                 # Attempt to run the pipe process in the user's preferred shell instead of the default behavior of using sh.
                 shell = os.environ.get("SHELL")
                 if shell:
@@ -3554,6 +3552,11 @@ class Cmd:
                 else command_toolbar.pipe_target(self.stdout)
             )
             pipe_stderr = None if isinstance(sys.stderr, utils.StdSim) else command_toolbar.pipe_target(sys.stderr)
+
+            if sys.platform != "win32":
+                kwargs["start_new_session"] = not any(
+                    stream is not None and stream.isatty() for stream in (pipe_stdout, pipe_stderr)
+                )
 
             with contextlib.ExitStack() as terminal_stack:
                 # The toolbar can neither draw nor hold the keyboard while a pipe process owns

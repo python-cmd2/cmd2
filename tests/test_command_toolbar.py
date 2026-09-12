@@ -1,6 +1,7 @@
 """Command toolbar lifecycle and terminal integration tests."""
 
 import contextlib
+import subprocess
 import sys
 import threading
 import time
@@ -117,6 +118,22 @@ class FileTerminal:
 
     def __getattr__(self, name):
         return getattr(self.file, name)
+
+
+@pytest.mark.parametrize(("stdout_tty", "stderr_tty"), [(False, False), (True, False), (False, True), (True, True)])
+def test_pipeline_process_group_selection(toolbar_app, tmp_path, monkeypatch, running_pipe_process, stdout_tty, stderr_tty):
+    app, _, _ = toolbar_app
+    with (tmp_path / "stdout").open("w+") as out, (tmp_path / "stderr").open("w+") as err:
+        app.stdout = FileTerminal(out) if stdout_tty else out
+        monkeypatch.setattr(sys, "stderr", FileTerminal(err) if stderr_tty else err)
+        with mock.patch("subprocess.Popen", wraps=subprocess.Popen) as popen:
+            app.onecmd_plus_hooks(f'help | "{sys.executable}" -S -c "import sys; print(sys.stdin.read())"')
+        options = popen.call_args.kwargs
+        if sys.platform == "win32":
+            assert options["creationflags"] == subprocess.CREATE_NEW_PROCESS_GROUP
+            assert "start_new_session" not in options
+        else:
+            assert options["start_new_session"] == (not (stdout_tty or stderr_tty))
 
 
 @pytest.mark.parametrize("builtin_pager", [False, True])

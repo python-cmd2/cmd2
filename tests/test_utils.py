@@ -219,6 +219,15 @@ def test_proc_reader_send_sigint(pr_none) -> None:
         assert ret_code == -signal.SIGINT
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
+def test_proc_reader_does_not_resignal_its_own_group(pr_none) -> None:
+    with mock.patch("os.getpgid", return_value=os.getpgrp()), mock.patch("os.killpg") as killpg:
+        pr_none.send_sigint()
+    killpg.assert_not_called()
+    pr_none.terminate()
+    pr_none.wait()
+
+
 def test_proc_reader_terminate(pr_none) -> None:
     assert pr_none._proc.poll() is None
     pr_none.terminate()
