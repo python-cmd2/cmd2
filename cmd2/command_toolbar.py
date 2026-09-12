@@ -493,7 +493,9 @@ class CommandToolbar:
         with self._lock:
             self._serialized = True
             for stream in self._streams:
-                stream.serializer = SerializedTerminalWriter(stream.original, reserved.lock, reserved.bridge)
+                stream.serializer = SerializedTerminalWriter(
+                    stream.original, reserved.lock, reserved.bridge, output=reserved.display.terminal.output
+                )
         # While the command display owns the terminal it has nothing of its own to draw, so its
         # renderer frames are suppressed: emitting one would reserve the usable height and
         # scroll command output off the screen. The toolbar is painted independently.

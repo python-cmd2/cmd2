@@ -29,21 +29,26 @@ from .terminal_transaction import TerminalLock
 if TYPE_CHECKING:  # pragma: no cover
     from typing import TextIO
 
+    from prompt_toolkit.output import Output
+
 
 class SerializedTerminalWriter:
     """A stream that writes to the terminal under the terminal transaction lock."""
 
-    def __init__(self, stream: "TextIO", lock: TerminalLock, bridge: Any = None) -> None:
+    def __init__(self, stream: "TextIO", lock: TerminalLock, bridge: Any = None, *, output: "Output | None" = None) -> None:
         """Wrap the terminal's own stream.
 
         :param stream: the *original* terminal stream. Never a proxy over it: a physical
             writer that routed back into a proxy would queue its own output behind itself.
         :param lock: the terminal transaction lock every cmd2-controlled writer shares
         :param bridge: the renderer bridge to inform of managed output, if one is active
+        :param output: the qualified physical backend, when writing to a reserved terminal.
+            Its outer flush owns platform setup such as Windows VT console mode.
         """
         self._stream = stream
         self._lock = lock
         self.bridge = bridge
+        self._output = output
 
     @property
     def stream(self) -> "TextIO":
@@ -58,11 +63,15 @@ class SerializedTerminalWriter:
         """
         with self._lock.transaction("managed write"):
             try:
-                written = self._stream.write(data)
+                if self._output is None:
+                    written = self._stream.write(data)
+                else:
+                    self._output.write_raw(data)
+                    written = len(data)
                 # Flushed before the lock is given up. Left buffered, this output would reach
                 # the terminal after whatever paints next, which is the ordering the
                 # transaction is supposed to establish.
-                self._stream.flush()
+                self.flush()
             finally:
                 # Recorded whether or not the write succeeded, and still inside the
                 # transaction. The bridge drops any frame prepared against the cursor this
@@ -81,7 +90,10 @@ class SerializedTerminalWriter:
         nothing either. The write that produced the buffered output already said so.
         """
         with self._lock.transaction("managed flush"):
-            self._stream.flush()
+            if self._output is None:
+                self._stream.flush()
+            else:
+                self._output.flush()
 
     def __getattr__(self, name: str) -> Any:
         """Delegate file attributes to the terminal stream.

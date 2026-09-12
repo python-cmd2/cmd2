@@ -12,6 +12,9 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Self
 
 import pytest
+from prompt_toolkit.data_structures import Size
+from prompt_toolkit.output import DummyOutput
+from prompt_toolkit.output.vt100 import Vt100_Output
 
 from cmd2.command_toolbar import ToolbarStream
 from cmd2.managed_output import SerializedTerminalWriter
@@ -97,6 +100,59 @@ class TestWriting:
         """Callers ask streams whether they are a terminal, and what their encoding is."""
         writer, stream, _lock = make()
         assert writer.readable() == stream.readable()
+
+
+class TestBackendWriting:
+    @pytest.mark.parametrize("fail_flush", [False, True])
+    def test_outer_backend_flush_owns_vt_mode_inside_the_transaction(self, fail_flush) -> None:
+        """Model Windows' outer backend on every platform: its inner VT writer alone does
+        not enable console processing, and restoration must also happen on failure."""
+        mode = 0
+        observed = []
+
+        class Console(RecordingStream):
+            def write(self, text: str) -> int:
+                observed.append((mode, current_transaction()))
+                return super().write(text)
+
+            def flush(self) -> None:
+                super().flush()
+                if fail_flush:
+                    raise RuntimeError("console flush failed")
+
+        console = Console()
+
+        class WindowsLikeOutput(DummyOutput):
+            def __init__(self) -> None:
+                self.vt100_output = Vt100_Output(console, lambda: Size(24, 80))
+
+            def write_raw(self, data: str) -> None:
+                self.vt100_output.write_raw(data)
+
+            def flush(self) -> None:
+                nonlocal mode
+                original_mode = mode
+                mode = 4
+                try:
+                    self.vt100_output.flush()
+                finally:
+                    mode = original_mode
+
+        bridge = RecordingBridge()
+        writer = SerializedTerminalWriter(console, TerminalLock(), bridge, output=WindowsLikeOutput())
+        data = "\x1b[31mred\x1b[0m\n"
+        if fail_flush:
+            with pytest.raises(RuntimeError, match="console flush failed"):
+                writer.write(data)
+        else:
+            assert writer.write(data) == len(data)
+            writer.flush()
+        assert console.getvalue() == data
+        assert mode == 0
+        assert observed
+        assert all(enabled == 4 and transaction is not None for enabled, transaction in observed)
+        assert len(bridge.notes) == 1
+        assert bridge.notes[0] is not None
 
 
 class TestInvalidationContract:

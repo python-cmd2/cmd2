@@ -211,6 +211,9 @@ class TestCommandOutputRouting:
                 assert display._proxy is None
                 assert display._streams
                 assert all(stream.serializer is not None for stream in display._streams)
+                # Commands must reach the qualified outer backend, whose flush enables VT
+                # processing on Windows, rather than writing to its stream or inner writer.
+                assert all(stream.serializer._output is harness.backend for stream in display._streams)
         finally:
             harness.close()
 
