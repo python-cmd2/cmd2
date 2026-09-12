@@ -347,6 +347,11 @@ class TerminalDisplay:
         return self._geometry is not None
 
     @property
+    def handoff_active(self) -> bool:
+        """Whether another terminal owner holds the screen, even below the height floor."""
+        return self._handoff_active
+
+    @property
     def output(self) -> "Output":
         """The output callers should render through: the adapter while reserved, else the backend."""
         if self._adapter is not None and self._geometry is not None:

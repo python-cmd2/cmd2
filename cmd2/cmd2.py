@@ -86,6 +86,7 @@ from prompt_toolkit.layout.containers import ConditionalContainer, FloatContaine
 from prompt_toolkit.output import DummyOutput, create_output
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.shortcuts import CompleteStyle, PromptSession, choice, set_title
+from prompt_toolkit.shortcuts.choice_input import ChoiceInput
 from prompt_toolkit.styles import DynamicStyle
 from rich.console import (
     Group,
@@ -2175,7 +2176,8 @@ class Cmd:
 
         Use this context manager around application-specific calls to ``input()``, other
         terminal UIs, or subprocesses that inherit the terminal. cmd2 automatically suspends
-        its toolbar for its own input prompts, external pagers, and shell commands.
+        its toolbar for external pagers and shell commands. Managed input prompts borrow
+        the reservation without releasing the rows.
 
         In reserved mode this also gives the reserved rows back, because a program that
         inherits the terminal knows nothing about a scroll region and would find its output
@@ -3790,9 +3792,9 @@ class Cmd:
         The command display is stopped either way, but only some prompts give the terminal
         away with it. The main prompt is the one the reservation exists for: it renders
         through the reserved output, and the toolbar has to still be there while the user is
-        typing -- that is what "stable across ordinary commands" means. Any other session is
-        an application prompt cmd2 has not bound to the reservation, so it gets the terminal
-        to itself, rows included.
+        typing. Managed nested prompts on the same terminal borrow that reservation with
+        their own bridge after the command input reader stops. Other terminals and prompts
+        inside an external handoff retain the exclusive-terminal path.
 
         :param prompt: the prompt text or a callable that returns the prompt.
         :param session: the PromptSession instance to use for reading.
@@ -3800,11 +3802,13 @@ class Cmd:
         :return: the stripped input string.
         :raises EOFError: if the input stream is closed or the user signals EOF (e.g., Ctrl+D)
         """
-        owns_the_reservation = session is self.main_session
+        reserved = self._reserved_toolbar
+        owns_the_reservation = session is self.main_session or (reserved is not None and reserved.can_manage(session))
         with self._quiesce_bottom_toolbar() if owns_the_reservation else self.suspend_bottom_toolbar():
-            reserved = self._reserved_toolbar
             if owns_the_reservation and reserved is not None and reserved.bridge is not None:
                 reserved.bridge.finish_command_output()
+                with reserved.prompt_session(session):
+                    return self._read_raw_input_now(prompt, session, **prompt_kwargs)
             return self._read_raw_input_now(prompt, session, **prompt_kwargs)
 
     def _read_raw_input_now(
@@ -3932,7 +3936,7 @@ class Cmd:
 
         temp_session: PromptSession[str] = PromptSession(
             auto_suggest=self.main_session.auto_suggest,
-            bottom_toolbar=self.get_bottom_toolbar if self.main_session.bottom_toolbar is not None else None,
+            bottom_toolbar=self.main_session.bottom_toolbar,
             color_depth=self.main_session.color_depth,
             complete_style=self.main_session.complete_style,
             complete_in_thread=self.main_session.complete_in_thread,
@@ -3961,7 +3965,7 @@ class Cmd:
         :raises Exception: any other exceptions raised by prompt()
         """
         temp_session: PromptSession[str] = PromptSession(
-            bottom_toolbar=self.get_bottom_toolbar if self.main_session.bottom_toolbar is not None else None,
+            bottom_toolbar=self.main_session.bottom_toolbar,
             color_depth=self.main_session.color_depth,
             enable_suspend=self.main_session.enable_suspend,
             input=self.main_session.input,
@@ -4937,7 +4941,7 @@ class Cmd:
         self.last_result = True
         return True
 
-    @command_toolbar.suspend_toolbar
+    @command_toolbar.quiesce_toolbar
     def select(self, opts: str | Iterable[str] | Iterable[tuple[Any, str | None]], prompt: str = "Your choice? ") -> Any:
         """Present a menu to the user.
 
@@ -4972,7 +4976,22 @@ class Cmd:
             try:
                 while True:
                     with create_app_session(input=self.main_session.input, output=self.main_session.output):
-                        result = choice(message=prompt, options=fulloptions)
+                        reserved = self._reserved_toolbar
+                        if reserved is not None and reserved.can_manage(self.main_session):
+                            if reserved.bridge is not None:
+                                reserved.bridge.finish_command_output()
+                            # ChoiceInput.prompt() constructs and runs in one step. Binding
+                            # its application first gives the initial frame reserved geometry.
+                            selection = ChoiceInput(
+                                message=prompt,
+                                options=fulloptions,
+                                style=self.main_session.style,
+                                enable_suspend=self.main_session.enable_suspend,
+                            )._create_application()
+                            with reserved.prompt_application(selection):
+                                result = selection.run()
+                        else:
+                            result = choice(message=prompt, options=fulloptions)
                     if result is not None:
                         return result
             except KeyboardInterrupt:

@@ -61,6 +61,34 @@ class Harness:
         return self.session.app
 
 
+@pytest.mark.parametrize("guest_fails", [False, True])
+def test_failed_reacquisition_releases_bindings_without_masking_the_guest(monkeypatch, guest_fails) -> None:
+    harness = Harness()
+    try:
+        with harness.toolbar:
+            display = harness.toolbar.display
+
+            def fail():
+                raise OSError("resume failed")
+
+            monkeypatch.setattr(display, "reacquire_region_after_handoff", fail)
+            expected = ValueError if guest_fails else OSError
+
+            def run_guest():
+                with harness.toolbar.suspended():
+                    if guest_fails:
+                        raise ValueError("guest failed")
+
+            with pytest.raises(expected, match="guest failed" if guest_fails else "resume failed"):
+                run_guest()
+            assert harness.toolbar.bridge is None
+            assert harness.app.output is harness.backend
+            assert display.lease_depth == 0
+            assert isinstance(harness.toolbar.take_pending_error(), OSError)
+    finally:
+        harness.close()
+
+
 class TestBinding:
     def test_starting_binds_the_application_and_its_renderer(self) -> None:
         harness = Harness()

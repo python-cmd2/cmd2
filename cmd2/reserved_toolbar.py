@@ -17,14 +17,18 @@ The toolbar's content is read through a callable rather than captured, so a call
 new ``bottom_toolbar`` to the session still reaches the band.
 """
 
-from contextlib import contextmanager, suppress
+import os
+import signal
+from contextlib import ExitStack, contextmanager, suppress
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Self
 
-from prompt_toolkit.filters import Condition
+from prompt_toolkit.application import run_in_terminal
+from prompt_toolkit.filters import Condition, Never
 from prompt_toolkit.layout import HSplit, Window
 from prompt_toolkit.layout.containers import ConditionalContainer
 from prompt_toolkit.styles import DynamicStyle
+from prompt_toolkit.utils import suspend_to_background_supported
 
 from .prompt_toolkit_bridge import PromptToolkitBridge
 from .reserved_output import ReservedOutput
@@ -107,6 +111,9 @@ class ReservedToolbar:
         self._original_filter: Any = None
         self._installed_filter: Any = None
         self.stopped_handler: Callable[[], None] | None = None
+        self._job_control_stack = ExitStack()
+        self._nested_stacks: list[ExitStack] = []
+        self._nested_bridges: list[PromptToolkitBridge] = []
 
     @property
     def is_active(self) -> bool:
@@ -132,7 +139,7 @@ class ReservedToolbar:
     @property
     def bridge(self) -> PromptToolkitBridge | None:
         """The renderer bridge while active, else ``None``."""
-        return self._bridge
+        return self._nested_bridges[-1] if self._nested_bridges else self._bridge
 
     @property
     def painter(self) -> ToolbarPainter | None:
@@ -195,6 +202,7 @@ class ReservedToolbar:
             # From here the application's own renders go through prepare and commit, which is
             # what puts them in the same queue as command output and toolbar paints.
             self._bridge.bind(app)
+            self._job_control_stack.enter_context(self._job_control(app))
             # When the bridge abandons reserved rendering it cannot resume anything itself:
             # the rows are still withheld and the renderer is still routed through it. Giving
             # them back is this object's job, and it is what lets compatibility rendering
@@ -240,6 +248,94 @@ class ReservedToolbar:
         return error
 
     @contextmanager
+    def _job_control(self, app: Any) -> "Iterator[None]":
+        """Release the physical reservation inside upstream's cooked-mode handoff."""
+        original = app.suspend_to_background
+
+        def suspend_to_background(suspend_group: bool = True) -> None:
+            if not suspend_to_background_supported():
+                return
+
+            def suspend_process() -> None:
+                # run_in_terminal has stopped rendering and detached input before this runs.
+                # A signal callback itself must never acquire the terminal transaction.
+                with self.suspended():
+                    os.kill(0 if suspend_group else os.getpid(), signal.SIGTSTP)
+
+            run_in_terminal(suspend_process)
+
+        app.suspend_to_background = suspend_to_background
+        try:
+            yield
+        finally:
+            if app.suspend_to_background is suspend_to_background:
+                app.suspend_to_background = original
+
+    def can_manage(self, session: "PromptSession[Any]") -> bool:
+        """Whether a temporary prompt uses this terminal and its managed input reader."""
+        return (
+            self._display is not None
+            and not self._display.handoff_active
+            and session.input is self._session.input
+            and session.app.output in (self._bound_output, self._display.terminal.output)
+            and native_toolbar_container(session) is not None
+        )
+
+    @contextmanager
+    def prompt_session(self, session: "PromptSession[Any]") -> "Iterator[None]":
+        """Lend the reservation to a temporary prompt after the command reader has stopped."""
+        if session is self._session:
+            yield
+            return
+        native = native_toolbar_container(session)
+        if native is None:
+            raise RuntimeError("cannot locate the nested session's bottom toolbar window")
+        with self.prompt_application(session.app, native):
+            yield
+
+    @contextmanager
+    def prompt_application(self, app: Any, native: ConditionalContainer | None = None) -> "Iterator[None]":
+        """Bind a managed input application while retaining the physical reservation."""
+        previous_output, previous_renderer_output = app.output, app.renderer.output
+        previous_filter = native.filter if native is not None else Never()
+        output = self._bound_output
+        installed_filter = previous_filter & Condition(lambda: not self.is_active)
+        bridge = PromptToolkitBridge(renderer=app.renderer, display=self.display, lock=self._lock)
+        previous_bridge = self.bridge
+        if previous_bridge is not None:
+            previous_bridge.forget_prompt_anchor()
+            previous_bridge.note_owner_change()
+
+        def restore() -> None:
+            bridge.unbind()
+            if bridge in self._nested_bridges:
+                self._nested_bridges.remove(bridge)
+            if app.output is output:
+                app.output = previous_output
+            if app.renderer.output is output:
+                app.renderer.output = previous_renderer_output
+            if native is not None and native.filter is installed_filter:
+                native.filter = previous_filter
+            if previous_bridge is not None:
+                previous_bridge.forget_prompt_anchor()
+                previous_bridge.require_resynchronization("a nested prompt returned the terminal")
+
+        with ExitStack() as stack:
+            stack.callback(restore)
+            # Abandonment restores the guest immediately, before native rendering resumes.
+            self._nested_stacks.append(stack)
+            stack.callback(self._nested_stacks.remove, stack)
+            app.output = app.renderer.output = output
+            if native is not None:
+                native.filter = installed_filter
+            self._nested_bridges.append(bridge)
+            bridge.bind(app)
+            bridge.set_frame_committed_handler(self.refresh)
+            bridge.set_emission_stopped_handler(self._emission_stopped)
+            stack.enter_context(self._job_control(app))
+            yield
+
+    @contextmanager
     def suspended(self) -> "Iterator[None]":
         """Give the rows back for the duration of the block, and take them again after.
 
@@ -267,8 +363,9 @@ class ReservedToolbar:
             yield
             return
 
-        outermost = self._suspend_depth == 0
+        outermost = self._suspend_depth == 0 and not display.handoff_active
         self._suspend_depth += 1
+        body_failed = False
         try:
             if outermost:
                 with self._lock.transaction("suspend"):
@@ -279,13 +376,25 @@ class ReservedToolbar:
                     # paint over their output.
                     self._invalidate_ownership("the terminal was handed to another program")
             yield
+        except BaseException:
+            body_failed = True
+            raise
         finally:
             self._suspend_depth -= 1
             if outermost:
-                with self._lock.transaction("resume"):
-                    display.reacquire_region_after_handoff()
-                    self._invalidate_ownership("the terminal came back from another program")
-                self.refresh()
+                try:
+                    with self._lock.transaction("resume"):
+                        display.reacquire_region_after_handoff()
+                        self._invalidate_ownership("the terminal came back from another program")
+                    self.refresh()
+                except Exception as error:
+                    self._pending_error = error
+                    with suppress(Exception):
+                        self.stop()
+                    # A failed guest (including Ctrl-C/termination) remains the reason for
+                    # unwinding; cleanup failure is available through take_pending_error().
+                    if not body_failed:
+                        raise
 
     def _invalidate_ownership(self, reason: str) -> None:
         """Discard everything that described the screen before ownership changed.
@@ -298,6 +407,9 @@ class ReservedToolbar:
             self._bridge.forget_prompt_anchor()
             self._bridge.forget_unfinished_command_output()
             self._bridge.require_resynchronization(reason)
+        for bridge in self._nested_bridges:
+            bridge.forget_prompt_anchor()
+            bridge.require_resynchronization(reason)
 
     def refresh(self) -> bool:
         """Evaluate the toolbar's content and paint whatever changed.
@@ -335,8 +447,8 @@ class ReservedToolbar:
         The error the bridge is holding is taken here rather than left with it: the bridge is
         dropped a moment later, and an error the user never sees is the same as none.
         """
-        if self._bridge is not None and self._pending_error is None:
-            self._pending_error = self._bridge.take_pending_error()
+        if self.bridge is not None and self._pending_error is None:
+            self._pending_error = self.bridge.take_pending_error()
         with suppress(Exception):
             self.stop()
 
@@ -357,8 +469,8 @@ class ReservedToolbar:
         """
         self._pending_error = error
         self._consecutive_paint_failures += 1
-        if self._bridge is not None:
-            self._bridge.require_resynchronization("a toolbar paint failed; the cursor's position is unknown")
+        if self.bridge is not None:
+            self.bridge.require_resynchronization("a toolbar paint failed; the cursor's position is unknown")
         if self._consecutive_paint_failures >= _MAX_CONSECUTIVE_PAINT_FAILURES:
             with suppress(Exception):
                 self.stop()
@@ -371,6 +483,9 @@ class ReservedToolbar:
         other.
         """
         display, self._display = self._display, None
+        for stack in reversed(tuple(self._nested_stacks)):
+            stack.close()
+        self._job_control_stack.close()
         if self._bridge is not None:
             self._bridge.unbind()
         self._bridge = None
