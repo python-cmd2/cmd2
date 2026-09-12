@@ -65,11 +65,11 @@ class SerializedTerminalWriter:
                 self._stream.flush()
             finally:
                 # Recorded whether or not the write succeeded, and still inside the
-                # transaction. A write that raised may have emitted part of its text and may
-                # have scrolled the screen doing it -- a stream cannot say which -- so the
-                # bridge must not be left believing the terminal is as it was. Invalidating
-                # after output that never arrived costs a repaint; not invalidating after
-                # output that did costs a prompt drawn over it.
+                # transaction. The bridge drops any frame prepared against the cursor this
+                # output moved and bumps its generation so one preparing concurrently cannot
+                # commit against the terminal as it was. It does not erase or repaint: command
+                # output goes below an empty command display, so a line in progress -- one that
+                # did not end in a newline -- stays on screen for the next write to continue.
                 if self.bridge is not None:
                     self.bridge.note_managed_write()
         return written

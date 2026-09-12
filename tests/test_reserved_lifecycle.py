@@ -236,7 +236,8 @@ class TestCommandOutputRouting:
             harness.close()
 
     def test_command_output_tells_the_bridge_inside_the_write(self) -> None:
-        """The Stage 3 contract: the invalidation is part of the emitting transaction."""
+        """The Stage 3 contract: the bridge learns of the output as part of the emitting
+        transaction, so its generation advances and any remembered origin is forgotten."""
         harness = Harness(mode="reserved")
         try:
             with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
@@ -244,8 +245,9 @@ class TestCommandOutputRouting:
                 assert toolbar is not None
                 bridge = toolbar.bridge
                 assert bridge is not None
+                before = bridge.generations()
                 harness.app.poutput("command output")
-                assert bridge.needs_resynchronization is True
+                assert bridge.generations() != before
                 assert bridge.prompt_anchor is None
         finally:
             harness.close()

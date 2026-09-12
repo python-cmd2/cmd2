@@ -7,6 +7,12 @@
       whitespace and a trailing newline are not marked, since nothing visible is lost.
     - Reserved bottom toolbars display control characters in caret notation, as legacy rendering
       does, instead of sending them to the terminal.
+    - Resizing the terminal while a reserved toolbar is active now reinstalls the reserved rows for
+      the new size and repaints the toolbar at the new bottom row, instead of leaving the renderer
+      wrapping to the old width. A stale toolbar is no longer left behind when the terminal grows.
+    - Command output that does not end in a newline (for example a progress line updated with a
+      carriage return) is no longer erased by a reserved toolbar's redraw. The line in progress is
+      preserved and the next write continues it.
 
 - Breaking Changes
     - Replaced `enable_bottom_toolbar` with `bottom_toolbar_mode` in `Cmd.__init__()`. The default,

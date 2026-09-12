@@ -265,6 +265,20 @@ class PhysicalTerminal:
         self._output.write_raw("\x1bD" * rows + f"\x1b[{rows}A")
         self._output.flush()
 
+    def erase_rows(self, first: int, last: int) -> None:
+        """Clear whole physical rows, preserving the cursor.
+
+        Used to wipe the old toolbar's rows when a resize leaves them inside the screen. The
+        erase is by line, so it does not depend on the scroll margins, and the cursor is saved
+        and restored around it so the caller's position survives.
+
+        :param first: the one-based first row to clear
+        :param last: the one-based last row to clear, inclusive
+        """
+        moves = "".join(f"\x1b[{row};1H\x1b[2K" for row in range(first, last + 1))
+        self._output.write_raw(f"{cursor_save_sequence()}{moves}{cursor_restore_sequence()}")
+        self._output.flush()
+
     def install_region(self, geometry: Geometry) -> None:
         """Install the scroll region described by ``geometry``.
 
@@ -439,6 +453,7 @@ class TerminalDisplay:
             # program currently owning it. The resize is not lost: the return path measures
             # afresh rather than restoring whatever was installed before the handoff.
             return False
+        previous = self._geometry
         geometry = self._measure()
         if not geometry.is_eligible or not self._terminal.supports_reservation:
             if self._geometry is not None:
@@ -446,10 +461,17 @@ class TerminalDisplay:
                 self._adapter = None
                 self._terminal.release_region()
             return False
-        if self._geometry is None:
+        if previous is None:
             # The guest may have scrolled to the physical bottom, just as the shell
             # that launched us may have done before the initial acquisition.
             self._terminal.make_room_for_region(geometry)
+        elif geometry.physical_rows > previous.physical_rows:
+            # The terminal grew, so the rows the old band occupied are now inside the screen
+            # and still hold its stale text. They never scrolled -- the band sits outside the
+            # scroll region -- so those rows hold nothing but the old toolbar and are safe to
+            # clear before the new region is installed. A terminal that shrank instead pushed
+            # the old band off the bottom, so there is nothing left to clear.
+            self._terminal.erase_rows(previous.usable_rows + 1, previous.physical_rows)
         self._terminal.install_region(geometry)
         self._geometry = geometry
         if self._adapter is None:

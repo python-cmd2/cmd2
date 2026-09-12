@@ -116,6 +116,11 @@ class PromptToolkitBridge:
         self._in_flight: PreparedRender | None = None
         self._preparing = False
         self._committed: Generations | None = None
+        # The renderer's screen as of the last committed frame. Preparation advances the
+        # renderer's own ``_last_screen`` to a frame that may never be emitted, so this is the
+        # baseline a managed write restores: not the uncommitted advance, and not a cleared
+        # baseline that would force an erasing repaint over the output just written.
+        self._committed_screen: Any = None
         self._needs_resynchronization = False
         self._reserved_emission_stopped = False
         self._redraw_pending = False
@@ -145,6 +150,7 @@ class PromptToolkitBridge:
         self._after_render_event: Any = None
         self._after_render_original: Any = None
         self._after_render_installed: Any = None
+        self._render_suppressed = False
 
     # -- what is known ---------------------------------------------------------------------
 
@@ -227,24 +233,41 @@ class PromptToolkitBridge:
         self._redraw_scheduler = scheduler
 
     def note_managed_write(self, prompt_anchor: int | None = None) -> None:
-        """Record that managed output reached the terminal.
+        """Record that command output reached the terminal.
 
-        This invalidates the committed baseline rather than only bumping a generation.
-        Generation comparison catches a write that lands *during* a preparation, but a write
-        between two frames leaves the renderer believing its last screen is still displayed
-        and its cursor still where that screen ended -- and the output just emitted moved the
-        cursor, and may have scrolled everything above it. The next frame would be diffed
-        against a screen the terminal no longer shows, from an origin it no longer has.
+        In reserved mode command output goes straight to the terminal, below an empty command
+        display and beside a toolbar pinned outside the scroll region. So a managed write
+        changes what is *on* the terminal without changing what the command display would draw
+        -- which is nothing -- and without moving the toolbar. The renderer's committed
+        baseline still describes the empty command display correctly, and the next frame diffed
+        against it is a true no-op that emits nothing and, wrapped in the cursor save and
+        restore :meth:`set_preserve_cursor` installs, leaves the cursor where the output left
+        it. A line in progress therefore survives, and the next write continues it.
 
-        :param prompt_anchor: the physical row the prompt now starts on, where the layer that
-            emitted the output knows it. Passing nothing *forgets* the origin rather than
-            keeping the old one: the write moved the cursor and may have scrolled the screen,
-            so the remembered row is exactly what is no longer true, and recovery asks the
-            terminal instead.
+        This is why a managed write must *not* recover here, and above all must not clear the
+        baseline. Clearing it forces the next frame to repaint from scratch: the renderer homes
+        the cursor and erases downward, and that erase lands on the very output just written --
+        wiping a line still in progress, or scrolling the region to reserve space it does not
+        need. What the write does need is to drop any frame prepared against the cursor it
+        moved, and to bump the generation so a frame preparing concurrently cannot commit
+        against the terminal as it was.
+
+        The prompt's own origin is re-established when the prompt renders, by the cursor report
+        prompt-toolkit requests for itself; the bridge does not need to guess it from here.
+
+        :param prompt_anchor: the physical row the prompt now starts on, where a caller happens
+            to know it. Passing nothing forgets any remembered origin rather than keeping a row
+            the output has moved past.
         """
         self._terminal_generation += 1
         self._prompt_anchor = prompt_anchor
-        self.require_resynchronization("managed output reached the terminal")
+        # Only the frame in flight goes; it was prepared against the cursor and content this
+        # write moved, so committing it would emit a stale frame. The renderer's baseline is
+        # reset to the last committed screen -- not left as the advance a pending preparation
+        # made, which the terminal never received, and not cleared, which would force the next
+        # frame to erase down over the output just written.
+        self._in_flight = None
+        self._renderer._last_screen = self._committed_screen
         self._request_redraw()
 
     def note_owner_change(self) -> None:
@@ -297,6 +320,21 @@ class PromptToolkitBridge:
         :param handler: called after every render attempt, or ``None`` to remove it
         """
         self._render_attempted_handler = handler
+
+    def set_render_suppressed(self, suppressed: bool) -> None:
+        """Stop emitting the renderer's own frames while the command display owns the terminal.
+
+        The command display has nothing of its own to draw in reserved mode: the toolbar is
+        painted independently, and command output goes straight to the terminal. A renderer
+        frame there would only reserve the usable height and scroll to claim it, moving the
+        cursor off the line output is still writing. So while this is set, a render repaints
+        the toolbar and reports the frame but emits nothing through the renderer, leaving
+        command output and the cursor exactly as they are. It is set while the command display
+        owns the terminal and cleared at the prompt, whose frames must render for real.
+
+        :param suppressed: whether the renderer's frames are suppressed
+        """
+        self._render_suppressed = suppressed
 
     def set_emission_stopped_handler(self, handler: "Callable[[], None]") -> None:
         """Install what to call when reserved rendering has to be abandoned.
@@ -455,6 +493,8 @@ class PromptToolkitBridge:
             # on the renderer and nothing routes through here at all.
             return
 
+        self._reconfigure_if_resized()
+
         if self._needs_resynchronization:
             try:
                 self.resynchronize()
@@ -474,6 +514,16 @@ class PromptToolkitBridge:
                 # would guess at the origin, which is the thing recovery exists to avoid.
                 return
 
+        if self._render_suppressed:
+            # The command display owns the terminal and has nothing of its own to draw. Its
+            # toolbar is repainted here; a renderer frame is not emitted, so command output and
+            # the cursor it left mid-line are untouched. The frame still counts as rendered, so
+            # readiness and after-render fire as they would for any frame.
+            self._last_emission_committed = True
+            if self._frame_committed_handler is not None:
+                self._frame_committed_handler()
+            return
+
         prepared = self.prepare(app, layout, is_done=is_done)
         if prepared is None:
             self._request_redraw()
@@ -484,6 +534,30 @@ class PromptToolkitBridge:
         self._last_emission_committed = True
         if self._frame_committed_handler is not None:
             self._frame_committed_handler()
+
+    def _reconfigure_if_resized(self) -> None:
+        """Remeasure the physical terminal and re-establish the region if it changed size.
+
+        The command display runs on its own thread, where the window-change signal cannot be
+        delivered, so prompt-toolkit's size poll is the only notice a resize gives there --
+        and the poll reads the reserved adapter, which reports the *virtual* size and goes on
+        hiding the change until the region has been remeasured. At the main prompt the signal
+        does fire, but its recovery reinstalls the region from the old geometry. Either way
+        the remeasure has to happen on the render the poll or the signal drives, or the
+        renderer wraps to a stale width and the toolbar paints at an obsolete row.
+
+        The prompt origin is forgotten: a resize reflows the screen, so the remembered row is
+        no longer where the prompt starts, and recovery re-establishes it from the terminal.
+        """
+        geometry = self._display.geometry
+        if geometry is None:
+            return
+        with self._lock.transaction("resize"):
+            if self._display.terminal.physical_size() == geometry.physical_size:
+                return
+            self._display.reconfigure()
+        self.forget_prompt_anchor()
+        self.note_geometry_change()
 
     def _fire_after_render_through_bridge(self) -> None:
         """Tell the application a frame was rendered, but only if one actually was.
@@ -623,11 +697,19 @@ class PromptToolkitBridge:
             # publication that follows -- leaving a frame in flight that nothing invalidated
             # and everything downstream believes is current.
             if self.needs_resynchronization or self.reserved_emission_stopped:
-                # Something invalidated the terminal while the frame was being prepared -- a
-                # managed write from inside a layout callback, say, or a failure that
-                # abandoned the reservation outright. Either way the operations are recorded
-                # against a terminal that has moved on.
+                # Something invalidated the terminal while the frame was being prepared -- an
+                # erase from inside a layout callback, say, or a failure that abandoned the
+                # reservation outright. Either way the operations are recorded against a
+                # terminal that has moved on.
                 self._retire()
+                return None
+
+            if self.generations() != generations:
+                # A managed write landed while the frame was being prepared. It emits no
+                # recovery of its own -- command output leaves the empty command display's
+                # baseline correct -- but the frame was recorded against the cursor and content
+                # that write moved, so it must not be published as current.
+                self._in_flight = None
                 return None
 
             prepared = PreparedRender(batch=recorder.batch(), generations=generations)
@@ -682,6 +764,9 @@ class PromptToolkitBridge:
 
         self._in_flight = None
         self._committed = prepared.generations
+        # The renderer's screen now matches what the terminal received. A managed write
+        # restores this rather than the advance a later, uncommitted preparation would make.
+        self._committed_screen = self._renderer._last_screen
         self._redraw_pending = False
         return True
 

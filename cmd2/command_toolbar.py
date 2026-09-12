@@ -221,7 +221,17 @@ class CommandToolbar:
             and self.toolbar.content.style == "class:bottom-toolbar"
         ):
             raise RuntimeError("Cannot locate PromptSession bottom toolbar")
-        self._layout = Layout(HSplit([Window(height=0), Window(), self.toolbar]))
+        # In reserved mode the command display has nothing of its own to draw -- the toolbar
+        # is painted independently into rows outside the scroll region. A full-height filler
+        # window would make the renderer reserve the whole usable region and scroll to claim
+        # it, carrying command output up and off the screen. A zero-height layout reserves
+        # nothing, so command output owns the region and the renderer's frames are no-ops.
+        # Legacy rendering still needs the filler to push its scrolling toolbar to the bottom.
+        reserved = cmd.reserved_toolbar
+        if reserved is not None and reserved.is_active:
+            self._layout = Layout(HSplit([Window(height=0)]))
+        else:
+            self._layout = Layout(HSplit([Window(height=0), Window(), self.toolbar]))
         self._display_stack: contextlib.ExitStack | None = None
         bindings = KeyBindings()
 
@@ -382,7 +392,21 @@ class CommandToolbar:
             self._serialized = True
             for stream in self._streams:
                 stream.serializer = SerializedTerminalWriter(stream.original, reserved.lock, reserved.bridge)
+        # While the command display owns the terminal it has nothing of its own to draw, so its
+        # renderer frames are suppressed: emitting one would reserve the usable height and
+        # scroll command output off the screen. The toolbar is painted independently.
+        if reserved.bridge is not None:
+            reserved.bridge.set_render_suppressed(True)
         return True
+
+    def _resume_rendering(self) -> None:
+        """Let the renderer emit its frames again, now the command display has given up the terminal.
+
+        The next frames belong to the main prompt, which must render for real.
+        """
+        bridge = self._reserved_bridge()
+        if bridge is not None:
+            bridge.set_render_suppressed(False)
 
     def _app_exited(self) -> None:
         """Give the terminal back to the streams when the display stops on its own.
@@ -396,6 +420,7 @@ class CommandToolbar:
             # A deliberate pause restores the streams itself, in the right order.
             return
 
+        self._resume_rendering()
         with self._lock:
             # Leave self._proxy set so that the next _pause() still drains and closes
             # it. With the display gone, its worker writes to the terminal directly.
@@ -425,6 +450,7 @@ class CommandToolbar:
 
     def _pause(self) -> None:
         self._pausing = True
+        self._resume_rendering()
         try:
             try:
                 # Hold off other threads while the proxy drains so their output is never

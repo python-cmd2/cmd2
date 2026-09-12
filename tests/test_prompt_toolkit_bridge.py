@@ -190,18 +190,27 @@ class TestPreparation:
 
 class TestCommitValidation:
     def test_stale_prepared_frame_never_becomes_diff_baseline(self) -> None:
-        """Named test 13.2: intervening output retires the batch without emitting it."""
+        """Named test 13.2: intervening output drops the batch without emitting it, and the
+        screen the uncommitted frame advanced to never becomes the next frame's baseline."""
         harness = Harness()
+        assert harness.render() is True
+        committed = harness.renderer._last_screen
+        assert committed is not None
+
+        # Preparing advances the renderer's own last screen to a frame nothing has emitted.
         prepared = harness.prepare()
         assert prepared is not None
+        assert harness.renderer._last_screen is not committed
         harness.clear()
 
         harness.bridge.note_managed_write()
         assert harness.bridge.commit(prepared) is False
 
         assert harness.written() == ""
-        assert harness.renderer._last_screen is None
-        assert harness.bridge.needs_resynchronization is True
+        # The baseline is the last committed screen, not the advance the uncommitted frame
+        # made -- which the terminal never received.
+        assert harness.renderer._last_screen is committed
+        assert harness.bridge.in_flight is None
 
     def test_a_resize_between_prepare_and_commit_retires_the_batch(self) -> None:
         harness = Harness()
@@ -245,13 +254,13 @@ class TestCommitValidation:
     def test_uncommitted_frame_metadata_is_not_dispatched(self) -> None:
         """Named test 13.2: provisional handlers and windows stay invisible until commit."""
         harness = Harness()
+        assert harness.bridge.can_dispatch_input is True
         prepared = harness.prepare()
         assert prepared is not None
-        harness.bridge.note_managed_write(prompt_anchor=1)
+        # A frame is prepared but not committed: its handlers and windows are provisional.
         assert harness.bridge.can_dispatch_input is False
-        assert harness.bridge.commit(prepared) is False
-        assert harness.bridge.can_dispatch_input is False
-        harness.resynchronize()
+        assert harness.bridge.commit(prepared) is True
+        # Committed: the metadata now describes the screen the terminal received.
         assert harness.bridge.can_dispatch_input is True
 
 
@@ -690,13 +699,20 @@ class TestReviewRegressions:
         assert harness.prepare() is not None
         assert recursive == [None]
 
-    def test_managed_output_between_frames_invalidates_the_baseline(self) -> None:
-        """Review finding 3: the committed cursor relationship does not survive a write."""
+    def test_managed_output_drops_the_frame_but_keeps_the_baseline(self) -> None:
+        """Command output moves the cursor, so a frame prepared against it must not commit --
+        but the committed baseline is kept, so the next frame is a no-op, not an erase over
+        the output just written."""
         harness = Harness()
         assert harness.render() is True
+        committed = harness.renderer._last_screen
+        prepared = harness.prepare()
+        assert prepared is not None
         harness.bridge.note_managed_write()
-        assert harness.bridge.needs_resynchronization is True
-        assert harness.prepare() is None
+        assert harness.bridge.in_flight is None
+        assert harness.bridge.commit(prepared) is False
+        assert harness.renderer._last_screen is committed
+        assert harness.bridge.needs_resynchronization is False
 
     def test_a_managed_write_can_supply_the_new_prompt_origin(self) -> None:
         """The layer that emitted the output is the one that knows where it ended."""
@@ -737,7 +753,8 @@ class TestReviewRegressions:
         assert harness.bridge.resynchronization_reason is None
 
     def test_a_write_from_inside_a_layout_callback_retires_the_frame(self) -> None:
-        """The operations were recorded against a terminal that moved on mid-render."""
+        """The operations were recorded against a terminal that moved on mid-render, so the
+        frame's generation no longer matches and it is not published."""
 
         def content() -> str:
             harness.bridge.note_managed_write()
@@ -745,8 +762,7 @@ class TestReviewRegressions:
 
         harness = Harness(content=content)
         assert harness.prepare() is None
-        assert harness.bridge.needs_resynchronization is True
-        assert harness.bridge.can_dispatch_input is False
+        assert harness.bridge.in_flight is None
 
     def test_a_cursor_report_is_validated_against_the_screen_when_released(self) -> None:
         """With no reservation the whole screen is usable, and the band no longer exists."""
@@ -801,9 +817,11 @@ class TestReviewRegressionsRoundTwo:
         harness.clear()
         harness.resynchronize()
         written = harness.written()
+        # Recovery re-establishes the origin from the terminal rather than the forgotten row:
+        # it asks for a cursor report and does not home to the row the output moved past.
         assert "\x1b[1;1H" not in written
         assert "\x1b[6n" in written
-        assert harness.bridge.needs_resynchronization is True
+        assert harness.bridge.prompt_anchor is None
 
     def test_a_frame_prepared_after_emission_stopped_is_not_published(self) -> None:
         """Review finding 2: stopping is not the same state as owing a recovery."""
@@ -1077,6 +1095,51 @@ class TestRenderInterception:
         assert harness.bridge.reserved_emission_stopped is True
         assert isinstance(harness.bridge.take_pending_error(), ReservedModeFailureError)
         assert harness.stream_recorder.getvalue() == ""
+
+    def test_a_suppressed_render_paints_the_toolbar_and_emits_no_frame(self) -> None:
+        """While the command display owns the terminal, a render draws nothing of its own."""
+        harness = self.bound()
+        committed: list[bool] = []
+        harness.bridge.set_frame_committed_handler(lambda: committed.append(True))
+        harness.bridge.set_render_suppressed(True)
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+        assert "hello" not in harness.stream_recorder.getvalue()
+        assert committed == [True]
+        assert harness.bridge.in_flight is None
+
+    def test_a_render_reinstalls_the_region_after_a_resize(self) -> None:
+        """The size poll is blinded by the adapter, so the remeasure happens on the render."""
+        harness = self.bound()
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+        harness.size = Size(rows=12, columns=40)
+        harness.stream_recorder.truncate(0), harness.stream_recorder.seek(0)
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+        # The region is reinstalled for the new height and recovery is owed for the reflow.
+        assert "\x1b[1;11r" in harness.stream_recorder.getvalue()
+        assert harness.display.geometry is not None
+        assert harness.display.geometry.physical_rows == 12
+
+    def test_a_suppressed_render_below_the_floor_is_a_no_op(self) -> None:
+        """With no reservation there is nothing to remeasure and nothing of its own to draw."""
+        harness = self.bound()
+        harness.display.release()
+        assert harness.display.geometry is None
+        harness.bridge.set_render_suppressed(True)
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+        assert harness.bridge.in_flight is None
+
+    def test_a_render_whose_commit_is_refused_asks_for_another(self) -> None:
+        """A frame that cannot commit -- the terminal moved between prepare and commit -- is
+        not drawn, and a redraw is requested so a fresh frame follows."""
+        harness = self.bound()
+        harness.bridge.commit = lambda prepared: False  # type: ignore[method-assign]
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+        assert harness.bridge.redraw_pending is True
 
     def test_an_erase_is_emitted_inside_a_transaction(self) -> None:
         harness = self.bound()

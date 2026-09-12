@@ -3,10 +3,12 @@
 import io
 import sys
 import threading
+import time
 from types import SimpleNamespace
 
 import pyte
 import pytest
+from prompt_toolkit.data_structures import Size
 
 from cmd2.reserved_toolbar import ReservedToolbar
 from cmd2.utils import StdSim
@@ -194,3 +196,137 @@ def test_release_still_resets_margins_when_geometry_cannot_be_measured(terminal_
 
         monkeypatch.setattr(harness.backend, "get_size", unavailable)
     assert terminal.screen.margins is None
+
+
+def wait_for(predicate, timeout: float = 5.0) -> bool:
+    """Poll until the display thread has done something observable, or give up."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if predicate():
+            return True
+        time.sleep(0.01)
+    return predicate()
+
+
+def committed_frames(harness) -> list[int]:
+    """Count frames the bridge actually committed; upstream's event fires only for those."""
+    count = [0]
+
+    def bump(app) -> None:
+        count[0] += 1
+
+    harness.app.main_session.app.after_render += bump
+    return count
+
+
+def resize(harness, terminal, rows: int, columns: int) -> None:
+    """Resize the emulated terminal the way a real one is resized: all at once, margins reset."""
+    terminal.screen.resize(lines=rows, columns=columns)
+    terminal.screen.set_margins()
+    harness.size = Size(rows=rows, columns=columns)
+
+
+class TestResize:
+    """A resize during a command reaches the display only through prompt-toolkit's size poll.
+
+    The command display runs on its own thread, where no window-change signal can be
+    attached, so the poll on ``output.get_size()`` is the only way a resize arrives there.
+    """
+
+    @pytest.mark.parametrize(("rows", "columns"), [(12, 40), (40, 100)])
+    def test_a_resize_during_a_command_reinstalls_the_region_and_repaints(self, terminal_harness, rows, columns) -> None:
+        harness, terminal = terminal_harness
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            ui = harness.app._command_toolbar.app
+            resize(harness, terminal, rows, columns)
+            # The resize is applied on the next render. During a command that is a refresh
+            # tick; the poll cannot see it, because the reserved adapter reports the virtual
+            # size until the region is remeasured. Drive that render here.
+            ui.loop.call_soon_threadsafe(ui.invalidate)
+            assert wait_for(lambda: terminal.screen.margins == pyte.screens.Margins(0, rows - 2))
+            assert ui.output.get_size() == Size(rows=rows - 1, columns=columns)
+            assert wait_for(lambda: terminal.screen.display[-1].startswith("STATUS"))
+            assert harness.app.reserved_toolbar.display.geometry.physical_size == Size(rows=rows, columns=columns)
+            # The band moved, so the old one must not linger as a second toolbar.
+            assert sum(row.startswith("STATUS") for row in terminal.screen.display) == 1
+            harness.app.poutput("after")
+            assert terminal.screen.display[-1].startswith("STATUS")
+        assert terminal.screen.margins is None
+
+    def test_a_resize_at_the_prompt_reinstalls_the_region_and_keeps_the_prompt_usable(self, terminal_harness) -> None:
+        harness, terminal = terminal_harness
+        ui = harness.app.main_session.app
+        resized = False
+
+        def on_render(app) -> None:
+            nonlocal resized
+            if not resized:
+                resized = True
+                resize(harness, terminal, 12, 40)
+                # At the prompt the signal handler is what fires; deliver what it would.
+                ui.loop.call_soon_threadsafe(ui._on_resize)
+
+        ui.after_render += on_render
+        try:
+            with harness.app._reserved_toolbar_context():
+                read_prompt(harness, terminal)
+                assert terminal.screen.margins == pyte.screens.Margins(0, 10)
+                assert ui.output.get_size() == Size(rows=11, columns=40)
+                assert terminal.screen.display[-1].startswith("STATUS")
+                assert any(row.startswith("TEST> next") for row in terminal.screen.display)
+        finally:
+            ui.after_render -= on_render
+        assert terminal.screen.margins is None
+
+
+class TestPartialLines:
+    """Output that ends without a newline is a line in progress, not a line to redraw over."""
+
+    def _write_partial_and_redraw(self, harness, terminal, text: str) -> None:
+        frames = committed_frames(harness)
+        before = frames[0]
+        harness.app.stdout.write(text)
+        harness.app.stdout.flush()
+        harness.app._command_toolbar.app.invalidate()
+        assert wait_for(lambda: frames[0] > before)
+        bridge = harness.app.reserved_toolbar.bridge
+        assert wait_for(lambda: not bridge.needs_resynchronization and bridge.in_flight is None)
+
+    def test_partial_output_survives_the_redraw_and_the_next_write_continues_it(self, terminal_harness) -> None:
+        harness, terminal = terminal_harness
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            self._write_partial_and_redraw(harness, terminal, "PARTIAL")
+            assert terminal.screen.display[0].startswith("PARTIAL")
+            assert (terminal.screen.cursor.x, terminal.screen.cursor.y) == (len("PARTIAL"), 0)
+            harness.app.stdout.write("END\n")
+            harness.app.stdout.flush()
+            assert terminal.screen.display[0].startswith("PARTIALEND")
+            assert terminal.screen.display[-1].startswith("STATUS")
+
+    def test_partial_output_on_the_last_usable_row_survives_too(self, terminal_harness) -> None:
+        """A whole-line delete there has nothing below it to delete, and takes the line itself."""
+        harness, terminal = terminal_harness
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            usable = terminal.screen.lines - 1
+            harness.app.stdout.write("out\n" * (usable - 1))
+            harness.app.stdout.flush()
+            self._write_partial_and_redraw(harness, terminal, "PARTIAL")
+            assert terminal.screen.cursor.y + 1 == usable
+            assert terminal.screen.display[usable - 1].startswith("PARTIAL")
+            harness.app.stdout.write("END\n")
+            harness.app.stdout.flush()
+            assert terminal.screen.display[usable - 2].startswith("PARTIALEND")
+            assert terminal.screen.display[-1].startswith("STATUS")
+
+    def test_a_carriage_return_progress_line_ends_on_its_final_value(self, terminal_harness) -> None:
+        """A \r-updated progress line is a sequence of partial writes; each must survive its redraw."""
+        harness, terminal = terminal_harness
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            self._write_partial_and_redraw(harness, terminal, "Progress: 0%")
+            assert terminal.screen.display[0].startswith("Progress: 0%")
+            self._write_partial_and_redraw(harness, terminal, "\rProgress: 50%")
+            assert terminal.screen.display[0].startswith("Progress: 50%")
+            harness.app.stdout.write("\rProgress: 100%\n")
+            harness.app.stdout.flush()
+            assert terminal.screen.display[0].startswith("Progress: 100%")
+            assert terminal.screen.display[-1].startswith("STATUS")
