@@ -191,14 +191,19 @@ def pr_none():
     # Put the new process into a separate group so its signal are isolated from ours
     kwargs = {}
     if sys.platform.startswith("win"):
-        command = "timeout -t 5 /nobreak"
         kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
     else:
-        command = "sleep 5"
         kwargs["start_new_session"] = True
 
-    proc = subprocess.Popen(command, shell=True, **kwargs)
-    return cu.ProcReader(proc, None, None)
+    # The child restores the default SIGINT action so that, like `sleep`, it dies with -SIGINT on POSIX
+    child_code = "import signal, time; signal.signal(signal.SIGINT, signal.SIG_DFL); print('ready', flush=True); time.sleep(5)"
+    proc = subprocess.Popen([sys.executable, "-c", child_code], stdout=subprocess.PIPE, **kwargs)
+
+    # Wait for the child to report that it is running before returning it to a test. Signaling a Windows console
+    # process before it has finished initializing makes it fail with STATUS_DLL_INIT_FAILED (0xc0000142) and pop up
+    # an "Application Error" dialog that blocks the test run until someone clicks OK.
+    assert proc.stdout.readline().strip() == b"ready"
+    return cu.ProcReader(proc, sys.stdout, sys.stderr)
 
 
 def test_proc_reader_send_sigint(pr_none) -> None:
