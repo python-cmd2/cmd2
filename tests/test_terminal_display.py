@@ -298,9 +298,10 @@ class TestResize:
         screen.rows = 40
         stream.truncate(0), stream.seek(0)
         assert display.reconfigure()
-        # Growing brings the old band's row back inside the screen, so its stale toolbar is
-        # erased before the new region is installed.
-        assert stream.getvalue() == "\x1b7\x1b[24;1H\x1b[2K\x1b8\x1b7\x1b[1;39r\x1b8"
+        # A resize starts from full-screen margins, erases the old band's row -- growing has
+        # brought it back inside the screen with its stale toolbar -- makes room for the new
+        # band, and installs the new region.
+        assert stream.getvalue() == "\x1b7\x1b[r\x1b8\x1b7\x1b[24;1H\x1b[2K\x1b8\x1bD\x1b[1A\x1b7\x1b[1;39r\x1b8"
 
     def test_a_width_change_alone_is_still_a_new_generation(self) -> None:
         """Toolbar height is measured against the width, so a rewrap can change the reservation."""

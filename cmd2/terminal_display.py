@@ -465,13 +465,23 @@ class TerminalDisplay:
             # The guest may have scrolled to the physical bottom, just as the shell
             # that launched us may have done before the initial acquisition.
             self._terminal.make_room_for_region(geometry)
-        elif geometry.physical_rows > previous.physical_rows:
-            # The terminal grew, so the rows the old band occupied are now inside the screen
-            # and still hold its stale text. They never scrolled -- the band sits outside the
-            # scroll region -- so those rows hold nothing but the old toolbar and are safe to
-            # clear before the new region is installed. A terminal that shrank instead pushed
-            # the old band off the bottom, so there is nothing left to clear.
-            self._terminal.erase_rows(previous.usable_rows + 1, previous.physical_rows)
+        elif geometry.physical_size != previous.physical_size:
+            # A resize. The terminal may have reset its margins or kept the old ones; either
+            # way the old region no longer describes the screen, so start from full-screen
+            # margins -- which is also what making room needs, so that an index at the bottom
+            # scrolls the whole screen rather than an obsolete region.
+            self._terminal.release_region()
+            if geometry.physical_rows > previous.physical_rows:
+                # The terminal grew, so the rows the old band occupied are now inside the
+                # screen and still hold its stale text. They never scrolled -- the band sits
+                # outside the scroll region -- so they hold nothing but the old toolbar and
+                # are safe to clear before the new region is installed.
+                self._terminal.erase_rows(previous.usable_rows + 1, previous.physical_rows)
+            # A terminal that shrank may have left the cursor, and the output on its row, in
+            # the rows the new band will take. Making room scrolls that output up into the
+            # usable region and moves the cursor with it, column intact, before the band is
+            # installed over those rows and painted.
+            self._terminal.make_room_for_region(geometry)
         self._terminal.install_region(geometry)
         self._geometry = geometry
         if self._adapter is None:

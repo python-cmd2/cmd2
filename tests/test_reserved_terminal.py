@@ -34,6 +34,23 @@ class TerminalScreen(pyte.HistoryScreen):
         finally:
             self.margins = margins
 
+    def resize(self, lines: int | None = None, columns: int | None = None) -> None:
+        """Shrink by clipping the bottom while the cursor stays on screen.
+
+        pyte clips from the top, inside the scroll margins, which drops the cursor's own
+        line. xterm and VTE keep the cursor's line visible: with the cursor above the new
+        bottom they clip the rows below it, which is the case these tests exercise. The
+        band's old row goes with those rows, as it does on a real terminal.
+        """
+        lines = lines or self.lines
+        if lines < self.lines and self.cursor.y < lines:
+            for y in range(lines, self.lines):
+                self.buffer.pop(y, None)
+            self.lines = lines
+            self.dirty.update(range(lines))
+            self.set_margins()
+        super().resize(lines=lines, columns=columns)
+
 
 class EmulatedTerminal(io.StringIO):
     """Parse output and answer CPR where the cursor actually is when the query arrives."""
@@ -335,6 +352,32 @@ class TestPartialLines:
             harness.app.stdout.flush()
             assert terminal.screen.display[0].startswith("PARTIALEND")
             assert terminal.screen.display[-1].startswith("STATUS")
+
+    def test_partial_output_on_a_row_the_shrunk_band_takes_moves_up_with_its_cursor(self, terminal_harness) -> None:
+        """Shrinking can leave the cursor's row inside the new band. The output there and the
+        cursor move up into the usable region, column intact, before the band is painted."""
+        harness, terminal = terminal_harness
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            ui = harness.app._command_toolbar.app
+            harness.app.stdout.write("out\n" * 11 + "PARTIAL")
+            harness.app.stdout.flush()
+            assert (terminal.screen.cursor.x, terminal.screen.cursor.y + 1) == (len("PARTIAL"), 12)
+            resize(harness, terminal, 12, 80)
+            ui.loop.call_soon_threadsafe(ui._on_resize)
+            assert wait_for(lambda: terminal.screen.margins == pyte.screens.Margins(0, 10))
+            assert wait_for(lambda: terminal.screen.display[-1].startswith("STATUS"))
+            # Row 12 is the band now; the line and its cursor were scrolled up to row 11.
+            assert (terminal.screen.cursor.x, terminal.screen.cursor.y + 1) == (len("PARTIAL"), 11)
+            assert terminal.screen.display[10].startswith("PARTIAL")
+            harness.app.stdout.write("END\n")
+            harness.app.stdout.flush()
+            # The newline at the bottom of the usable region scrolls it, so the finished line
+            # sits one row up; it must be complete, and nothing may have landed in the band.
+            usable = terminal.screen.display[:-1]
+            assert any(row.startswith("PARTIALEND") for row in usable)
+            assert terminal.screen.display[-1].startswith("STATUS")
+            assert "END" not in terminal.screen.display[-1]
+            assert sum(row.startswith("STATUS") for row in terminal.screen.display) == 1
 
     def test_partial_output_survives_the_command_display_shutdown(self, terminal_harness) -> None:
         """Leaving the command context stops the empty display, whose shutdown must not erase

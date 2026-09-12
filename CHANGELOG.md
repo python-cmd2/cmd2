@@ -12,7 +12,9 @@
       wrapping to the old width. A stale toolbar is no longer left behind when the terminal grows.
     - Command output that does not end in a newline (for example a progress line updated with a
       carriage return) is no longer erased by a reserved toolbar's redraw, its shutdown, or a
-      terminal resize. The line in progress is preserved and the next write continues it.
+      terminal resize. The line in progress is preserved and the next write continues it. When
+      shrinking leaves that line in the rows the toolbar takes, the line and its cursor are moved up
+      into the usable region before the toolbar is painted.
     - Reserved rendering is no longer left suppressed, and the main prompt invisible, when a
       terminal that shrank below the two-row minimum during a command grows back afterward.
     - The built-in pager (used by `Cmd.ppaged()`) again displays its content in reserved toolbar
