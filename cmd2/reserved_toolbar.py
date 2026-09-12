@@ -253,14 +253,15 @@ class ReservedToolbar:
         original = app.suspend_to_background
 
         def suspend_to_background(suspend_group: bool = True) -> None:
-            if not suspend_to_background_supported():
+            suspend_signal = getattr(signal, "SIGTSTP", None)
+            if suspend_signal is None or not suspend_to_background_supported():
                 return
 
             def suspend_process() -> None:
                 # run_in_terminal has stopped rendering and detached input before this runs.
                 # A signal callback itself must never acquire the terminal transaction.
                 with self.suspended():
-                    os.kill(0 if suspend_group else os.getpid(), signal.SIGTSTP)
+                    os.kill(0 if suspend_group else os.getpid(), suspend_signal)
 
             run_in_terminal(suspend_process)
 
