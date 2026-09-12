@@ -4,6 +4,7 @@ import io
 import sys
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace
 
 import pyte
@@ -329,4 +330,43 @@ class TestPartialLines:
             harness.app.stdout.write("\rProgress: 100%\n")
             harness.app.stdout.flush()
             assert terminal.screen.display[0].startswith("Progress: 100%")
+            assert terminal.screen.display[-1].startswith("STATUS")
+
+
+class TestPager:
+    """The built-in pager renders a full screen of its own, so its frames must not be
+    suppressed the way an ordinary command's empty frames are."""
+
+    def test_the_pager_draws_its_content_over_the_reserved_toolbar(self, terminal_harness) -> None:
+        harness, terminal = terminal_harness
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            display = harness.app._command_toolbar
+            body = "\n".join(f"row {index:03d}" for index in range(200))
+            shown = threading.Event()
+
+            def drive() -> None:
+                # Wait until the pager has painted its first screen, then quit it. Quit either
+                # way, so a pager that never draws fails the assertion instead of hanging the
+                # blocking page() call forever.
+                try:
+                    if wait_for(lambda: terminal.screen.display[0].startswith("row 000")):
+                        shown.set()
+                finally:
+                    harness.pipe.send_text("q")
+
+            with ThreadPoolExecutor() as executor:
+                future = executor.submit(drive)
+                display.page(body, chop=False)
+                future.result(timeout=5)
+
+            assert shown.is_set(), "the pager never drew its content"
+            # The toolbar is suppressed again for ordinary output once the pager has closed.
+            assert harness.app.reserved_toolbar.bridge._render_suppressed is True
+        assert terminal.screen.margins is None
+
+    def test_output_that_fits_is_printed_without_a_pager(self, terminal_harness) -> None:
+        harness, terminal = terminal_harness
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            harness.app._command_toolbar.page("one short line", chop=False)
+            assert any(row.startswith("one short line") for row in terminal.screen.display)
             assert terminal.screen.display[-1].startswith("STATUS")

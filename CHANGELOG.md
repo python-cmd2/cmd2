@@ -13,6 +13,9 @@
     - Command output that does not end in a newline (for example a progress line updated with a
       carriage return) is no longer erased by a reserved toolbar's redraw. The line in progress is
       preserved and the next write continues it.
+    - The built-in pager (used by `Cmd.ppaged()`) again displays its content in reserved toolbar
+      mode. It had rendered nothing while still accepting its keys, because the command display's
+      renderer frames were being suppressed.
 
 - Breaking Changes
     - Replaced `enable_bottom_toolbar` with `bottom_toolbar_mode` in `Cmd.__init__()`. The default,

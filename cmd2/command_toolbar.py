@@ -395,18 +395,19 @@ class CommandToolbar:
         # While the command display owns the terminal it has nothing of its own to draw, so its
         # renderer frames are suppressed: emitting one would reserve the usable height and
         # scroll command output off the screen. The toolbar is painted independently.
-        if reserved.bridge is not None:
-            reserved.bridge.set_render_suppressed(True)
+        self._set_render_suppressed(True)
         return True
 
-    def _resume_rendering(self) -> None:
-        """Let the renderer emit its frames again, now the command display has given up the terminal.
+    def _set_render_suppressed(self, suppressed: bool) -> None:
+        """Turn the renderer's own frames off while the command display owns the terminal.
 
-        The next frames belong to the main prompt, which must render for real.
+        Off for ordinary command output, which the empty command display must not repaint; on
+        again for the pager, whose full screen must render, and for the main prompt once the
+        display has given the terminal back.
         """
         bridge = self._reserved_bridge()
         if bridge is not None:
-            bridge.set_render_suppressed(False)
+            bridge.set_render_suppressed(suppressed)
 
     def _app_exited(self) -> None:
         """Give the terminal back to the streams when the display stops on its own.
@@ -420,7 +421,7 @@ class CommandToolbar:
             # A deliberate pause restores the streams itself, in the right order.
             return
 
-        self._resume_rendering()
+        self._set_render_suppressed(False)
         with self._lock:
             # Leave self._proxy set so that the next _pause() still drains and closes
             # it. With the display gone, its worker writes to the terminal directly.
@@ -450,7 +451,7 @@ class CommandToolbar:
 
     def _pause(self) -> None:
         self._pausing = True
-        self._resume_rendering()
+        self._set_render_suppressed(False)
         try:
             try:
                 # Hold off other threads while the proxy drains so their output is never
@@ -622,6 +623,10 @@ class CommandToolbar:
         def enter() -> None:
             nonlocal entered
             entered = True
+            # The pager has a full screen of its own to draw, so the render suppression that
+            # keeps ordinary command frames from touching the terminal has to come off for the
+            # duration -- otherwise the pager swaps in its layout and nothing is ever painted.
+            self._set_render_suppressed(False)
             self.app.renderer.erase()
             self.app.layout = layout
             self.app.key_bindings = pager.bindings
@@ -638,6 +643,9 @@ class CommandToolbar:
             self.app.layout, self.app.key_bindings, self.app.editing_mode, self.app.full_screen = previous
             self.app.renderer.full_screen = self.app.full_screen
             self.app.renderer.request_absolute_cursor_position()
+            # Back to ordinary command output, whose frames are suppressed again so the toolbar
+            # stays put. Command finalization and the next prompt lift this in turn.
+            self._set_render_suppressed(True)
             self.app.invalidate()
 
         def close() -> None:
