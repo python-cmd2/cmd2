@@ -769,7 +769,7 @@ class CommandToolbar:
             if reserved is not None:
                 # The very first pager layout must see the physical size. Releasing from
                 # enter_alternate_screen during replay is too late: that frame was measured.
-                handoff.enter_context(reserved.suspended())
+                handoff.enter_context(reserved.suspended(defer_band_clear=True))
             self.app.layout = layout
             self.app.key_bindings = pager.bindings
             self.app.editing_mode = EditingMode.EMACS

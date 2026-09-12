@@ -336,7 +336,7 @@ class ReservedToolbar:
             yield
 
     @contextmanager
-    def suspended(self) -> "Iterator[None]":
+    def suspended(self, *, defer_band_clear: bool = False) -> "Iterator[None]":
         """Give the rows back for the duration of the block, and take them again after.
 
         A program that inherits the terminal -- a shell command, an editor, an external pager
@@ -357,6 +357,9 @@ class ReservedToolbar:
         says nothing about whose terminal it is: the guest the outer block handed it to still
         has it, and reinstalling margins or painting a band over their screen would be the
         same mistake as never releasing at all.
+
+        :param defer_band_clear: keep the main-screen bar visible during managed pager
+            preparation; external terminal users must retain the default immediate clear.
         """
         display = self._display
         if display is None:
@@ -367,9 +370,12 @@ class ReservedToolbar:
         self._suspend_depth += 1
         body_failed = False
         try:
+            if not defer_band_clear:
+                with self._lock.transaction("clear retained toolbar"):
+                    display.clear_deferred_band()
             if outermost:
                 with self._lock.transaction("suspend"):
-                    display.release_region_for_handoff()
+                    display.release_region_for_handoff(defer_band_clear=defer_band_clear)
                     # Forgotten as the terminal changes hands, not after the guest has
                     # finished with it. From this moment the remembered row describes a screen
                     # someone else is writing on, and anything that rendered against it would

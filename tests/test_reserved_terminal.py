@@ -818,6 +818,51 @@ def test_termination_unwinds_reserved_command_ownership(terminal_harness) -> Non
 
 
 class TestPager:
+    @pytest.mark.parametrize("action", ["resume", "output", "external"])
+    def test_retained_startup_bar_is_cleared_before_output_or_external_handoff(self, terminal_harness, action) -> None:
+        harness, terminal = terminal_harness
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            reserved = harness.app.reserved_toolbar
+            with reserved.suspended(defer_band_clear=True):
+                assert terminal.screen.display[-1].startswith("STATUS")
+                if action == "output":
+                    # Blank lines can scroll the retained bar without overwriting its text.
+                    harness.app.stdout.write("\n" * 50)
+                    harness.app.stdout.flush()
+                elif action == "external":
+                    with reserved.suspended():
+                        assert terminal.screen.display[-1].strip() == ""
+                else:
+                    assert reserved.display._deferred_band is not None
+            assert reserved.display._deferred_band is None
+            assert terminal.screen.display[-1].startswith("STATUS")
+            history = ["".join(line[x].data for x in sorted(line)) for line in terminal.screen.history.top]
+            assert not any("STATUS" in row for row in history)
+
+    def test_toolbar_remains_visible_until_the_first_pager_frame_is_prepared(self, terminal_harness, monkeypatch) -> None:
+        harness, terminal = terminal_harness
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            reserved = harness.app.reserved_toolbar
+            display = harness.app._command_toolbar
+            original_prepare = reserved.bridge.prepare
+            seen = []
+
+            def prepare(*args, **kwargs):
+                frame = original_prepare(*args, **kwargs)
+                if display._paging and frame is not None and not seen:
+                    # Observe after the expensive layout work, before commit. Checking only
+                    # the completed pager would miss the blank interval while a file loads.
+                    seen.append(terminal.screen.display[-1])
+                    assert display.app.output.get_size() == Size(24, 80)
+                return frame
+
+            monkeypatch.setattr(reserved.bridge, "prepare", prepare)
+            assert run_pager(harness, terminal)
+            assert seen
+            assert seen[0].startswith("STATUS")
+            assert reserved.display._deferred_band is None
+            assert terminal.screen.display[-1].startswith("STATUS")
+
     def test_first_pager_frame_uses_full_geometry(self, terminal_harness) -> None:
         harness, terminal = terminal_harness
         with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
