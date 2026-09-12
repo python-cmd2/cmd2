@@ -116,6 +116,8 @@ addopts = [
 ]
 
 [tool.coverage.run]
+# Include the cmd2 applications launched by the terminal integration tests.
+patch = ["subprocess"]
 # Use sys.monitoring on Python 3.12+; coverage falls back with a warning on 3.11.
 core = "sysmon"
 source = ["cmd2"]
