@@ -300,6 +300,76 @@ class TestResize:
     attached, so the poll on ``output.get_size()`` is the only way a resize arrives there.
     """
 
+    @pytest.mark.parametrize("terminal_harness", [2, 3], indirect=True)
+    @pytest.mark.parametrize("text", ["", "typed"])
+    def test_minimum_height_reacquisition_through_idle_polling(self, terminal_harness, monkeypatch, text) -> None:
+        """Fallback can erase a cached band before growth returns to exactly the same size."""
+        harness, terminal = terminal_harness
+        ui = harness.app.main_session.app
+        ui.terminal_size_polling_interval = 0.01
+        task = None
+        polls = 0
+        errors = []
+
+        async def until(predicate):
+            async with asyncio.timeout(5):
+                while not predicate():  # noqa: ASYNC110 - observe upstream state without driving a redraw
+                    await asyncio.sleep(0.01)
+
+        async def transitions():
+            try:
+                if text:
+                    harness.pipe.send_text(text)
+                    await until(lambda: ui.current_buffer.text == text)
+                for rows, columns in ((3, 80), (2, 80), (3, 80), (4, 40), (24, 100), (3, 80), (2, 80), (3, 80)):
+                    baseline = polls
+                    # Let upstream establish/settle its size baseline before changing it.
+                    await until(lambda baseline=baseline: polls >= baseline + 2)
+                    if harness.size != Size(rows=rows, columns=columns):
+                        resize(harness, terminal, rows, columns)
+                    toolbar = harness.app.reserved_toolbar
+                    await until(lambda toolbar=toolbar, rows=rows: toolbar.is_active == (rows >= 3))
+                    if rows >= 3:
+                        await until(lambda toolbar=toolbar, rows=rows: toolbar.display.geometry.physical_rows == rows)
+                        await until(lambda: terminal.screen.display[-1].startswith("STATUS"))
+                    await until(lambda: any(row.startswith("TEST> " + text) for row in terminal.screen.display))
+                    assert ui.current_buffer.text == text
+                    assert ui.current_buffer.cursor_position == len(text)
+            except Exception as error:  # noqa: BLE001 - report outside prompt-toolkit's event loop
+                errors.append(error)
+            finally:
+                harness.pipe.send_text("\n")
+
+        def ready(app):
+            nonlocal task
+            if task is None:
+                task = ui.create_background_task(transitions())
+
+        ui.after_render += ready
+        try:
+            with harness.app._reserved_toolbar_context():
+                get_size = ui.output.get_size
+
+                def observe_size():
+                    nonlocal polls
+                    try:
+                        current = asyncio.current_task()
+                    except RuntimeError:
+                        current = None
+                    if current is not None and current.get_coro().__name__ == "_poll_output_size":
+                        polls += 1
+                    return get_size()
+
+                monkeypatch.setattr(ui.output, "get_size", observe_size)
+                assert harness.app._read_raw_input("TEST> ", harness.app.main_session) == text
+                assert task is not None
+                task.result()
+                if errors:
+                    raise errors[0]
+        finally:
+            ui.after_render -= ready
+        assert terminal.screen.margins is None
+
     @pytest.mark.parametrize("terminal_harness", [2], indirect=True)
     def test_initially_short_prompt_grows_and_accepts_visible_input(self, terminal_harness) -> None:
         harness, terminal = terminal_harness
@@ -329,6 +399,45 @@ class TestResize:
             watchdog.cancel()
             watchdog.join()
             ui.after_render -= ready
+
+    @pytest.mark.parametrize("terminal_harness", [3], indirect=True)
+    @pytest.mark.parametrize("partial", ["", "PARTIAL"])
+    def test_quiet_command_reacquires_the_same_band(self, terminal_harness, monkeypatch, partial) -> None:
+        """The command poll restores the whole band without disturbing unfinished output."""
+        harness, terminal = terminal_harness
+        harness.app.main_session.app.terminal_size_polling_interval = 0.01
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            toolbar = harness.app.reserved_toolbar
+            output = harness.app._command_toolbar.app.output
+            get_size = output.get_size
+            polls = 0
+
+            def observe_size():
+                nonlocal polls
+                try:
+                    current = asyncio.current_task()
+                except RuntimeError:
+                    current = None
+                if current is not None and current.get_coro().__name__ == "_poll_output_size":
+                    polls += 1
+                return get_size()
+
+            monkeypatch.setattr(output, "get_size", observe_size)
+            harness.app.stdout.write(partial)
+            harness.app.stdout.flush()
+            for rows in (2, 3, 4, 3, 2, 3):
+                baseline = polls
+                assert wait_for(lambda baseline=baseline: polls >= baseline + 2)
+                resize(harness, terminal, rows, 80)
+                assert wait_for(lambda rows=rows: toolbar.is_active == (rows >= 3))
+                if rows >= 3:
+                    assert wait_for(lambda rows=rows: toolbar.display.geometry.physical_rows == rows)
+                    assert wait_for(lambda: terminal.screen.display[-1].startswith("STATUS"))
+                if partial:
+                    assert any(row.startswith(partial) for row in terminal.screen.display)
+            harness.app.poutput(" COMPLETE")
+            assert any(row.startswith(partial + " COMPLETE") for row in terminal.screen.display)
+        assert terminal.screen.margins is None
 
     @pytest.mark.parametrize("terminal_harness", [2], indirect=True)
     def test_initially_short_terminal_acquires_during_a_quiet_command(self, terminal_harness, monkeypatch) -> None:
