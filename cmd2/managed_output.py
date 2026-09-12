@@ -71,7 +71,7 @@ class SerializedTerminalWriter:
                 # output goes below an empty command display, so a line in progress -- one that
                 # did not end in a newline -- stays on screen for the next write to continue.
                 if self.bridge is not None:
-                    self.bridge.note_managed_write()
+                    self.bridge.note_managed_write(data=data)
         return written
 
     def flush(self) -> None:

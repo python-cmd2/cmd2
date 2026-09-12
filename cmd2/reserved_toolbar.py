@@ -27,6 +27,7 @@ from prompt_toolkit.layout.containers import ConditionalContainer
 from prompt_toolkit.styles import DynamicStyle
 
 from .prompt_toolkit_bridge import PromptToolkitBridge
+from .reserved_output import ReservedOutput
 from .terminal_display import TerminalDisplay
 from .terminal_transaction import TerminalLock
 from .theme import get_pt_theme
@@ -105,6 +106,7 @@ class ReservedToolbar:
         self._native_toolbar: ConditionalContainer | None = None
         self._original_filter: Any = None
         self._installed_filter: Any = None
+        self.stopped_handler: Callable[[], None] | None = None
 
     @property
     def is_active(self) -> bool:
@@ -145,13 +147,13 @@ class ReservedToolbar:
     def start(self) -> bool:
         """Acquire the reservation and bind the application to it.
 
-        A terminal too short for the floor is not an error: the lease is simply refused, and
-        the application keeps rendering through its own backend exactly as it did before.
+        A terminal too short for the floor keeps its lease and resize bridge. The adapter
+        exposes the full terminal until growth makes a reservation possible.
 
         :return: whether a reservation was installed
         """
         if self._display is not None:
-            return True
+            return self.is_active
 
         app = self._session.app
         native = native_toolbar_container(self._session)
@@ -162,17 +164,15 @@ class ReservedToolbar:
             raise RuntimeError("cannot locate the session's bottom toolbar window")
 
         display = TerminalDisplay(app.output, reserved_rows=self._reserved_rows)
-        if not display.acquire():
-            # Nothing was installed, so there is nothing to release; leaving the lease held
-            # would make every later acquire a no-op at depth two.
-            display.release()
-            return False
+        display.acquire()
 
         self._display = display
         try:
             self._original_app_output = app.output
             self._original_renderer_output = app.renderer.output
-            self._bound_output = display.output
+            # Keep a live view even if startup is below the height floor. Binding the raw
+            # backend there would leave Application.output unadapted after reacquisition.
+            self._bound_output = display.output if display.is_reserved else ReservedOutput(app.output, display)
             app.output = self._bound_output
             app.renderer.output = self._bound_output
 
@@ -221,7 +221,7 @@ class ReservedToolbar:
             with suppress(Exception):
                 self.stop()
             raise
-        return True
+        return self.is_active
 
     def take_pending_error(self) -> BaseException | None:
         """Take the failure waiting to be reported, if there is one.
@@ -394,6 +394,8 @@ class ReservedToolbar:
         self._original_app_output = None
         self._original_renderer_output = None
         display.release()
+        if self.stopped_handler is not None:
+            self.stopped_handler()
 
     def __enter__(self) -> Self:
         """Start the reservation."""

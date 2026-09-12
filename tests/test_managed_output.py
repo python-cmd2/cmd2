@@ -27,7 +27,7 @@ class RecordingBridge:
         self.notes: list[Any] = []
         self.anchors: list[int | None] = []
 
-    def note_managed_write(self, prompt_anchor: int | None = None) -> None:
+    def note_managed_write(self, prompt_anchor: int | None = None, *, data: str | None = None) -> None:
         self.notes.append(current_transaction())
         self.anchors.append(prompt_anchor)
 

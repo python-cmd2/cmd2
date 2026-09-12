@@ -228,7 +228,7 @@ class CommandToolbar:
         # nothing, so command output owns the region and the renderer's frames are no-ops.
         # Legacy rendering still needs the filler to push its scrolling toolbar to the bottom.
         reserved = cmd.reserved_toolbar
-        if reserved is not None and reserved.is_active:
+        if reserved is not None and reserved.bridge is not None:
             self._layout = Layout(HSplit([Window(height=0)]))
         else:
             self._layout = Layout(HSplit([Window(height=0), Window(), self.toolbar]))
@@ -286,12 +286,12 @@ class CommandToolbar:
         self._ready.set()
 
     def _reserved_bridge(self) -> Any:
-        """Return the renderer bridge, when a reservation is holding the toolbar.
+        """Return the retained bridge, including while below the reservation height floor.
 
         :return: the bridge, or ``None`` in legacy rendering
         """
         reserved = self.cmd.reserved_toolbar
-        if reserved is None or not reserved.is_active:
+        if reserved is None:
             return None
         return reserved.bridge
 
@@ -302,6 +302,11 @@ class CommandToolbar:
         self._ready.clear()
         self._error = None
         try:
+            reserved = self.cmd.reserved_toolbar
+            if reserved is not None:
+                previous_handler = reserved.stopped_handler
+                reserved.stopped_handler = self._reservation_stopped
+                stack.callback(setattr, reserved, "stopped_handler", previous_handler)
             stack.enter_context(create_app_session(input=self.app.input, output=self.app.output))
             # Only replace terminal streams. In particular, preserve redirected stderr
             # and self.stdout when a nested command has redirected its output to a file.
@@ -343,6 +348,9 @@ class CommandToolbar:
         stack.callback(self.app.after_render.remove_handler, self._display_started)
         bridge = self._reserved_bridge()
         if bridge is not None:
+            # Set before the worker's first frame, including after a guest handoff.
+            # Recovery at that frame must restore command modes without homing its cursor.
+            bridge.set_render_suppressed(True)
             # In reserved mode a frame can be skipped, and the after-render event is withheld
             # for those because nothing reached the terminal. Readiness is a different
             # question -- the display is up either way -- so it hangs on the attempt instead.
@@ -373,13 +381,41 @@ class CommandToolbar:
             raise self._error
         if self._install_serializers():
             return
+        self._install_legacy_proxy()
+
+    def _install_legacy_proxy(self) -> None:
+        """Route output through the native toolbar's erase-and-redraw proxy."""
         # The worker already combines queued writes. A batching sleep would also
         # delay close(), which runs at each command finalization boundary.
         proxy = _ContextStdoutProxy(raw=True, sleep_between_writes=0)
         with self._lock:
+            if self._proxy is not None:
+                proxy.close()
+                return
             self._proxy = proxy
+            self._serialized = False
             for stream in self._streams:
+                stream.serializer = None
                 stream.proxy = proxy
+
+    def _reservation_stopped(self) -> None:
+        """Restore legacy layout and routing on the UI loop after safe physical release."""
+        if self.app.loop is not None and self.app.is_running:
+            self.app.loop.call_soon_threadsafe(self._restore_legacy_display)
+
+    def _restore_legacy_display(self) -> None:
+        """Replace the empty reserved display once its bridge has been removed."""
+        previous_layout = self._layout
+        self._layout = Layout(HSplit([Window(height=0), Window(), self.toolbar]))
+        if self._pausing or not self.app.is_running or self.app.is_done:
+            return
+        self._install_legacy_proxy()
+        if self.app.layout is previous_layout:
+            self.app.layout = self._layout
+        self.app.erase_when_done = True
+        self.app.renderer.reset()
+        self.app.renderer.request_absolute_cursor_position()
+        self.app.invalidate()
 
     def _install_serializers(self) -> bool:
         """Route output straight to the terminal when a reservation is holding the toolbar.
@@ -392,7 +428,7 @@ class CommandToolbar:
         :return: whether serialized writing was installed
         """
         reserved = self.cmd.reserved_toolbar
-        if reserved is None or not reserved.is_active:
+        if reserved is None or reserved.bridge is None:
             return False
         with self._lock:
             self._serialized = True

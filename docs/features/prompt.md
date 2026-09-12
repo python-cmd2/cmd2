@@ -119,6 +119,9 @@ retains prompt-toolkit's layout. The number of reserved rows is not yet configur
 
 ### Refreshing the Toolbar
 
+In reserved rendering, if command output ends without a newline, cmd2 adds one before displaying the
+next main prompt. This preserves the unfinished output above the prompt.
+
 The toolbar is rendered by `prompt-toolkit` and is naturally redrawn whenever the prompt is
 refreshed. If you want the toolbar to update automatically during input and command execution (for
 example, to display a clock), you can set `refresh_interval` in the [cmd2.Cmd.__init__][]

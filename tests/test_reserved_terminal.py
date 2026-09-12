@@ -1,5 +1,6 @@
 """Reservation boundaries interpreted by a terminal, rather than a fixed row-one CPR stub."""
 
+import asyncio
 import io
 import sys
 import threading
@@ -9,6 +10,7 @@ from types import SimpleNamespace
 
 import pyte
 import pytest
+from prompt_toolkit.application import run_in_terminal
 from prompt_toolkit.data_structures import Size
 
 from cmd2.reserved_toolbar import ReservedToolbar
@@ -113,6 +115,47 @@ def read_prompt(harness, terminal, expected_toolbar="STATUS") -> None:
         assert terminal.reports
         assert all(row < terminal.screen.lines for row in terminal.reports)
         assert terminal.screen.display[-1].startswith(expected_toolbar)
+    finally:
+        watchdog.cancel()
+        watchdog.join()
+        ui.after_render -= ready
+
+
+def test_background_output_survives_return_to_active_prompt(terminal_harness) -> None:
+    harness, terminal = terminal_harness
+    ui = harness.app.main_session.app
+    started = False
+    finished = False
+    sent = False
+    task = None
+
+    async def output():
+        nonlocal finished
+        await run_in_terminal(lambda: terminal.write("BACKGROUND MESSAGE\n"))
+        finished = True
+        ui.invalidate()
+
+    def ready(app):
+        nonlocal started, sent, task
+        if not started and app.renderer._min_available_height > 0:
+            started = True
+            task = app.create_background_task(output())
+        elif finished and not sent and app.renderer._min_available_height > 0:
+            sent = True
+            harness.pipe.send_text("next\n")
+
+    ui.after_render += ready
+    watchdog = threading.Timer(5, harness.pipe.close)
+    watchdog.start()
+    try:
+        with harness.app._reserved_toolbar_context():
+            assert harness.app._read_raw_input("TEST> ", harness.app.main_session) == "next"
+            assert task is not None
+            assert task.done()
+            task.result()
+            assert sum("BACKGROUND MESSAGE" in row for row in terminal.screen.display) == 1
+            assert any(row.startswith("TEST> next") for row in terminal.screen.display)
+            assert terminal.screen.display[-1].startswith("STATUS")
     finally:
         watchdog.cancel()
         watchdog.join()
@@ -251,6 +294,72 @@ class TestResize:
     attached, so the poll on ``output.get_size()`` is the only way a resize arrives there.
     """
 
+    @pytest.mark.parametrize("terminal_harness", [2], indirect=True)
+    def test_initially_short_prompt_grows_and_accepts_visible_input(self, terminal_harness) -> None:
+        harness, terminal = terminal_harness
+        ui = harness.app.main_session.app
+        resized = False
+        sent = False
+
+        def ready(app):
+            nonlocal resized, sent
+            if not resized:
+                resized = True
+                resize(harness, terminal, 24, 80)
+                ui.loop.call_soon_threadsafe(ui._on_resize)
+            elif not sent and harness.app.reserved_toolbar.is_active:
+                sent = True
+                harness.pipe.send_text("next\n")
+
+        ui.after_render += ready
+        watchdog = threading.Timer(5, harness.pipe.close)
+        watchdog.start()
+        try:
+            with harness.app._reserved_toolbar_context():
+                assert harness.app._read_raw_input("TEST> ", harness.app.main_session) == "next"
+                assert any(row.startswith("TEST> next") for row in terminal.screen.display)
+                assert terminal.screen.display[-1].startswith("STATUS")
+        finally:
+            watchdog.cancel()
+            watchdog.join()
+            ui.after_render -= ready
+
+    @pytest.mark.parametrize("terminal_harness", [2], indirect=True)
+    def test_initially_short_terminal_acquires_during_a_quiet_command(self, terminal_harness, monkeypatch) -> None:
+        harness, terminal = terminal_harness
+        # Exercise the actual size poll, without explicitly invalidating or calling _on_resize.
+        harness.app.main_session.app.terminal_size_polling_interval = 0.01
+        with harness.app._reserved_toolbar_context():
+            toolbar = harness.app.reserved_toolbar
+            assert not toolbar.is_active
+            output = harness.app.main_session.app.output
+            get_size = output.get_size
+            polled = threading.Event()
+
+            def observe_size():
+                size = get_size()
+                try:
+                    task = asyncio.current_task()
+                except RuntimeError:
+                    task = None
+                if task is not None and task.get_coro().__name__ == "_poll_output_size":
+                    polled.set()
+                return size
+
+            monkeypatch.setattr(output, "get_size", observe_size)
+            with harness.app._command_toolbar_context():
+                # The upstream poll first establishes a baseline; resize after it has
+                # sampled the short terminal, rather than racing its initial sample.
+                assert polled.wait(5)
+                resize(harness, terminal, 24, 80)
+                assert wait_for(lambda: toolbar.is_active)
+                assert output.get_size() == Size(rows=23, columns=80)
+                assert wait_for(lambda: terminal.screen.display[-1].startswith("STATUS"))
+                harness.app.stdout.write("PARTIAL")
+                harness.app.stdout.flush()
+        assert any(row.startswith("PARTIAL") for row in terminal.screen.display)
+        assert terminal.screen.margins is None
+
     @pytest.mark.parametrize(("rows", "columns"), [(12, 40), (40, 100)])
     def test_a_resize_during_a_command_reinstalls_the_region_and_repaints(self, terminal_harness, rows, columns) -> None:
         harness, terminal = terminal_harness
@@ -300,6 +409,34 @@ class TestResize:
 
 class TestPartialLines:
     """Output that ends without a newline is a line in progress, not a line to redraw over."""
+
+    @pytest.mark.parametrize("lines", [0, 22])
+    def test_partial_output_survives_the_next_main_prompt(self, terminal_harness, lines) -> None:
+        harness, terminal = terminal_harness
+        with harness.app._reserved_toolbar_context():
+            with harness.app._command_toolbar_context():
+                harness.app.stdout.write("out\n" * lines + "IMPORTANT PARTIAL")
+                harness.app.stdout.flush()
+            read_prompt(harness, terminal)
+            history = ["".join(line[x].data for x in sorted(line)) for line in terminal.screen.history.top]
+            visible = history + terminal.screen.display
+            assert sum("IMPORTANT PARTIAL" in row for row in visible) == 1
+            assert any("TEST> next" in row for row in visible)
+
+    def test_guest_partial_output_survives_command_resume(self, terminal_harness) -> None:
+        harness, terminal = terminal_harness
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            with harness.app.suspend_bottom_toolbar():
+                harness.app.stdout.write("PARTIAL")
+                harness.app.stdout.flush()
+            frames = committed_frames(harness)
+            harness.app._command_toolbar.app.invalidate()
+            assert wait_for(lambda: frames[0] > 0)
+            assert wait_for(lambda: not harness.app.reserved_toolbar.bridge.needs_resynchronization)
+            assert terminal.screen.cursor.x == 7
+            harness.app.stdout.write("END\n")
+            harness.app.stdout.flush()
+            assert terminal.screen.display[0].startswith("PARTIALEND")
 
     def _write_partial_and_redraw(self, harness, terminal, text: str) -> None:
         frames = committed_frames(harness)
@@ -407,6 +544,33 @@ class TestPartialLines:
 class TestPager:
     """The built-in pager renders a full screen of its own, so its frames must not be
     suppressed the way an ordinary command's empty frames are."""
+
+    def test_abandoning_reservation_restores_legacy_display_and_routing(self, terminal_harness) -> None:
+        harness, terminal = terminal_harness
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            reserved = harness.app.reserved_toolbar
+            display = harness.app._command_toolbar
+
+            class BrokenContent:
+                def __pt_formatted_text__(self):
+                    raise ValueError("cannot format toolbar")
+
+            reserved.content = BrokenContent
+
+            def fail():
+                reserved.refresh()
+                reserved.refresh()
+
+            display.app.loop.call_soon_threadsafe(fail)
+            assert wait_for(lambda: not reserved.is_active)
+            assert wait_for(lambda: display._proxy is not None)
+            assert all(stream.serializer is None for stream in display._streams)
+            harness.app.main_session.bottom_toolbar = "RECOVERED"
+            display.app.invalidate()
+            assert wait_for(lambda: terminal.screen.display[-1].startswith("RECOVERED"))
+            harness.app.poutput("legacy output")
+            assert wait_for(lambda: any("legacy output" in row for row in terminal.screen.display))
+            assert terminal.screen.margins is None
 
     def test_the_pager_draws_its_content_over_the_reserved_toolbar(self, terminal_harness) -> None:
         harness, terminal = terminal_harness

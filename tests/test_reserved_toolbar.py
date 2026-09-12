@@ -130,14 +130,22 @@ class TestBinding:
         finally:
             harness.close()
 
-    def test_a_terminal_too_short_to_reserve_binds_nothing(self) -> None:
-        """Below the two-row floor there is no reservation, so nothing should be wrapped."""
+    def test_a_terminal_too_short_to_reserve_keeps_a_resize_bridge(self) -> None:
+        """Below the floor the full-size adapter retains a retry path and cleans up normally."""
         harness = Harness(rows=2)
         try:
             assert harness.toolbar.start() is False
+            assert isinstance(harness.app.output, ReservedOutput)
+            assert harness.app.renderer.output is harness.app.output
+            assert harness.app.output.get_size() == Size(rows=2, columns=80)
+            assert harness.toolbar.bridge is not None
+            assert harness.toolbar.display.lease_depth == 1
+            assert harness.toolbar.start() is False
+            assert harness.toolbar.display.lease_depth == 1
+            assert harness.toolbar.is_active is False
+            harness.toolbar.stop()
             assert harness.app.output is harness.backend
             assert harness.app.renderer.output is harness.backend
-            assert harness.toolbar.is_active is False
         finally:
             harness.close()
 

@@ -151,6 +151,7 @@ class PromptToolkitBridge:
         self._after_render_original: Any = None
         self._after_render_installed: Any = None
         self._render_suppressed = False
+        self._unfinished_command_output = False
 
     # -- what is known ---------------------------------------------------------------------
 
@@ -232,7 +233,7 @@ class PromptToolkitBridge:
         """
         self._redraw_scheduler = scheduler
 
-    def note_managed_write(self, prompt_anchor: int | None = None) -> None:
+    def note_managed_write(self, prompt_anchor: int | None = None, *, data: str | None = None) -> None:
         """Record that command output reached the terminal.
 
         In reserved mode command output goes straight to the terminal, below an empty command
@@ -258,8 +259,11 @@ class PromptToolkitBridge:
         :param prompt_anchor: the physical row the prompt now starts on, where a caller happens
             to know it. Passing nothing forgets any remembered origin rather than keeping a row
             the output has moved past.
+        :param data: emitted command text, for deciding whether the next prompt needs a new line
         """
         self._terminal_generation += 1
+        if data:
+            self._unfinished_command_output = not data.rstrip("\r").endswith("\n")
         self._prompt_anchor = prompt_anchor
         # Only the frame in flight goes; it was prepared against the cursor and content this
         # write moved, so committing it would emit a stale frame. The renderer's baseline is
@@ -269,6 +273,20 @@ class PromptToolkitBridge:
         self._in_flight = None
         self._renderer._last_screen = self._committed_screen
         self._request_redraw()
+
+    def finish_command_output(self) -> None:
+        """Start the next prompt on a fresh line if command output left one unfinished.
+
+        The reserved erase deletes whole lines. Moving past a partial line before the
+        prompt's first render preserves that line, including at the scrolling margin.
+        """
+        with self._lock.transaction("finish command output"):
+            if self._unfinished_command_output:
+                self._display.output.write_raw("\r\n")
+                self._display.output.flush()
+                self._unfinished_command_output = False
+                self._prompt_anchor = None
+                self._terminal_generation += 1
 
     def note_owner_change(self) -> None:
         """Record that a different UI owner now holds the terminal."""
@@ -630,8 +648,8 @@ class PromptToolkitBridge:
         if not self._bound:
             self._originals["erase"](leave_alternate_screen)
             return
-        # A resize is the reason the renderer is erasing here (prompt-toolkit erases, requests
-        # the cursor, then redraws). A terminal that resets its scroll margins on resize would
+        # A resize can be the reason the renderer is erasing here (prompt-toolkit erases,
+        # requests the cursor, then redraws). A terminal that resets its margins on resize would
         # make this bounded erase run against the whole screen, deleting lines and scrolling
         # the old toolbar row up into the output. Reinstalling the region for the new size
         # first -- which also clears the old band -- keeps the erase bounded.
@@ -651,6 +669,11 @@ class PromptToolkitBridge:
                 # Recorded whether or not it finished. An erase that raised part-way has still
                 # moved the cursor and cleared some of what was below it, and a stream cannot
                 # say how much.
+                # run_in_terminal also erases before handing output to its callback. Its
+                # immediate redraw must wait for the post-output cursor report, rather than
+                # recovering at the old prompt row and erasing the callback's output.
+                self._prompt_anchor = None
+                self._invalidate_pending_cursor_reports()
                 self.require_resynchronization("the renderer erased the screen")
 
     def _clear_through_bridge(self) -> None:
@@ -840,6 +863,11 @@ class PromptToolkitBridge:
                 # this call queues for the terminal, and recovery would then write cursor and
                 # mode sequences into a terminal nothing is allowed to emit to any more.
                 raise ReservedModeFailureError("reserved emission has stopped; release before rendering again")
+            if self._render_suppressed:
+                # A guest may leave an unfinished output line at any column. The empty
+                # command display needs its terminal modes restored, not a prompt origin.
+                self._establish(policy, None)
+                return
             # The origin is read *here*, not before the wait. Recovery can queue behind
             # another writer for as long as that writer holds the terminal, and what it does
             # in the meantime -- emitting output, moving the prompt, resizing -- is exactly
@@ -866,7 +894,7 @@ class PromptToolkitBridge:
         # would repaint the prompt over committed output.
         self.request_cursor_position()
 
-    def _establish(self, policy: TerminalModePolicy, origin: int) -> None:
+    def _establish(self, policy: TerminalModePolicy, origin: int | None) -> None:
         """Put the terminal into the known state, from inside the transaction.
 
         Recovery is marked complete here rather than after the lock is given back: whoever
@@ -874,10 +902,11 @@ class PromptToolkitBridge:
         already been done.
 
         :param policy: the mode policy to establish
-        :param origin: the physical row to place the cursor on
+        :param origin: the prompt's physical row, or ``None`` to preserve the command cursor
         """
         output = self._display.output
-        output.write_raw(f"\x1b[{origin};1H")
+        if origin is not None:
+            output.write_raw(f"\x1b[{origin};1H")
         # Upstream enables bracketed paste on every render and latches a flag beside the
         # emission, so the policy here is not conditional: it is on, and the flag is made
         # to agree with an enable that actually reached the terminal.
@@ -895,7 +924,8 @@ class PromptToolkitBridge:
         self._needs_resynchronization = False
         self._resynchronization_reason = None
         self._in_flight = None
-        self._initialize_renderer(policy, origin)
+        if origin is not None:
+            self._initialize_renderer(policy, origin)
 
     def _usable_rows(self) -> int:
         """How many rows the application may use right now.

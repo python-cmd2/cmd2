@@ -3802,6 +3802,9 @@ class Cmd:
         """
         owns_the_reservation = session is self.main_session
         with self._quiesce_bottom_toolbar() if owns_the_reservation else self.suspend_bottom_toolbar():
+            reserved = self._reserved_toolbar
+            if owns_the_reservation and reserved is not None and reserved.bridge is not None:
+                reserved.bridge.finish_command_output()
             return self._read_raw_input_now(prompt, session, **prompt_kwargs)
 
     def _read_raw_input_now(

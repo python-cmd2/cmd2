@@ -1,6 +1,16 @@
 ## 4.3.0 (TBD)
 
 - Bug Fixes
+    - Background output printed above an active reserved prompt through `run_in_terminal()` or
+      `patch_stdout()` is preserved when the prompt redraws.
+    - Reserved rendering preserves unfinished command output when the main prompt returns by
+      starting the prompt on a fresh line.
+    - Falling back from reserved rendering during a command restores the native toolbar layout and
+      stdout proxy, so a recovered toolbar remains visible during the command.
+    - Resuming the reserved command display after a terminal handoff preserves the cursor column of
+      unfinished guest output, so later command output continues the same line.
+    - A reserved toolbar started in a terminal below the minimum height now activates when the
+      terminal grows, including during a quiet command.
     - Reserved bottom toolbars now indicate clipped content with a right-edge ellipsis (`…`). Long
       lines are truncated without wrapping, and newlines beyond the reserved row are indicated
       instead of silently hiding content, including when the first line is empty. Trailing

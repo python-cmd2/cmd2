@@ -1401,7 +1401,8 @@ class TestReviewRegressionsRoundThree:
         assert harness.bridge.reserved_emission_stopped is True
         assert released == [1]
 
-    def test_a_reply_in_transit_when_the_screen_cleared_is_not_reused(self) -> None:
+    @pytest.mark.parametrize("operation", ["clear", "erase"])
+    def test_a_reply_in_transit_when_the_screen_cleared_is_not_reused(self, operation) -> None:
         """Review finding: emptying the queue lets the next reply answer the wrong request."""
         harness = self.bound()
         harness.renderer.request_absolute_cursor_position = lambda: None  # type: ignore[method-assign]
@@ -1409,7 +1410,8 @@ class TestReviewRegressionsRoundThree:
 
         harness.bridge.request_cursor_position()  # request A, about the pre-clear screen
         with set_app(harness.app):
-            harness.renderer.clear()
+            getattr(harness.renderer, operation)()
+        assert harness.bridge.prompt_anchor is None
         harness.bridge.request_cursor_position()  # request B, about the cleared screen
 
         # Reply A arrives late. It describes the screen before the clear.
