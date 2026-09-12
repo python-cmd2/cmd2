@@ -456,7 +456,19 @@ class PromptToolkitBridge:
             return
 
         if self._needs_resynchronization:
-            self.resynchronize()
+            try:
+                self.resynchronize()
+            except ReservedModeFailureError as error:
+                # Raised from here, this would climb out through upstream's redraw and end the
+                # application: nothing above a render is placed to catch it. The failure is
+                # the kind the error's contract describes -- release the reservation, then
+                # render natively -- so it goes through the same door as every other
+                # abandonment. The owner's handler gives the rows back and unbinds this
+                # bridge; the redraw asked for afterwards is upstream's own, drawn by the
+                # render this wrapper no longer stands in front of.
+                self.stop_reserved_emission(error)
+                app.invalidate()
+                return
             if self._needs_resynchronization:
                 # Recovery is waiting on the terminal to say where the cursor is. Drawing now
                 # would guess at the origin, which is the thing recovery exists to avoid.
@@ -722,6 +734,14 @@ class PromptToolkitBridge:
             # terminal somebody else still owned.
             origin = self._usable_prompt_anchor()
             if origin is None:
+                # Read inside the same transaction, for the same reason: the console is asked
+                # where the cursor is *now*, and now has to be while nobody else can move it.
+                origin = self._native_prompt_origin()
+                if origin is not None:
+                    # Remembered as a reply's row would be: the next recovery that finds the
+                    # terminal unchanged can start from it instead of asking again.
+                    self._prompt_anchor = origin
+            if origin is None:
                 can_report = self._display.output.responds_to_cpr
             else:
                 self._establish(policy, origin)
@@ -791,6 +811,27 @@ class PromptToolkitBridge:
             self._prompt_anchor = None
             return None
         return anchor
+
+    def _native_prompt_origin(self) -> int | None:
+        """Read the prompt's origin from a backend that reports the cursor synchronously.
+
+        Windows never answers a cursor-position report -- its output says so by design -- but
+        the console API says where the cursor is, at once. That is the same fact a report
+        would carry, so it is held to the same rule: a row inside the reserved band is the
+        failure named in the design, not an origin to render from. Recovery cannot ask again
+        and get a different answer, as it can wait for another reply, so here it is refused
+        outright and the owner falls back to compatibility rendering.
+
+        :return: the one-based physical row, or ``None`` if the backend cannot report it
+        :raises ReservedModeFailureError: if the reported row is outside the usable region
+        """
+        row = self._display.terminal.cursor_row()
+        if row is None:
+            return None
+        usable = self._usable_rows()
+        if not 1 <= row <= usable:
+            raise ReservedModeFailureError(f"the terminal reports the cursor on row {row}, outside the usable rows 1-{usable}")
+        return row
 
     def _desired_policy(self) -> TerminalModePolicy:
         """Evaluate the current owner's mode policy, off the terminal lock.

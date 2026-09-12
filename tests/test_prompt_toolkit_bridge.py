@@ -42,6 +42,33 @@ class TtyStringIO(io.StringIO):
         return True
 
 
+class NativeCursorOutput(Vt100_Output):
+    """A backend that reports the cursor at once and never answers a report, as Windows does.
+
+    ``Windows10_Output`` serves ``get_rows_below_cursor_position`` from the console API and
+    declares ``responds_to_cpr`` false: the row is available synchronously, so a request is
+    never sent and a reply never arrives.
+    """
+
+    rows_below = 0
+
+    def get_rows_below_cursor_position(self) -> int:
+        return self.rows_below
+
+    @property
+    def responds_to_cpr(self) -> bool:
+        return False
+
+
+@pytest.fixture
+def qualified_native_double(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Treat the native-cursor double as a qualified backend, so the harness can reserve."""
+    import cmd2.terminal_display as td
+
+    name = f"{NativeCursorOutput.__module__}.{NativeCursorOutput.__qualname__}"
+    monkeypatch.setattr(td, "_QUALIFIED_BACKENDS", td._QUALIFIED_BACKENDS | {name})
+
+
 class Harness:
     """A real application over a reserved terminal, with the stream it writes to."""
 
@@ -52,10 +79,11 @@ class Harness:
         reserved_rows: int = 1,
         content: Any = "hello",
         lock: TerminalLock | None = None,
+        backend_type: type[Vt100_Output] = Vt100_Output,
     ) -> None:
         self.stream = TtyStringIO()
         self.size = Size(rows=rows, columns=columns)
-        self.backend = Vt100_Output(self.stream, lambda: self.size)
+        self.backend = backend_type(self.stream, lambda: self.size)
         self.display = TerminalDisplay(self.backend, reserved_rows=reserved_rows)
         assert self.display.acquire() is True
         self.lock = lock or TerminalLock()
@@ -477,6 +505,62 @@ class TestCursorPositionReports:
         harness = Harness()
         harness.backend.enable_cpr = False
         assert harness.bridge.request_cursor_position() is False
+
+
+@pytest.mark.usefixtures("qualified_native_double")
+class TestNativeCursorRecovery:
+    """Windows never answers a cursor report; the console API says where the cursor is instead.
+
+    The named regression: with the origin forgotten after managed output, recovery on Windows
+    used to conclude that the terminal cannot report its cursor and raise, which ended the
+    application at its first prompt.
+    """
+
+    def test_an_unknown_origin_is_read_from_the_backend_without_a_report(self) -> None:
+        harness = Harness(rows=24, backend_type=NativeCursorOutput)
+        harness.backend.rows_below = 15  # the cursor is on physical row 10
+        harness.bridge.forget_prompt_anchor()
+        harness.bridge.require_resynchronization("a command wrote")
+        harness.clear()
+        harness.resynchronize()
+        written = harness.written()
+        assert "\x1b[10;1H" in written
+        assert "\x1b[6n" not in written
+        assert harness.bridge.needs_resynchronization is False
+        assert harness.bridge.prompt_anchor == 10
+        assert harness.renderer._min_available_height == 23 - 10 + 1
+
+    def test_the_row_is_physical_not_reservation_adjusted(self) -> None:
+        """The adapter's rows-below answer stops at the usable bottom; the origin must not."""
+        harness = Harness(rows=24, backend_type=NativeCursorOutput)
+        harness.backend.rows_below = 2  # physical row 23: the last usable row
+        harness.bridge.forget_prompt_anchor()
+        harness.bridge.require_resynchronization("a command wrote")
+        harness.clear()
+        harness.resynchronize()
+        assert "\x1b[23;1H" in harness.written()
+        assert harness.renderer._min_available_height == 1
+
+    def test_a_cursor_inside_the_reserved_band_is_refused(self) -> None:
+        """A row in the band would give the prompt a height of zero, and cannot be asked again."""
+        harness = Harness(rows=24, backend_type=NativeCursorOutput)
+        harness.backend.rows_below = 1  # the last physical row, which is the band
+        harness.bridge.forget_prompt_anchor()
+        harness.bridge.require_resynchronization("a command wrote")
+        harness.clear()
+        with pytest.raises(ReservedModeFailureError, match="row 24"), set_app(harness.app):
+            harness.bridge.resynchronize()
+        assert harness.written() == ""
+        assert harness.bridge.needs_resynchronization is True
+
+    def test_a_remembered_origin_is_used_before_the_backend_is_asked(self) -> None:
+        harness = Harness(rows=24, backend_type=NativeCursorOutput)
+        harness.backend.rows_below = 15
+        harness.bridge.set_prompt_anchor(3)
+        harness.bridge.require_resynchronization("test")
+        harness.clear()
+        harness.resynchronize()
+        assert "\x1b[3;1H" in harness.written()
 
 
 class TestRecoveryEdges:
@@ -976,6 +1060,23 @@ class TestRenderInterception:
             harness.renderer.render(harness.app, harness.app.layout)
         assert "\x1b[6n" in harness.stream_recorder.getvalue()
         assert harness.bridge.needs_resynchronization is True
+
+    def test_a_render_whose_recovery_cannot_finish_stops_emission_instead_of_raising(self) -> None:
+        """Raised out of a render, the failure would climb through upstream's redraw and end
+        the application. It is an abandonment like any other: the owner is told, and nothing
+        is drawn from a guessed origin."""
+        harness = self.bound()
+        stopped: list[bool] = []
+        harness.bridge.set_emission_stopped_handler(lambda: stopped.append(True))
+        harness.bridge.forget_prompt_anchor()
+        harness.backend.enable_cpr = False
+        harness.bridge.require_resynchronization("a command wrote")
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+        assert stopped == [True]
+        assert harness.bridge.reserved_emission_stopped is True
+        assert isinstance(harness.bridge.take_pending_error(), ReservedModeFailureError)
+        assert harness.stream_recorder.getvalue() == ""
 
     def test_an_erase_is_emitted_inside_a_transaction(self) -> None:
         harness = self.bound()

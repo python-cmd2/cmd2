@@ -403,6 +403,35 @@ class TestFailedAcquisition:
         assert calls == ["attempted", "attempted"], "the region reset was not attempted"
 
 
+class NativeRowsOutput:
+    """A Windows-like output that reports rows below the cursor from the console API."""
+
+    def __init__(self, rows: int, rows_below: int) -> None:
+        self._rows = rows
+        self._rows_below = rows_below
+
+    def get_size(self) -> Size:
+        return Size(rows=self._rows, columns=80)
+
+    def get_rows_below_cursor_position(self) -> int:
+        return self._rows_below
+
+
+class TestCursorRow:
+    def test_a_vt_backend_cannot_report_the_cursor_directly(self) -> None:
+        output, _ = make_output()
+        assert PhysicalTerminal(output).cursor_row() is None
+
+    def test_the_row_is_one_based_from_the_top_of_the_viewport(self) -> None:
+        """Windows says how many rows are below the cursor, the last row included."""
+        output = NativeRowsOutput(rows=21, rows_below=5)
+        assert PhysicalTerminal(output).cursor_row() == 17  # type: ignore[arg-type]
+
+    def test_the_bottom_row_has_one_row_below_it(self) -> None:
+        output = NativeRowsOutput(rows=21, rows_below=1)
+        assert PhysicalTerminal(output).cursor_row() == 21  # type: ignore[arg-type]
+
+
 class WindowsLikeScreen:
     """A Windows output whose viewport origin can be moved between reads."""
 

@@ -194,6 +194,26 @@ class PhysicalTerminal:
             return None
         return (info.srWindow.Left, info.srWindow.Top, info.dwSize.X, info.dwSize.Y)
 
+    def cursor_row(self) -> int | None:
+        """Read the cursor's physical row from a backend that can say without being asked.
+
+        Windows serves the cursor from the console API, in the same call and in viewport
+        coordinates, which is why its output never answers a cursor-position report. The VT
+        backends have no such call and raise ``NotImplementedError``; there the row has to be
+        requested from the terminal and arrives later, as a reply.
+
+        Both reads come from the unwrapped backend, so the result is a *physical* row: the
+        adapter's rows-below answer stops at the usable bottom, and would place the cursor
+        one reservation too high.
+
+        :return: the one-based physical row, or ``None`` where the backend cannot report it
+        """
+        try:
+            rows_below = self._output.get_rows_below_cursor_position()
+        except NotImplementedError:
+            return None
+        return self.physical_size().rows - rows_below + 1
+
     def measure(self, generation: int, reserved_rows: int) -> Geometry:
         """Take a fresh geometry snapshot.
 
