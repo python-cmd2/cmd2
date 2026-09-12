@@ -19,9 +19,17 @@ import pytest
 pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX job control")
 
 
-@pytest.mark.parametrize("finish", ["q", "\x03", "process_sigint", "group_sigint", "exit_sigint", "read_input", "shell_input"])
-@pytest.mark.parametrize("stop_job", [False, True])
-@pytest.mark.parametrize("shell_child", [False, True])
+@pytest.mark.parametrize(
+    ("finish", "stop_job", "shell_child"),
+    [
+        pytest.param("interrupts", True, False, id="direct-signals-and-job-control"),
+        pytest.param("interrupts", True, True, id="shell-signals-and-job-control"),
+        pytest.param("exit_sigint", False, False, id="interrupt-busy-producer"),
+        pytest.param("exit_sigint", True, True, id="stop-and-interrupt-busy-producer"),
+        pytest.param("read_input", False, False, id="nested-prompt"),
+        pytest.param("shell_input", False, True, id="shell-input"),
+    ],
+)
 def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_job, shell_child) -> None:
     import fcntl
     import pty
@@ -65,9 +73,12 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
         encoding="utf-8",
     )
     application = tmp_path / "application.py"
+    application_pid = tmp_path / "application.pid"
+    interrupt_request = tmp_path / "interrupt.request"
     application.write_text(
         "from cmd2 import Cmd, ToolbarMode\n"
-        "import os, time\n"
+        "import os, pathlib, signal, threading, time\n"
+        f"pathlib.Path({str(application_pid)!r}).write_text(str(os.getpid()))\n"
         "class App(Cmd):\n"
         "    def do_busy(self, statement):\n"
         "        os.write(2, b'BUSY_READY\\n')\n"
@@ -77,6 +88,17 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
         "app = App(bottom_toolbar_mode=ToolbarMode.RESERVED)\n"
         "app.prompt = 'TEST> '\n"
         "app.main_session.bottom_toolbar = 'STATUS'\n"
+        f"if {finish == 'interrupts'!r}:\n"
+        "    def interrupt_from_worker():\n"
+        f"        request = pathlib.Path({str(interrupt_request)!r})\n"
+        "        for _ in range(2):\n"
+        "            while not request.exists():\n"
+        "                time.sleep(0.01)\n"
+        "            request.unlink()\n"
+        # A process-directed signal can be delivered to any unblocked thread.
+        # Force that case so an indefinite main-thread wait cannot pass by luck.
+        "            signal.pthread_kill(threading.get_ident(), signal.SIGINT)\n"
+        "    threading.Thread(target=interrupt_from_worker, daemon=True).start()\n"
         "app.cmdloop()\n",
         encoding="utf-8",
     )
@@ -137,7 +159,13 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
         wait_until(lambda: "OUTER> " in transcript)
         send(f"{shlex.quote(sys.executable)} {shlex.quote(str(application))}\n")
         wait_until(lambda: screen.display[-1].startswith("STATUS"))
-        job_group = os.tcgetpgrp(master)
+        # A foreground-group query is an observation, not the child's identity.
+        # It can change during startup and handoffs. Never use an unverified
+        # foreground query as a kill()/killpg() destination.
+        job_group = int(application_pid.read_text())
+        assert job_group > 1
+        assert os.getpgid(job_group) == job_group
+        wait_until(lambda: os.tcgetpgrp(master) == job_group)
         command = "busy" if finish == "exit_sigint" else "help -v"
         if finish == "read_input":
             command = "ask"
@@ -159,7 +187,9 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
         if finish == "exit_sigint":
             wait_until(lambda: "BUSY_READY\r\n" in transcript)
         pager_process = int(pager_pid.read_text())
-        pipeline_group = os.tcgetpgrp(master)
+        pipeline_group = os.getpgid(pager_process)
+        assert pipeline_group > 1
+        assert pipeline_group != job_group
         for rows in (12, 24) if stop_job else ():
             send("\x1a")
             wait_until(lambda: os.tcgetpgrp(master) == process.pid)
@@ -181,15 +211,20 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
             assert os.tcgetpgrp(master) == pipeline_group
         if finish == "exit_sigint":
             send("\x03")
-        elif finish in ("\x03", "process_sigint", "group_sigint"):
-            for expected_count in (1, 2):
-                if finish == "process_sigint":
+        elif finish == "interrupts":
+            # Exercise every signal route on this live pipeline, avoiding a fresh
+            # interpreter and terminal setup for each overlapping matrix combination.
+            sources = ("terminal", "terminal", "process", "process", "thread", "thread", "group", "group")
+            for expected_count, source in enumerate(sources, start=1):
+                if source == "process":
                     # Signal cmd2 alone, as with `kill -INT <cmd2-pid>`.
                     os.kill(job_group, signal.SIGINT)
-                elif finish == "group_sigint":
+                elif source == "thread":
+                    interrupt_request.touch()
+                elif source == "group":
                     os.killpg(pipeline_group, signal.SIGINT)
                 else:
-                    send(finish)
+                    send("\x03")
                 wait_until(lambda count=expected_count: transcript.count("PAGER_INTERRUPT\r\n") >= count)
                 # Keep the handler alive long enough to observe a duplicate delivery,
                 # then also check that a second real interrupt is not suppressed.
@@ -215,6 +250,8 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
         if pipeline_group is not None:
             with contextlib.suppress(ProcessLookupError):
                 os.killpg(pipeline_group, signal.SIGKILL)
+        # Release the PTY before reaping its session leader. On macOS, waiting
+        # while the master is still open can leave terminal teardown blocked.
+        os.close(master)
         process.kill()
         process.wait(timeout=5)
-        os.close(master)

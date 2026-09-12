@@ -666,7 +666,10 @@ class ProcReader:
                     self._set_foreground_group(terminal_fd, self._original_group)
                 # Stop every terminal reader before returning control to the outer shell.
                 os.killpg(self._proc.pid, signal.SIGSTOP)
-                os.killpg(os.getpgrp(), signal.SIGSTOP)
+                # Target this thread so the whole process stops before this call returns.
+                # killpg can deliver SIGSTOP to another thread on Linux, allowing this
+                # worker to run ahead and resume the pipeline before cmd2 has stopped.
+                signal.raise_signal(signal.SIGSTOP)
                 # Execution resumes here when the outer shell continues cmd2. A `bg`
                 # must not steal the terminal from that shell.
                 if os.tcgetpgrp(terminal_fd) == self._original_group:
@@ -692,7 +695,13 @@ class ProcReader:
         """
         if self._terminal_fd is None:
             self._proc.wait(timeout)
-        elif not self._process_done.wait(timeout) and timeout is not None:
+        elif timeout is None:
+            # A process-directed signal may reach a worker thread. Python still runs
+            # its handler on the main thread, so periodically return from the wait
+            # to dispatch it even when the main thread's system call was not interrupted.
+            while not self._process_done.wait(0.1):
+                pass
+        elif not self._process_done.wait(timeout):
             raise subprocess.TimeoutExpired(self._proc.args, timeout)
 
     def wait(self) -> None:
