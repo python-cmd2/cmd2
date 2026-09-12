@@ -691,7 +691,11 @@ class CommandToolbar:
             filter=Condition(lambda: suspend_to_background_supported() and to_filter(self.cmd.main_session.enable_suspend)()),
         )(self._suspend_binding)
         layout = Layout(HSplit([pager.container, self.toolbar]), focused_element=pager.text)
-        previous = (self.app.layout, self.app.key_bindings, self.app.editing_mode, self.app.full_screen)
+        # The layout is deliberately not saved here. The display's layout can change while the
+        # pager is open -- a reservation abandoned mid-page switches it to the legacy one -- and
+        # restoring the layout saved on entry would put the obsolete reserved layout back,
+        # leaving no toolbar. Pager exit reads the display's current layout instead.
+        previous = (self.app.key_bindings, self.app.editing_mode, self.app.full_screen)
         entered = False
 
         def enter() -> None:
@@ -714,7 +718,8 @@ class CommandToolbar:
                 return
             entered = False
             self.app.renderer.erase()
-            self.app.layout, self.app.key_bindings, self.app.editing_mode, self.app.full_screen = previous
+            self.app.layout = self._layout
+            self.app.key_bindings, self.app.editing_mode, self.app.full_screen = previous
             self.app.renderer.full_screen = self.app.full_screen
             self.app.renderer.request_absolute_cursor_position()
             # Back to ordinary command output, whose frames are suppressed again so the toolbar
@@ -739,7 +744,8 @@ class CommandToolbar:
                 self._call_in_ui(leave)
             else:
                 # The application's shutdown already reset the renderer.
-                self.app.layout, self.app.key_bindings, self.app.editing_mode, self.app.full_screen = previous
+                self.app.layout = self._layout
+                self.app.key_bindings, self.app.editing_mode, self.app.full_screen = previous
                 self.app.renderer.full_screen = self.app.full_screen
 
     @contextlib.contextmanager

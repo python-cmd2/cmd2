@@ -613,6 +613,36 @@ class TestPager:
             assert wait_for(lambda: any("legacy output" in row for row in terminal.screen.display))
         assert terminal.screen.margins is None
 
+    def test_abandoning_reservation_while_the_pager_is_open_keeps_the_fallback_layout(self, terminal_harness) -> None:
+        """The reservation can stop while the pager is on screen. Pager exit must put back the
+        display's *current* layout -- the legacy one the fallback switched to -- not the
+        reserved layout it saved on entry, or the toolbar stays absent after the pager."""
+        harness, terminal = terminal_harness
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            reserved = harness.app.reserved_toolbar
+            display = harness.app._command_toolbar
+            body = "\n".join(f"row {index:03d}" for index in range(200))
+
+            def drive() -> None:
+                try:
+                    if wait_for(lambda: terminal.screen.display[0].startswith("row 000")):
+                        display.app.loop.call_soon_threadsafe(reserved.stop)
+                        wait_for(lambda: reserved.bridge is None)
+                finally:
+                    harness.pipe.send_text("q")
+
+            with ThreadPoolExecutor() as executor:
+                future = executor.submit(drive)
+                display.page(body, chop=False)
+                future.result(timeout=5)
+
+            assert reserved.bridge is None
+            assert len(display.app.layout.container.children) == 3
+            harness.app.main_session.bottom_toolbar = "RECOVERED"
+            display.app.invalidate()
+            assert wait_for(lambda: terminal.screen.display[-1].startswith("RECOVERED"))
+        assert terminal.screen.margins is None
+
     def test_the_pager_draws_its_content_over_the_reserved_toolbar(self, terminal_harness) -> None:
         harness, terminal = terminal_harness
         with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():

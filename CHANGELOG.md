@@ -9,7 +9,8 @@
       blank line.
     - Falling back from reserved rendering during a command restores the native toolbar layout and
       stdout proxy, so a recovered toolbar remains visible during the command, including when the
-      fallback happens while the command has handed the terminal to another program.
+      fallback happens while the command has handed the terminal to another program or while the
+      built-in pager is open.
     - Resuming the reserved command display after a terminal handoff preserves the cursor column of
       unfinished guest output, so later command output continues the same line.
     - A reserved toolbar started in a terminal below the minimum height now activates when the
