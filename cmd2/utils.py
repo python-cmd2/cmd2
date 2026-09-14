@@ -836,12 +836,23 @@ class PipelineWriter(io.FileIO):
         self._reader = reader
 
     def write(self, b: Any) -> int:
-        """Write bytes while the consumer can interact with the terminal."""
+        """Write all of b while the consumer can interact with the terminal.
+
+        A signal that interrupts a blocking write, such as the job-control stop
+        ProcReader relays, returns a partial count. Finishing the buffer under the
+        same lend keeps the terminal with the consumer instead of returning it for
+        the instant between two writes, when a consumer that has just resumed a
+        terminal read would be stopped again with SIGTTIN.
+        """
         import signal
 
+        view = memoryview(b).cast("B")
         try:
             with self._reader.lend_terminal():
-                return cast(int, super().write(b))
+                written = 0
+                while written < len(view):
+                    written += cast(int, super().write(view[written:]))
+                return written
         except BrokenPipeError:
             # Ctrl-C during a blocking write must cancel the command, even if it
             # normally catches BrokenPipeError. Raise here rather than signaling

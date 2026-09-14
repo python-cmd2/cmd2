@@ -19,6 +19,35 @@ import pytest
 pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX job control")
 
 
+def describe_processes(root: int, master: int) -> str:
+    """Report the terminal's foreground group and every descendant of root, for a timeout.
+
+    A silent transcript says only that nothing happened. Process states (T for stopped)
+    and wait channels say which process was waiting for whom.
+    """
+    try:
+        foreground: object = os.tcgetpgrp(master)
+    except OSError as error:
+        foreground = error
+    listing = subprocess.run(
+        ["ps", "-e", "-o", "pid,ppid,pgid,stat,wchan,command"], capture_output=True, text=True, check=False
+    )
+    rows = listing.stdout.splitlines()
+    parents = {}
+    for row in rows[1:]:
+        fields = row.split(maxsplit=2)
+        if len(fields) >= 2 and fields[0].isdigit() and fields[1].isdigit():
+            parents[int(fields[0])] = int(fields[1])
+    family = {root}
+    while True:
+        grown = family | {pid for pid, parent in parents.items() if parent in family}
+        if grown == family:
+            break
+        family = grown
+    described = [row for row in rows[1:] if row.split(maxsplit=1)[0].isdigit() and int(row.split(maxsplit=1)[0]) in family]
+    return "\n".join([f"foreground process group: {foreground}", rows[0] if rows else "", *described])
+
+
 @pytest.mark.parametrize(
     ("finish", "stop_job", "shell_child", "launcher", "producer"),
     [
@@ -174,7 +203,7 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
                 stream.feed(data)
             if predicate():
                 return
-        pytest.fail(f"terminal condition timed out:\n{transcript}")
+        pytest.fail(f"terminal condition timed out:\n{transcript}\n{describe_processes(process.pid, master)}")
 
     def stopped(*pids: int) -> bool:
         """Whether every process is stopped, not merely deprived of the terminal.
@@ -387,7 +416,7 @@ def test_pipeline_from_worker_thread_stays_isolated(tmp_path) -> None:
                 transcript += decoder.decode(os.read(master, 65536))
             if predicate():
                 return
-        pytest.fail(f"terminal condition timed out:\n{transcript}")
+        pytest.fail(f"terminal condition timed out:\n{transcript}\n{describe_processes(process.pid, master)}")
 
     try:
         wait_until(lambda: "OUTER> " in transcript)
