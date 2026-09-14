@@ -886,8 +886,18 @@ def test_pipe_to_shell_error(redirection_app, mocker, capsys, terminal) -> None:
         target.fileno.return_value = 10
         mocker.patch("cmd2.command_toolbar.pipe_target", return_value=target)
         mocker.patch("os.tcgetpgrp", return_value=os.getpgrp())
+        mocker.patch("os.getsid", return_value=os.getpgrp())
         sigmask = mocker.patch("signal.pthread_sigmask", return_value=set())
         reader = mocker.patch("cmd2.utils.ProcReader").return_value
+        previous_tstp = signal.getsignal(signal.SIGTSTP)
+
+        def start_pipe(*args, **kwargs):
+            # Session-led pipelines inherit ignored Ctrl-Z, but the caller's
+            # handler must be restored even when startup reports an early exit.
+            assert signal.getsignal(signal.SIGTSTP) == signal.SIG_IGN
+            return process
+
+        popen.side_effect = start_pipe
 
     if terminal:
         # run_cmd captures stderr in a StdSim, which deliberately disables terminal handoff.
@@ -900,6 +910,7 @@ def test_pipe_to_shell_error(redirection_app, mocker, capsys, terminal) -> None:
     assert "Pipe process exited with code 127 before command could run" in " ".join(err)
     assert capsys.readouterr().out == ""
     if terminal:
+        assert signal.getsignal(signal.SIGTSTP) == previous_tstp
         reader.wait_for_exit.assert_called_once_with(0.2)
         reader.wait.assert_called_once_with()
         process.wait.assert_not_called()

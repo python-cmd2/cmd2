@@ -3571,14 +3571,23 @@ class Cmd:
                 if pipe_stdout is not None or pipe_stderr is not None:
                     terminal_stack.enter_context(self.suspend_bottom_toolbar())
 
-                proc = subprocess.Popen(  # noqa: S602
-                    statement.redirect_to,
-                    stdin=subproc_stdin,
-                    stdout=subprocess.PIPE if pipe_stdout is None else pipe_stdout,
-                    stderr=subprocess.PIPE if pipe_stderr is None else pipe_stderr,
-                    shell=True,
-                    **kwargs,
-                )
+                with contextlib.ExitStack() as spawn_stack:
+                    if terminal_fd is not None and os.getpgrp() == os.getsid(0):
+                        import signal
+
+                        # A session leader's job has no outer shell to resume it.
+                        # Its pipeline must inherit the same Ctrl-Z behavior: the
+                        # new group would otherwise make SIGTSTP actionable again.
+                        previous_tstp = signal.signal(signal.SIGTSTP, signal.SIG_IGN)
+                        spawn_stack.callback(signal.signal, signal.SIGTSTP, previous_tstp)
+                    proc = subprocess.Popen(  # noqa: S602
+                        statement.redirect_to,
+                        stdin=subproc_stdin,
+                        stdout=subprocess.PIPE if pipe_stdout is None else pipe_stdout,
+                        stderr=subprocess.PIPE if pipe_stderr is None else pipe_stderr,
+                        shell=True,
+                        **kwargs,
+                    )
                 # Only the child should own a read end. In particular, a consumer
                 # exit must unblock a producer writing to a full pipe immediately.
                 subproc_stdin.close()

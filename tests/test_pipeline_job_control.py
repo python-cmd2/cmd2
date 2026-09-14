@@ -47,6 +47,7 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
     interrupts = tmp_path / "interrupts"
     pager.write_text(
         "import errno, os, pathlib, signal, sys, termios, tty\n"
+        f"if {launcher == 'exec'!r}: assert signal.getsignal(signal.SIGTSTP) == signal.SIG_IGN\n"
         f"pathlib.Path({str(pager_pid)!r}).write_text(str(os.getpid()))\n"
         f"if {finish != 'exit_sigint'!r}: sys.stdin.read()\n"
         # Like less, use an inherited terminal descriptor for keyboard input when
@@ -76,8 +77,10 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
         "    try:\n"
         "        setcbreak()\n"
         "        os.write(1, b'PAGER_READY\\n')\n"
-        "        while os.read(terminal.fileno(), 1) != b'q':\n"
-        "            pass\n"
+        "        while True:\n"
+        "            key = os.read(terminal.fileno(), 1)\n"
+        "            if key == b'q': break\n"
+        "            if key == b'p': os.write(1, b'PAGER_ALIVE\\n')\n"
         "    finally:\n"
         "        termios.tcsetattr(terminal, termios.TCSANOW, saved)\n",
         encoding="utf-8",
@@ -138,7 +141,9 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
         "fcntl.ioctl(0, termios.TIOCSCTTY, 0); "
         "os.execv(os.environ['TEST_SHELL'], ['bash', '--noprofile', '--norc', '-i'])"
     )
-    env = dict(os.environ, TERM="xterm-256color", PS1="OUTER> ", TEST_SHELL=shell)
+    # Exercise the same pipeline shell on developer machines and in CI. An
+    # inherited zsh can exec the pager directly, hiding bash's stop/wait behavior.
+    env = dict(os.environ, TERM="xterm-256color", PS1="OUTER> ", TEST_SHELL=shell, SHELL=shell)
     env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
     process = subprocess.Popen([sys.executable, "-c", bootstrap], stdin=slave, stdout=slave, stderr=slave, env=env)
     os.close(slave)
@@ -232,9 +237,11 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
         assert pipeline_group > 1
         assert pipeline_group != job_group
         if launcher == "exec":
+            # There is no outer shell to run fg: Ctrl-Z must leave the pager
+            # usable. Require a fresh read acknowledgement, not a SIGCONT.
             start = len(transcript)
-            send("\x1a")
-            wait_until(lambda: "PAGER_RESUMED\r\n" in transcript[start:])
+            send("\x1ap")
+            wait_until(lambda: "PAGER_ALIVE\r\n" in transcript[start:])
             assert os.tcgetpgrp(master) == pipeline_group
         for rows in (12, 24) if stop_job else ():
             send("\x1a")
