@@ -428,6 +428,35 @@ def test_shell_manual_call(base_app) -> None:
     base_app.do_shell(cmd)
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
+def test_shell_falls_back_to_own_group_when_pipeline_exited(base_app, tmp_path) -> None:
+    import contextlib
+    import subprocess
+    from unittest import mock
+
+    # A group whose only member has exited cannot be joined. The consumer of a terminal
+    # pipeline can exit between the check and the spawn, like `shell sleep 1 | true`.
+    leader = subprocess.Popen([sys.executable, "-c", "pass"], process_group=0)
+    leader.wait()
+    base_app._cur_pipe_proc_reader = mock.Mock(terminal_group=leader.pid, lend_terminal=contextlib.nullcontext)
+    with (tmp_path / "output").open("w+") as output:
+        base_app.stdout = output
+        base_app.do_shell("echo joined")
+        output.seek(0)
+        assert output.read() == "joined\n"
+    assert base_app.last_result == 0
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX shell executable")
+def test_shell_permission_error_unrelated_to_pipeline(base_app, tmp_path, monkeypatch) -> None:
+    unusable_shell = tmp_path / "shell"
+    unusable_shell.write_text("#!/bin/sh\n")
+    unusable_shell.chmod(0o644)
+    monkeypatch.setenv("SHELL", str(unusable_shell))
+    with pytest.raises(PermissionError):
+        base_app.do_shell("echo hi")
+
+
 def test_base_error(base_app) -> None:
     _out, err = run_cmd(base_app, "meow")
     assert "is not a recognized command" in err[0]

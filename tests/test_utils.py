@@ -268,6 +268,18 @@ def test_proc_reader_sigint_reaches_group_after_leader_exit() -> None:
         member.wait()
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
+def test_proc_reader_terminal_group() -> None:
+    proc = mock.Mock(pid=4242, returncode=None, stdout=None, stderr=None)
+    assert cu.ProcReader(proc, sys.stdout, sys.stderr).terminal_group is None
+
+    with mock.patch("os.tcgetpgrp", return_value=os.getpgrp()):
+        reader = cu.ProcReader(proc, sys.stdout, sys.stderr, terminal_fd=0)
+    assert reader.terminal_group == proc.pid
+    proc.returncode = 0
+    assert reader.terminal_group is None
+
+
 def test_proc_reader_terminate(pr_none) -> None:
     assert pr_none._proc.poll() is None
     pr_none.terminate()
