@@ -3554,12 +3554,15 @@ class Cmd:
 
             terminal_fd = None
             if sys.platform != "win32":
-                for stream in (pipe_stdout, pipe_stderr):
-                    if stream is not None and stream.isatty():
-                        with contextlib.suppress(OSError, ValueError):
-                            if os.tcgetpgrp(stream.fileno()) == os.getpgrp():
-                                terminal_fd = stream.fileno()
-                                break
+                # Job control installs signal handlers, which only the main thread may do.
+                # Elsewhere, keep the pipeline in its own session as before.
+                if threading.current_thread() is threading.main_thread():
+                    for stream in (pipe_stdout, pipe_stderr):
+                        if stream is not None and stream.isatty():
+                            with contextlib.suppress(OSError, ValueError):
+                                if os.tcgetpgrp(stream.fileno()) == os.getpgrp():
+                                    terminal_fd = stream.fileno()
+                                    break
                 if terminal_fd is None:
                     kwargs["start_new_session"] = True
                 else:
@@ -5248,17 +5251,37 @@ class Cmd:
         utils.expand_user_in_tokens(tokens)
         expanded_command = " ".join(tokens)
 
-        # Prevent KeyboardInterrupts while in the shell process. The shell process will
-        # still receive the SIGINT since it is in the same process group as us.
-        with self.sigint_protection:
-            # For any stream that is a StdSim, we will use a pipe so we can capture its output
-            proc = subprocess.Popen(  # noqa: S602
-                expanded_command,
-                stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]
-                stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
-                shell=True,
-                **kwargs,
-            )
+        # A terminal pipeline's consumer needs the terminal to drain the pipe, but a shell
+        # command writes into that pipe itself rather than through self.stdout, which lends
+        # the terminal per write. Run the command inside the pipeline's job instead, for as
+        # long as it runs: the consumer keeps the terminal, and Ctrl-C and Ctrl-Z reach both
+        # processes, as they would in a shell pipeline.
+        pipeline = self._cur_pipe_proc_reader
+        pipeline_group = None
+        if pipeline is not None and not isinstance(self.stdout, utils.StdSim):  # type: ignore[unreachable]
+            pipeline_group = pipeline.terminal_group
+
+        # Prevent KeyboardInterrupts while in the shell process. The shell process still
+        # receives the SIGINT: it is in our process group or in the foreground pipeline's.
+        with self.sigint_protection, contextlib.ExitStack() as terminal_stack:
+            if pipeline is not None and pipeline_group is not None:
+                kwargs["process_group"] = pipeline_group
+                terminal_stack.enter_context(pipeline.lend_terminal())
+            while True:
+                try:
+                    # For any stream that is a StdSim, we will use a pipe so we can capture its output
+                    proc = subprocess.Popen(  # noqa: S602
+                        expanded_command,
+                        stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]
+                        stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
+                        shell=True,
+                        **kwargs,
+                    )
+                    break
+                except PermissionError:
+                    # The pipeline exited before the command could join its group.
+                    if kwargs.pop("process_group", None) is None:
+                        raise
 
             proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
             proc_reader.wait()

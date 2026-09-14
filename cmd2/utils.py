@@ -587,12 +587,15 @@ class ProcReader:
             # the whole process group to make sure it propagates further than the shell
             try:
                 group_id = os.getpgid(self._proc.pid)
-                # Pipelines have their own group. Never re-signal our own group:
-                # other ProcReader callers may share it and already received Ctrl-C.
-                if group_id != os.getpgrp():
-                    os.killpg(group_id, signal.SIGINT)
             except ProcessLookupError:
-                return
+                # Pipelines lead their own group. A shell command that joined it, such
+                # as `shell sleep 100 | head -1`, can outlive the reaped consumer.
+                group_id = self._proc.pid
+            # Never re-signal our own group: other ProcReader callers may share it
+            # and already received Ctrl-C.
+            if group_id != os.getpgrp():
+                with contextlib.suppress(ProcessLookupError):
+                    os.killpg(group_id, signal.SIGINT)
 
     def terminate(self) -> None:
         """Terminate the process."""
@@ -604,6 +607,13 @@ class ProcReader:
             # Popen.terminate() polls first, which would compete with our waitpid thread.
             with contextlib.suppress(ProcessLookupError):
                 os.kill(self._proc.pid, signal.SIGTERM)
+
+    @property
+    def terminal_group(self) -> int | None:
+        """Process group of a running terminal pipeline, which a producer may join, or None."""
+        if self._terminal_fd is None or self._proc.returncode is not None:
+            return None
+        return self._proc.pid
 
     @staticmethod
     def _set_foreground_group(terminal_fd: int, group_id: int) -> None:

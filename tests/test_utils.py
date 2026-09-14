@@ -223,7 +223,7 @@ def test_proc_reader_send_sigint(pr_none) -> None:
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
 def test_proc_reader_does_not_resignal_its_own_group(pr_none) -> None:
     try:
-        with mock.patch("os.getpgid", return_value=os.getpgrp()), mock.patch("os.killpg") as killpg:
+        with mock.patch("os.getpgrp", return_value=pr_none._proc.pid), mock.patch("os.killpg") as killpg:
             pr_none.send_sigint()
         killpg.assert_not_called()
     finally:
@@ -232,11 +232,40 @@ def test_proc_reader_does_not_resignal_its_own_group(pr_none) -> None:
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
-def test_proc_reader_sigint_after_consumer_exit() -> None:
-    reader = cu.ProcReader(mock.Mock(stdout=None, stderr=None), sys.stdout, sys.stderr)
-    with mock.patch("os.getpgid", side_effect=ProcessLookupError), mock.patch("os.killpg") as killpg:
+def test_proc_reader_sigint_after_pipeline_exit() -> None:
+    reader = cu.ProcReader(mock.Mock(pid=os.getpid() + 1, stdout=None, stderr=None), sys.stdout, sys.stderr)
+    with (
+        mock.patch("os.getpgid", side_effect=ProcessLookupError),
+        mock.patch("os.killpg", side_effect=ProcessLookupError) as killpg,
+    ):
         reader.send_sigint()
-    killpg.assert_not_called()
+    killpg.assert_called_once_with(reader._proc.pid, signal.SIGINT)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
+def test_proc_reader_sigint_reaches_group_after_leader_exit() -> None:
+    """A shell producer joins the pipeline's group and can outlive the consumer that led it."""
+    import subprocess
+
+    # A terminal pipeline leads its own group within our session, so a producer may join it.
+    leader = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"], process_group=0)
+    reader = cu.ProcReader(leader, sys.stdout, sys.stderr)
+    member_code = (
+        "import signal, time; signal.signal(signal.SIGINT, signal.SIG_DFL); print('ready', flush=True); time.sleep(30)"
+    )
+    member = subprocess.Popen([sys.executable, "-c", member_code], stdout=subprocess.PIPE, process_group=leader.pid)
+    try:
+        assert member.stdout is not None
+        assert member.stdout.readline().strip() == b"ready"
+        reader.terminate()
+        reader.wait()
+        assert leader.returncode == -signal.SIGTERM
+
+        reader.send_sigint()
+        assert member.wait(timeout=5) == -signal.SIGINT
+    finally:
+        member.kill()
+        member.wait()
 
 
 def test_proc_reader_terminate(pr_none) -> None:

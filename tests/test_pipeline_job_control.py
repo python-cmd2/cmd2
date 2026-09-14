@@ -20,20 +20,22 @@ pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX job contr
 
 
 @pytest.mark.parametrize(
-    ("finish", "stop_job", "shell_child", "launcher"),
+    ("finish", "stop_job", "shell_child", "launcher", "producer"),
     [
-        pytest.param("interrupts", True, False, "direct", id="direct-signals-and-job-control"),
-        pytest.param("interrupts", True, True, "sh", id="wrapper-signals-and-job-control"),
-        pytest.param("exit_sigint", False, False, "direct", id="interrupt-busy-producer"),
-        pytest.param("exit_sigint", True, True, "uv", id="uv-stop-and-interrupt-busy-producer"),
-        pytest.param("read_input", False, False, "direct", id="nested-prompt"),
-        pytest.param("shell_input", False, True, "direct", id="shell-input"),
-        pytest.param("direct_input", False, False, "sh", id="direct-input-with-toolbar-off"),
-        pytest.param("direct_input", False, False, "exec", id="direct-input-in-orphaned-session"),
-        pytest.param("interrupts", False, False, "exec", id="orphaned-job-control"),
+        pytest.param("interrupts", True, False, "direct", "command", id="direct-signals-and-job-control"),
+        pytest.param("interrupts", True, True, "sh", "command", id="wrapper-signals-and-job-control"),
+        pytest.param("exit_sigint", False, False, "direct", "command", id="interrupt-busy-producer"),
+        pytest.param("exit_sigint", True, True, "uv", "command", id="uv-stop-and-interrupt-busy-producer"),
+        pytest.param("exit_sigint", False, False, "direct", "shell", id="interrupt-busy-shell-producer"),
+        pytest.param("exit_sigint", True, True, "sh", "shell", id="wrapper-stop-and-interrupt-busy-shell-producer"),
+        pytest.param("read_input", False, False, "direct", "command", id="nested-prompt"),
+        pytest.param("shell_input", False, True, "direct", "command", id="shell-input"),
+        pytest.param("direct_input", False, False, "sh", "command", id="direct-input-with-toolbar-off"),
+        pytest.param("direct_input", False, False, "exec", "command", id="direct-input-in-orphaned-session"),
+        pytest.param("interrupts", False, False, "exec", "command", id="orphaned-job-control"),
     ],
 )
-def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_job, shell_child, launcher) -> None:
+def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_job, shell_child, launcher, producer) -> None:
     import fcntl
     import pty
     import struct
@@ -88,8 +90,10 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
     application = tmp_path / "application.py"
     application_pid = tmp_path / "application.pid"
     interrupt_request = tmp_path / "interrupt.request"
+    last_result = tmp_path / "last_result"
     application.write_text(
         "from cmd2 import Cmd, ToolbarMode\n"
+        "from cmd2.plugin import CommandFinalizationData\n"
         "import getpass, os, pathlib, signal, threading, time\n"
         "signal.signal(signal.SIGTSTP, signal.SIG_DFL)\n"
         f"pathlib.Path({str(application_pid)!r}).write_text(str(os.getpid()))\n"
@@ -110,7 +114,11 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
         "        os.write(2, b'RAW> ')\n"
         "        assert os.read(0, 7) == b'direct\\n'\n"
         "        self.poutput('INPUT_COMPLETE')\n"
+        "    def record_result(self, data: CommandFinalizationData) -> CommandFinalizationData:\n"
+        f"        pathlib.Path({str(last_result)!r}).write_text(repr(self.last_result))\n"
+        "        return data\n"
         f"app = App(bottom_toolbar_mode=ToolbarMode.{'OFF' if finish == 'direct_input' else 'RESERVED'})\n"
+        "app.register_cmdfinalization_hook(app.record_result)\n"
         "app.prompt = 'TEST> '\n"
         "app.debug = True\n"
         "app.main_session.bottom_toolbar = 'STATUS'\n"
@@ -206,6 +214,21 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
         assert job_group > 1
         wait_until(lambda: os.tcgetpgrp(master) == job_group)
         command = "busy" if finish == "exit_sigint" else "help -v"
+        if producer == "shell":
+            # A shell command writes into the pipe itself rather than through cmd2's
+            # stdout, so cmd2 cannot lend the terminal write by write. Like seq or git
+            # log, this producer dies from SIGINT rather than handling it.
+            busy_script = tmp_path / "busy.py"
+            busy_script.write_text(
+                "import os, signal, sys, time\n"
+                "signal.signal(signal.SIGINT, signal.SIG_DFL)\n"
+                "os.write(2, b'BUSY_READY\\n')\n"
+                "sys.stdout.write('x' * 262144)\n"
+                "sys.stdout.flush()\n"
+                "time.sleep(30)\n",
+                encoding="utf-8",
+            )
+            command = f"shell {shlex.quote(sys.executable)} {shlex.quote(str(busy_script))}"
         if finish == "read_input":
             command = "ask"
         elif finish == "direct_input":
@@ -287,6 +310,11 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
         if finish != "exit_sigint":
             send("q")
         wait_until(lambda: os.tcgetpgrp(master) == job_group and "TEST>" in "\n".join(screen.display))
+        if producer == "shell":
+            # Ctrl-C reached the producer directly, as in a shell pipeline. It did not
+            # merely die of a broken pipe once the pager was gone.
+            wait_until(last_result.exists)
+            assert last_result.read_text() == repr(-signal.SIGINT)
         start = len(transcript)
         send("help quit\n")
         wait_until(lambda: "Exit this application" in transcript[start:])
@@ -306,6 +334,69 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
                 os.killpg(pipeline_group, signal.SIGKILL)
         # Release the PTY before reaping its session leader. On macOS, waiting
         # while the master is still open can leave terminal teardown blocked.
+        os.close(master)
+        process.kill()
+        process.wait(timeout=5)
+
+
+def test_pipeline_from_worker_thread_stays_isolated(tmp_path) -> None:
+    """A pipe started off the main thread cannot install job-control handlers.
+
+    It must fall back to running the pipeline in its own session, as before, rather
+    than failing after Popen and leaving the child unreaped.
+    """
+    import pty
+
+    shell = shutil.which("bash")
+    if shell is None:
+        pytest.skip("requires an interactive bash shell")
+    application = tmp_path / "application.py"
+    application.write_text(
+        "from cmd2 import Cmd, ToolbarMode\n"
+        "import os, threading\n"
+        "app = Cmd(bottom_toolbar_mode=ToolbarMode.OFF)\n"
+        "outcome = []\n"
+        "worker = threading.Thread(target=lambda: outcome.append(app.onecmd_plus_hooks('help quit | cat')))\n"
+        "worker.start()\n"
+        "worker.join()\n"
+        "try:\n"
+        "    reaped = os.waitpid(-1, os.WNOHANG)\n"
+        "except ChildProcessError:\n"
+        "    reaped = None\n"
+        "os.write(1, f'WORKER_DONE {outcome} {reaped}\\n'.encode())\n",
+        encoding="utf-8",
+    )
+    master, slave = pty.openpty()
+    bootstrap = (
+        "import os, fcntl, termios; os.setsid(); "
+        "fcntl.ioctl(0, termios.TIOCSCTTY, 0); "
+        "os.execv(os.environ['TEST_SHELL'], ['bash', '--noprofile', '--norc', '-i'])"
+    )
+    env = dict(os.environ, TERM="xterm-256color", PS1="OUTER> ", TEST_SHELL=shell, SHELL=shell)
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
+    process = subprocess.Popen([sys.executable, "-c", bootstrap], stdin=slave, stdout=slave, stderr=slave, env=env)
+    os.close(slave)
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    transcript = ""
+
+    def wait_until(predicate):
+        nonlocal transcript
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if select.select([master], [], [], 0.05)[0]:
+                transcript += decoder.decode(os.read(master, 65536))
+            if predicate():
+                return
+        pytest.fail(f"terminal condition timed out:\n{transcript}")
+
+    try:
+        wait_until(lambda: "OUTER> " in transcript)
+        os.write(master, f"{shlex.quote(sys.executable)} {shlex.quote(str(application))}\n".encode())
+        # The whole line: a partial read must not satisfy the wait before the reap result arrives.
+        wait_until(lambda: re.search(r"WORKER_DONE .*\r\n", transcript) is not None)
+        assert "Exit this application" in transcript
+        assert "WORKER_DONE [False] None" in transcript
+    finally:
         os.close(master)
         process.kill()
         process.wait(timeout=5)
