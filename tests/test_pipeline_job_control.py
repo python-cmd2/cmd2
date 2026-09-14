@@ -84,6 +84,12 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
     pager.write_text(
         "import errno, os, pathlib, signal, sys, termios, tty\n"
         f"if {launcher == 'exec'!r}: assert signal.getsignal(signal.SIGTSTP) == signal.SIG_IGN\n"
+        # Interactive bash leaves TTIN/TTOU ignored when exec replaces it. Give
+        # the simulated pager normal terminal-access stops: EOF can arrive before
+        # cmd2 lends it the terminal, and an ignored TTIN makes that read fail with
+        # EIO instead of waiting for the handoff. Preserve the inherited TSTP policy.
+        "signal.signal(signal.SIGTTIN, signal.SIG_DFL)\n"
+        "signal.signal(signal.SIGTTOU, signal.SIG_DFL)\n"
         f"pathlib.Path({str(pager_pid)!r}).write_text(str(os.getpid()))\n"
         f"if {finish != 'exit_sigint'!r}: sys.stdin.read()\n"
         # Like less, use an inherited terminal descriptor for keyboard input when
@@ -299,6 +305,9 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
         pipeline_group = os.getpgid(pager_process)
         assert pipeline_group > 1
         assert pipeline_group != job_group
+        # Readiness output can precede the foreground handoff. Send terminal
+        # signals and keystrokes only once the pipeline can receive them.
+        wait_until(lambda: os.tcgetpgrp(master) == pipeline_group)
         if launcher == "exec":
             # There is no outer shell to run fg: Ctrl-Z must leave the pager
             # usable. Require a fresh read acknowledgement, not a SIGCONT.
