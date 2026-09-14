@@ -2183,11 +2183,7 @@ class Cmd:
         inherits the terminal knows nothing about a scroll region and would find its output
         confined to rows it never asked for. The rows are taken again afterwards.
         """
-        reader = self._cur_pipe_proc_reader
-        with (
-            reader.borrow_terminal() if reader is not None else contextlib.nullcontext(),
-            self._quiesce_bottom_toolbar(),
-        ):
+        with self._quiesce_bottom_toolbar():
             reserved = self._reserved_toolbar
 
             if reserved is None:
@@ -3583,6 +3579,9 @@ class Cmd:
                     shell=True,
                     **kwargs,
                 )
+                # Only the child should own a read end. In particular, a consumer
+                # exit must unblock a producer writing to a full pipe immediately.
+                subproc_stdin.close()
                 if terminal_fd is not None:
                     import signal
 
@@ -3592,6 +3591,7 @@ class Cmd:
                     previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTTOU})
                     terminal_stack.callback(signal.pthread_sigmask, signal.SIG_SETMASK, previous_mask)
                     cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr, terminal_fd=terminal_fd)
+                    terminal_stack.enter_context(cmd_pipe_proc_reader.manage_terminal())
 
                 # Popen was called with shell=True so the user can chain pipe commands and redirect their output
                 # like: !ls -l | grep user | wc -l > out.txt. But this makes it difficult to know if the pipe process
@@ -3613,6 +3613,15 @@ class Cmd:
                 redir_saved_state.redirecting = True
                 if cmd_pipe_proc_reader is None:
                     cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
+
+                if terminal_fd is not None:
+                    import io
+
+                    pipe_fd = os.dup(new_stdout.fileno())
+                    new_stdout.close()
+                    new_stdout = io.TextIOWrapper(
+                        io.BufferedWriter(utils.PipelineWriter(pipe_fd, cmd_pipe_proc_reader)), encoding="utf-8"
+                    )
 
                 self.stdout = new_stdout
 
@@ -3693,6 +3702,8 @@ class Cmd:
 
                 with contextlib.suppress(BrokenPipeError):
                     # Close the file or pipe that stdout was redirected to
+                    if self._cur_pipe_proc_reader is not None:
+                        self._cur_pipe_proc_reader.finish_producer()
                     self.stdout.close()
 
                 # Restore self.stdout
@@ -3833,11 +3844,7 @@ class Cmd:
         """
         reserved = self._reserved_toolbar
         owns_the_reservation = session is self.main_session or (reserved is not None and reserved.can_manage(session))
-        reader = self._cur_pipe_proc_reader
-        with (
-            reader.borrow_terminal() if reader is not None else contextlib.nullcontext(),
-            self._quiesce_bottom_toolbar() if owns_the_reservation else self.suspend_bottom_toolbar(),
-        ):
+        with self._quiesce_bottom_toolbar() if owns_the_reservation else self.suspend_bottom_toolbar():
             if owns_the_reservation and reserved is not None and reserved.bridge is not None:
                 reserved.bridge.finish_command_output()
                 with reserved.prompt_session(session):

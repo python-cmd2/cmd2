@@ -20,17 +20,20 @@ pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX job contr
 
 
 @pytest.mark.parametrize(
-    ("finish", "stop_job", "shell_child"),
+    ("finish", "stop_job", "shell_child", "launcher"),
     [
-        pytest.param("interrupts", True, False, id="direct-signals-and-job-control"),
-        pytest.param("interrupts", True, True, id="shell-signals-and-job-control"),
-        pytest.param("exit_sigint", False, False, id="interrupt-busy-producer"),
-        pytest.param("exit_sigint", True, True, id="stop-and-interrupt-busy-producer"),
-        pytest.param("read_input", False, False, id="nested-prompt"),
-        pytest.param("shell_input", False, True, id="shell-input"),
+        pytest.param("interrupts", True, False, "direct", id="direct-signals-and-job-control"),
+        pytest.param("interrupts", True, True, "sh", id="wrapper-signals-and-job-control"),
+        pytest.param("exit_sigint", False, False, "direct", id="interrupt-busy-producer"),
+        pytest.param("exit_sigint", True, True, "uv", id="uv-stop-and-interrupt-busy-producer"),
+        pytest.param("read_input", False, False, "direct", id="nested-prompt"),
+        pytest.param("shell_input", False, True, "direct", id="shell-input"),
+        pytest.param("direct_input", False, False, "sh", id="direct-input-with-toolbar-off"),
+        pytest.param("direct_input", False, False, "exec", id="direct-input-in-orphaned-session"),
+        pytest.param("interrupts", False, False, "exec", id="orphaned-job-control"),
     ],
 )
-def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_job, shell_child) -> None:
+def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_job, shell_child, launcher) -> None:
     import fcntl
     import pty
     import struct
@@ -43,18 +46,25 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
     pager_pid = tmp_path / "pager.pid"
     interrupts = tmp_path / "interrupts"
     pager.write_text(
-        "import os, pathlib, signal, sys, termios, tty\n"
+        "import errno, os, pathlib, signal, sys, termios, tty\n"
         f"pathlib.Path({str(pager_pid)!r}).write_text(str(os.getpid()))\n"
         f"if {finish != 'exit_sigint'!r}: sys.stdin.read()\n"
         # Like less, use an inherited terminal descriptor for keyboard input when
         # stdin is a pipe. This also works in the broken detached-session case.
         "with os.fdopen(os.dup(sys.stderr.fileno()), 'rb', buffering=0) as terminal:\n"
         "    saved = termios.tcgetattr(terminal)\n"
+        "    def setcbreak():\n"
+        "        while True:\n"
+        "            try:\n"
+        "                tty.setcbreak(terminal)\n"
+        "                return\n"
+        "            except termios.error as error:\n"
+        "                if error.args[0] != errno.EINTR: raise\n"
         # os.write rather than print: a signal handler that uses buffered stdout raises
         # "reentrant call inside <_io.BufferedWriter>" when the signal lands mid-write,
         # which happens when the job is stopped while still reporting readiness.
         "    def resume(*args):\n"
-        "        tty.setcbreak(terminal)\n"
+        "        setcbreak()\n"
         "        os.write(1, b'PAGER_RESUMED\\n')\n"
         "    signal.signal(signal.SIGCONT, resume)\n"
         "    def interrupt(*args):\n"
@@ -64,7 +74,7 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
         "        os.write(1, b'PAGER_INTERRUPT\\n')\n"
         f"    signal.signal(signal.SIGINT, {'signal.SIG_DFL' if finish == 'exit_sigint' else 'interrupt'})\n"
         "    try:\n"
-        "        tty.setcbreak(terminal)\n"
+        "        setcbreak()\n"
         "        os.write(1, b'PAGER_READY\\n')\n"
         "        while os.read(terminal.fileno(), 1) != b'q':\n"
         "            pass\n"
@@ -77,16 +87,29 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
     interrupt_request = tmp_path / "interrupt.request"
     application.write_text(
         "from cmd2 import Cmd, ToolbarMode\n"
-        "import os, pathlib, signal, threading, time\n"
+        "import getpass, os, pathlib, signal, threading, time\n"
+        "signal.signal(signal.SIGTSTP, signal.SIG_DFL)\n"
         f"pathlib.Path({str(application_pid)!r}).write_text(str(os.getpid()))\n"
         "class App(Cmd):\n"
         "    def do_busy(self, statement):\n"
         "        os.write(2, b'BUSY_READY\\n')\n"
+        "        self.stdout.write('x' * 262144)\n"
+        "        self.stdout.flush()\n"
         "        time.sleep(30)\n"
         "    def do_ask(self, statement):\n"
         "        self.poutput(self.read_input('INPUT> '))\n"
-        "app = App(bottom_toolbar_mode=ToolbarMode.RESERVED)\n"
+        "    def do_direct(self, statement):\n"
+        "        self.stdout.buffer.write(b'x' * 262144)\n"
+        "        self.stdout.flush()\n"
+        "        assert self.select('first second', 'SELECT> ') == 'first'\n"
+        "        assert input('PLAIN> ') == 'answer'\n"
+        "        assert getpass.getpass('SECRET> ') == 'secret'\n"
+        "        os.write(2, b'RAW> ')\n"
+        "        assert os.read(0, 7) == b'direct\\n'\n"
+        "        self.poutput('INPUT_COMPLETE')\n"
+        f"app = App(bottom_toolbar_mode=ToolbarMode.{'OFF' if finish == 'direct_input' else 'RESERVED'})\n"
         "app.prompt = 'TEST> '\n"
+        "app.debug = True\n"
         "app.main_session.bottom_toolbar = 'STATUS'\n"
         f"if {finish == 'interrupts'!r}:\n"
         "    def interrupt_from_worker():\n"
@@ -147,6 +170,7 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
         blocked in a one-byte terminal read is woken by the stop signal and, if a keystroke
         has arrived by then, consumes it before it stops. Typing has to wait for the whole job.
         """
+        pids = tuple(set(pids))
         listing = subprocess.run(
             ["ps", "-o", "stat=", "-p", ",".join(map(str, pids))], capture_output=True, text=True, check=False
         )
@@ -157,18 +181,30 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
     pipeline_group = None
     try:
         wait_until(lambda: "OUTER> " in transcript)
-        send(f"{shlex.quote(sys.executable)} {shlex.quote(str(application))}\n")
-        wait_until(lambda: screen.display[-1].startswith("STATUS"))
+        launch = f"{shlex.quote(sys.executable)} {shlex.quote(str(application))}"
+        if launcher == "sh":
+            launch = f"{shlex.quote(shell)} -c {shlex.quote(launch + '; :')}"
+        elif launcher == "uv":
+            uv = shutil.which("uv")
+            if uv is None:
+                pytest.skip("requires uv")
+            launch = f"{shlex.quote(uv)} run --no-project -- {launch}"
+        elif launcher == "exec":
+            launch = "exec " + launch
+        send(launch + "\n")
+        wait_until(lambda: "TEST>" in "\n".join(screen.display))
         # A foreground-group query is an observation, not the child's identity.
         # It can change during startup and handoffs. Never use an unverified
         # foreground query as a kill()/killpg() destination.
-        job_group = int(application_pid.read_text())
+        app_pid = int(application_pid.read_text())
+        job_group = os.getpgid(app_pid)
         assert job_group > 1
-        assert os.getpgid(job_group) == job_group
         wait_until(lambda: os.tcgetpgrp(master) == job_group)
         command = "busy" if finish == "exit_sigint" else "help -v"
         if finish == "read_input":
             command = "ask"
+        elif finish == "direct_input":
+            command = "direct"
         elif finish == "shell_input":
             input_script = tmp_path / "input.py"
             input_script.write_text("import os\nos.write(2, b'INPUT> ')\ninput()\n", encoding="utf-8")
@@ -179,6 +215,11 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
             # the final command to replace it with exec.
             pipe_command = f"{shlex.quote(shell)} -c {shlex.quote(pipe_command + '; :')}"
         send(f"{command} | {pipe_command}\n")
+        if finish == "direct_input":
+            for prompt, response in (("SELECT>", "\r"), ("PLAIN>", "answer\n"), ("SECRET>", "secret\n"), ("RAW>", "direct\n")):
+                wait_until(lambda prompt=prompt: prompt in "\n".join(screen.display))
+                assert os.tcgetpgrp(master) == job_group
+                send(response)
         if finish in ("read_input", "shell_input"):
             wait_until(lambda: any(line.startswith("INPUT>") for line in screen.display))
             send("answer\n")
@@ -190,10 +231,15 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
         pipeline_group = os.getpgid(pager_process)
         assert pipeline_group > 1
         assert pipeline_group != job_group
+        if launcher == "exec":
+            start = len(transcript)
+            send("\x1a")
+            wait_until(lambda: "PAGER_RESUMED\r\n" in transcript[start:])
+            assert os.tcgetpgrp(master) == pipeline_group
         for rows in (12, 24) if stop_job else ():
             send("\x1a")
             wait_until(lambda: os.tcgetpgrp(master) == process.pid)
-            wait_until(lambda: stopped(job_group, pager_process))
+            wait_until(lambda: stopped(job_group, app_pid, pager_process))
             start = len(transcript)
             # A child left running can steal these keystrokes from the shell.
             send("printf 'SHELL_%s\\n' OWNS_INPUT\n")
@@ -218,7 +264,7 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
             for expected_count, source in enumerate(sources, start=1):
                 if source == "process":
                     # Signal cmd2 alone, as with `kill -INT <cmd2-pid>`.
-                    os.kill(job_group, signal.SIGINT)
+                    os.kill(app_pid, signal.SIGINT)
                 elif source == "thread":
                     interrupt_request.touch()
                 elif source == "group":
@@ -233,18 +279,19 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
                 assert interrupts.read_text() == "I" * expected_count
         if finish != "exit_sigint":
             send("q")
-        wait_until(lambda: screen.display[-1].startswith("STATUS") and "TEST>" in "\n".join(screen.display))
+        wait_until(lambda: os.tcgetpgrp(master) == job_group and "TEST>" in "\n".join(screen.display))
         start = len(transcript)
         send("help quit\n")
         wait_until(lambda: "Exit this application" in transcript[start:])
         send("quit\n")
-        wait_until(lambda: os.tcgetpgrp(master) == process.pid)
+        if launcher != "exec":
+            wait_until(lambda: os.tcgetpgrp(master) == process.pid)
     finally:
         # Kill only this test's job, including stopped descendants, on assertion failure.
         if pager_pid.exists():
             with contextlib.suppress(ProcessLookupError):
                 os.kill(int(pager_pid.read_text()), signal.SIGKILL)
-        if job_group is not None:
+        if job_group is not None and job_group != process.pid:
             with contextlib.suppress(ProcessLookupError):
                 os.killpg(job_group, signal.SIGKILL)
         if pipeline_group is not None:
