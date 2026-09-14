@@ -75,6 +75,7 @@ plugins:
             filters:
               - "!^_"
               - "get_bottom_toolbar"
+              - "suspend_bottom_toolbar"
             merge_init_into_class: true
             docstring_style: sphinx
             docstring_section_style: spacy
