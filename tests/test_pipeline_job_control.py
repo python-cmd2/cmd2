@@ -49,22 +49,24 @@ def describe_processes(root: int, master: int) -> str:
 
 
 @pytest.mark.parametrize(
-    ("finish", "stop_job", "shell_child", "launcher", "producer"),
+    ("finish", "stop_job", "shell_child", "launcher", "producer", "relay"),
     [
-        pytest.param("interrupts", True, False, "direct", "command", id="direct-signals-and-job-control"),
-        pytest.param("interrupts", True, True, "sh", "command", id="wrapper-signals-and-job-control"),
-        pytest.param("exit_sigint", False, False, "direct", "command", id="interrupt-busy-producer"),
-        pytest.param("exit_sigint", True, True, "uv", "command", id="uv-stop-and-interrupt-busy-producer"),
-        pytest.param("exit_sigint", False, False, "direct", "shell", id="interrupt-busy-shell-producer"),
-        pytest.param("exit_sigint", True, True, "sh", "shell", id="wrapper-stop-and-interrupt-busy-shell-producer"),
-        pytest.param("read_input", False, False, "direct", "command", id="nested-prompt"),
-        pytest.param("shell_input", False, True, "direct", "command", id="shell-input"),
-        pytest.param("direct_input", False, False, "sh", "command", id="direct-input-with-toolbar-off"),
-        pytest.param("direct_input", False, False, "exec", "command", id="direct-input-in-orphaned-session"),
-        pytest.param("interrupts", False, False, "exec", "command", id="orphaned-job-control"),
+        pytest.param("interrupts", True, False, "direct", "command", "main", id="direct-signals-and-job-control"),
+        pytest.param("interrupts", True, True, "sh", "command", "main", id="wrapper-signals-and-job-control"),
+        pytest.param("exit_sigint", False, False, "direct", "command", "main", id="interrupt-busy-producer"),
+        pytest.param("exit_sigint", True, True, "uv", "command", "worker", id="uv-stop-and-interrupt-busy-producer"),
+        pytest.param("exit_sigint", False, False, "direct", "shell", "main", id="interrupt-busy-shell-producer"),
+        pytest.param("exit_sigint", True, True, "sh", "shell", "worker", id="wrapper-stop-and-interrupt-busy-shell-producer"),
+        pytest.param("read_input", False, False, "direct", "command", "main", id="nested-prompt"),
+        pytest.param("shell_input", False, True, "direct", "command", "main", id="shell-input"),
+        pytest.param("direct_input", False, False, "sh", "command", "main", id="direct-input-with-toolbar-off"),
+        pytest.param("direct_input", False, False, "exec", "command", "main", id="direct-input-in-orphaned-session"),
+        pytest.param("interrupts", False, False, "exec", "command", "main", id="orphaned-job-control"),
     ],
 )
-def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_job, shell_child, launcher, producer) -> None:
+def test_pipeline_stops_with_cmd2_and_returns_terminal(
+    tmp_path, finish, stop_job, shell_child, launcher, producer, relay
+) -> None:
     import fcntl
     import pty
     import struct
@@ -125,6 +127,12 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(tmp_path, finish, stop_jo
         "from cmd2.plugin import CommandFinalizationData\n"
         "import getpass, os, pathlib, signal, threading, time\n"
         "signal.signal(signal.SIGTSTP, signal.SIG_DFL)\n"
+        f"if {relay == 'worker'!r}:\n"
+        # The kernel may hand a signal to a thread other than the one it was aimed at.
+        # Deliver the job-control relay to the watcher that sends it, so the main thread,
+        # blocked in a pipe write or a wait, only learns of it if it returns on its own.
+        "    _pthread_kill = signal.pthread_kill\n"
+        "    signal.pthread_kill = lambda thread_id, signum: _pthread_kill(threading.get_ident(), signum)\n"
         f"pathlib.Path({str(application_pid)!r}).write_text(str(os.getpid()))\n"
         "class App(Cmd):\n"
         "    def do_busy(self, statement):\n"

@@ -5284,6 +5284,16 @@ class Cmd:
                         raise
 
             proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
+            if pipeline_group is not None:
+                # Only the main thread runs Python signal handlers, and the job-control
+                # stop the pipeline's watcher relays may wake another thread. Return from
+                # the wait regularly so the handler runs while the command is still going.
+                while True:
+                    try:
+                        proc_reader.wait_for_exit(0.1)
+                        break
+                    except subprocess.TimeoutExpired:
+                        continue
             proc_reader.wait()
 
             # Save the return code of the application for use in a pyscript

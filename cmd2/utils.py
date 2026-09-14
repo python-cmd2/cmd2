@@ -836,25 +836,35 @@ class PipelineWriter(io.FileIO):
     def __init__(self, fd: int, reader: ProcReader) -> None:
         """Take ownership of a pipe descriptor managed by reader."""
         super().__init__(fd, "w")
+        os.set_blocking(fd, False)
         self._reader = reader
 
     def write(self, b: Any) -> int:
         """Write all of b while the consumer can interact with the terminal.
 
-        A signal that interrupts a blocking write, such as the job-control stop
-        ProcReader relays, returns a partial count. Finishing the buffer under the
-        same lend keeps the terminal with the consumer instead of returning it for
-        the instant between two writes, when a consumer that has just resumed a
-        terminal read would be stopped again with SIGTTIN.
+        The whole buffer goes out under one lend. Returning the terminal between two
+        writes, even for an instant, would stop a consumer that had just resumed a
+        terminal read with SIGTTIN.
+
+        A full pipe is awaited in short polls rather than a blocking write. Only the
+        main thread runs Python signal handlers, and the job-control stop ProcReader
+        relays may wake another thread, so the main thread has to return to Python
+        code on its own for the handler to run.
         """
+        import select
         import signal
 
         view = memoryview(b).cast("B")
+        poller = select.poll()
+        poller.register(self.fileno(), select.POLLOUT)
         try:
             with self._reader.lend_terminal():
                 written = 0
                 while written < len(view):
-                    written += cast(int, super().write(view[written:]))
+                    try:
+                        written += os.write(self.fileno(), view[written:])
+                    except BlockingIOError:
+                        poller.poll(100)
                 return written
         except BrokenPipeError:
             # Ctrl-C during a blocking write must cancel the command, even if it

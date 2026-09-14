@@ -944,7 +944,9 @@ class TestPager:
                 else:
                     assert reserved.display._deferred_band is not None
             assert reserved.display._deferred_band is None
-            assert terminal.screen.display[-1].startswith("STATUS")
+            # The command display keeps rendering on its own thread, so the bar it repaints
+            # after the handoff can land a frame later than the resume itself.
+            assert wait_for(lambda: terminal.screen.display[-1].startswith("STATUS"))
             history = ["".join(line[x].data for x in sorted(line)) for line in terminal.screen.history.top]
             assert not any("STATUS" in row for row in history)
 
