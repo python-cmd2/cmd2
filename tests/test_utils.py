@@ -1,5 +1,6 @@
 """Unit testing for cmd2/utils.py module."""
 
+import contextlib
 import errno
 import math
 import os
@@ -278,6 +279,48 @@ def test_proc_reader_terminal_group() -> None:
     assert reader.terminal_group == proc.pid
     proc.returncode = 0
     assert reader.terminal_group is None
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX pipes")
+@pytest.mark.parametrize("producer", ["writer", "child"])
+def test_pipeline_writer_delivers_more_than_the_pipe_holds(producer) -> None:
+    """Both cmd2's writes and a child inheriting the descriptor must wait for a slow consumer.
+
+    A shell producer gets the descriptor itself, so it must stay blocking: a child that
+    inherits O_NONBLOCK fails with EAGAIN once the pipe is full.
+    """
+    import subprocess
+    import threading
+
+    payload = b"x" * 4 * 1024 * 1024
+    read_fd, write_fd = os.pipe()
+    received = bytearray()
+
+    def drain() -> None:
+        while chunk := os.read(read_fd, 65536):
+            received.extend(chunk)
+            time.sleep(0.001)
+
+    reader = mock.Mock(lend_terminal=contextlib.nullcontext)
+    writer = cu.PipelineWriter(write_fd, reader)
+    consumer = threading.Thread(target=drain)
+    consumer.start()
+    try:
+        if producer == "writer":
+            assert writer.write(payload) == len(payload)
+        else:
+            child = subprocess.run(
+                [sys.executable, "-c", f"import sys; sys.stdout.buffer.write(b'x' * {len(payload)})"],
+                stdout=writer.fileno(),
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            assert child.returncode == 0, child.stderr.decode()
+    finally:
+        writer.close()
+        consumer.join()
+        os.close(read_fd)
+    assert bytes(received) == payload
 
 
 def test_proc_reader_terminate(pr_none) -> None:

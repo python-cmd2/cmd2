@@ -29,9 +29,12 @@ def describe_processes(root: int, master: int) -> str:
         foreground: object = os.tcgetpgrp(master)
     except OSError as error:
         foreground = error
-    listing = subprocess.run(
-        ["ps", "-e", "-o", "pid,ppid,pgid,stat,wchan,command"], capture_output=True, text=True, check=False
-    )
+    try:
+        listing = subprocess.run(
+            ["ps", "-e", "-o", "pid,ppid,pgid,stat,wchan,command"], capture_output=True, text=True, check=False
+        )
+    except OSError as error:
+        return f"foreground process group: {foreground}\nno process listing: {error}"
     rows = listing.stdout.splitlines()
     parents = {}
     for row in rows[1:]:

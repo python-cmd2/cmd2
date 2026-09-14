@@ -836,7 +836,6 @@ class PipelineWriter(io.FileIO):
     def __init__(self, fd: int, reader: ProcReader) -> None:
         """Take ownership of a pipe descriptor managed by reader."""
         super().__init__(fd, "w")
-        os.set_blocking(fd, False)
         self._reader = reader
 
     def write(self, b: Any) -> int:
@@ -846,25 +845,27 @@ class PipelineWriter(io.FileIO):
         writes, even for an instant, would stop a consumer that had just resumed a
         terminal read with SIGTTIN.
 
-        A full pipe is awaited in short polls rather than a blocking write. Only the
-        main thread runs Python signal handlers, and the job-control stop ProcReader
-        relays may wake another thread, so the main thread has to return to Python
-        code on its own for the handler to run.
+        A full pipe is awaited in short polls rather than in one blocking write. Only
+        the main thread runs Python signal handlers, and the job-control stop ProcReader
+        relays may wake another thread, so the main thread has to return to Python code
+        on its own for the handler to run. The descriptor itself stays blocking: a shell
+        command inherits it, and a producer that found it non-blocking would fail with
+        EAGAIN once the pipe filled.
         """
         import select
         import signal
 
         view = memoryview(b).cast("B")
+        fd = self.fileno()
         poller = select.poll()
-        poller.register(self.fileno(), select.POLLOUT)
+        poller.register(fd, select.POLLOUT)
         try:
             with self._reader.lend_terminal():
                 written = 0
                 while written < len(view):
-                    try:
-                        written += os.write(self.fileno(), view[written:])
-                    except BlockingIOError:
-                        poller.poll(100)
+                    # Once there is room, a write of at most PIPE_BUF bytes does not block.
+                    if poller.poll(100):
+                        written += os.write(fd, view[written : written + select.PIPE_BUF])
                 return written
         except BrokenPipeError:
             # Ctrl-C during a blocking write must cancel the command, even if it
