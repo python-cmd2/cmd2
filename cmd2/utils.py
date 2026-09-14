@@ -739,7 +739,10 @@ class ProcReader:
                 # Stop every terminal reader before returning control to the outer shell.
                 os.killpg(self._proc.pid, signal.SIGSTOP)
                 self._job_resumed.clear()
-                os.kill(os.getpid(), signal.SIGTSTP)
+                # Signal the main thread itself. Only it runs Python signal handlers, and a
+                # process-directed signal may be taken by another thread while the main
+                # thread sleeps in a system call, which then never returns to run the handler.
+                signal.pthread_kill(threading.main_thread().ident or 0, signal.SIGTSTP)
                 self._job_resumed.wait()
                 os.killpg(self._proc.pid, signal.SIGCONT)
         finally:
