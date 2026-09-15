@@ -129,14 +129,13 @@ def test_pipeline_process_group_selection(toolbar_app, tmp_path, monkeypatch, ru
         with mock.patch("subprocess.Popen", wraps=subprocess.Popen) as popen:
             app.onecmd_plus_hooks(f'help | "{sys.executable}" -S -c "import sys; print(sys.stdin.read())"')
         options = popen.call_args.kwargs
-        if sys.platform == "win32":
-            assert options["creationflags"] == subprocess.CREATE_NEW_PROCESS_GROUP
-            assert "start_new_session" not in options
-        else:
-            # A stream claiming isatty() is insufficient: these files do not
-            # refer to our controlling terminal, so no foreground handoff is safe.
-            assert options["start_new_session"]
-            assert "process_group" not in options
+        # A stream claiming isatty() is insufficient: these files do not refer to our
+        # controlling terminal, so no foreground handoff is safe. The pipeline is isolated
+        # the ordinary way instead: a new process group on Windows, a new session on POSIX.
+        isolation = "creationflags" if sys.platform == "win32" else "start_new_session"
+        expected = subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else True
+        assert options[isolation] == expected
+        assert options.keys().isdisjoint({"process_group", "start_new_session", "creationflags"} - {isolation})
 
 
 @pytest.mark.parametrize("builtin_pager", [False, True])
