@@ -8,12 +8,13 @@ import os
 import signal
 import sys
 import threading
+import time
 from collections.abc import Callable, Iterator
 from concurrent.futures import Future
 from concurrent.futures import TimeoutError as FutureTimeoutError
 from typing import TYPE_CHECKING, Any, TextIO, TypeVar, cast
 
-from prompt_toolkit.application import Application, create_app_session
+from prompt_toolkit.application import Application, create_app_session, run_in_terminal
 from prompt_toolkit.application.current import _current_app_session, get_app_session
 from prompt_toolkit.enums import EditingMode
 from prompt_toolkit.filters import Condition, to_filter
@@ -41,6 +42,33 @@ _SHUTDOWN_TIMEOUT = 10.0
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 _R = TypeVar("_R")
+
+
+def suspend_process_group(suspend_group: bool = True) -> None:
+    """Stop this process, or its whole process group, with SIGTSTP from any thread.
+
+    A process-directed stop signal can be taken by a thread other than the sender. Sent
+    from the display thread, it lands on the main thread, and the display thread carries
+    on for a few milliseconds: it puts the terminal back into raw mode and redraws before
+    the job has stopped. When the shell resumes the job it restores the modes it saved
+    beforehand, and nothing is left to undo that -- the terminal stays cooked, keys are
+    held until Enter, and every cursor-position query is echoed as ``^[[row;colR``.
+
+    So after sending the signal this thread waits for the stop to take it too. A stop
+    shows as time passing while asleep; a signal that was ignored, or discarded for an
+    orphaned process group, shows as nothing, and the wait ends on its own.
+
+    :param suspend_group: stop the whole process group, as a shell's Ctrl-Z would, rather
+        than only this process
+    """
+    if not hasattr(signal, "SIGTSTP"):  # pragma: no cover - POSIX only
+        return
+    os.kill(0 if suspend_group else os.getpid(), signal.SIGTSTP)
+    deadline = time.monotonic() + 0.25
+    while (before := time.monotonic()) < deadline:
+        time.sleep(0.01)
+        if time.monotonic() - before > 0.1:
+            return
 
 
 def suspend_toolbar(func: _F) -> _F:
@@ -217,6 +245,12 @@ class CommandToolbar:
 
         session = cmd.main_session
         self.app = session.app
+        # Ctrl-Z during a command is handled on the display's thread, where upstream's
+        # version would not hold the thread until the job has stopped. The reserved toolbar
+        # layers its row release over whatever is installed, so one it put there first is
+        # left in place; it releases the rows and then stops the process the same way.
+        if "suspend_to_background" not in vars(self.app):
+            cast("Any", self.app).suspend_to_background = self._suspend_to_background
         # PromptSession has no public hook for replacing just its input area.
         # Keep this small dependency on its layout shape in one place, and fail
         # explicitly if upstream changes it. Reuse the actual toolbar container,
@@ -281,6 +315,11 @@ class CommandToolbar:
 
         self._bindings = bindings
         self._suspend_binding = suspend
+
+    @staticmethod
+    def _suspend_to_background(suspend_group: bool = True) -> None:
+        """Suspend like upstream's ``Application.suspend_to_background()``, from any thread."""
+        run_in_terminal(functools.partial(suspend_process_group, suspend_group))
 
     def _display_started(self, app: Application[str]) -> None:  # noqa: ARG002
         """Report that the display is up and has finished its first frame."""

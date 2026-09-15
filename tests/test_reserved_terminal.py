@@ -858,7 +858,7 @@ def test_ctrl_z_releases_before_signaling_and_reacquires_after_resume(terminal_h
         resize(harness, terminal, 12, 80)
         stopped.set()
 
-    monkeypatch.setattr("cmd2.reserved_toolbar.os.kill", stop_process)
+    monkeypatch.setattr("cmd2.command_toolbar.os.kill", stop_process)
     with harness.app._reserved_toolbar_context():
         original_suspend = harness.app.main_session.app.suspend_to_background
         if owner in ("command", "pager"):

@@ -17,7 +17,6 @@ The toolbar's content is read through a callable rather than captured, so a call
 new ``bottom_toolbar`` to the session still reaches the band.
 """
 
-import os
 import signal
 from contextlib import ExitStack, contextmanager, suppress
 from types import TracebackType
@@ -30,6 +29,7 @@ from prompt_toolkit.layout.containers import ConditionalContainer
 from prompt_toolkit.styles import DynamicStyle
 from prompt_toolkit.utils import suspend_to_background_supported
 
+from .command_toolbar import suspend_process_group
 from .prompt_toolkit_bridge import PromptToolkitBridge
 from .reserved_output import ReservedOutput
 from .terminal_display import TerminalDisplay
@@ -261,7 +261,7 @@ class ReservedToolbar:
                 # run_in_terminal has stopped rendering and detached input before this runs.
                 # A signal callback itself must never acquire the terminal transaction.
                 with self.suspended():
-                    os.kill(0 if suspend_group else os.getpid(), suspend_signal)
+                    suspend_process_group(suspend_group)
 
             run_in_terminal(suspend_process)
 
