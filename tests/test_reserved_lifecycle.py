@@ -603,8 +603,8 @@ class TestPromptSuspension:
         finally:
             harness.close()
 
-    def test_another_session_still_gets_the_terminal_to_itself(self) -> None:
-        """A prompt cmd2 has not bound to the reservation renders outside it, for now."""
+    def test_another_session_on_the_same_terminal_borrows_the_reservation(self) -> None:
+        """Managed nested input retains the main-screen band."""
         harness = Harness(mode="reserved")
         try:
             with harness.app._reserved_toolbar_context():
@@ -616,7 +616,7 @@ class TestPromptSuspension:
 
                 harness.app._read_raw_input("> ", other)
 
-                assert seen == [False]
+                assert seen == [True]
                 assert toolbar.display.is_reserved is True
         finally:
             harness.close()

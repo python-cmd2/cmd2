@@ -86,6 +86,7 @@ from prompt_toolkit.layout.containers import ConditionalContainer, FloatContaine
 from prompt_toolkit.output import DummyOutput, create_output
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.shortcuts import CompleteStyle, PromptSession, choice, set_title
+from prompt_toolkit.shortcuts.choice_input import ChoiceInput
 from prompt_toolkit.styles import DynamicStyle
 from rich.console import (
     Group,
@@ -2175,7 +2176,8 @@ class Cmd:
 
         Use this context manager around application-specific calls to ``input()``, other
         terminal UIs, or subprocesses that inherit the terminal. cmd2 automatically suspends
-        its toolbar for its own input prompts, external pagers, and shell commands.
+        its toolbar for external pagers and shell commands. Managed input prompts borrow
+        the reservation without releasing the rows.
 
         In reserved mode this also gives the reserved rows back, because a program that
         inherits the terminal knows nothing about a scroll region and would find its output
@@ -3529,15 +3531,12 @@ class Cmd:
             subproc_stdin = open(read_fd, encoding="utf-8")  # noqa: SIM115
             new_stdout: TextIO = cast(TextIO, open(write_fd, "w", encoding="utf-8"))  # noqa: SIM115
 
-            # Create pipe process in a separate group to isolate our signals from it. If a Ctrl-C event occurs,
-            # our sigint handler will forward it only to the most recent pipe process. This makes sure pipe
-            # processes close in the right order (most recent first).
+            # Isolate pipeline signals from cmd2. Terminal pipelines receive the
+            # foreground terminal; ProcReader relays their job-control stops.
             kwargs: dict[str, Any] = {}
             if sys.platform == "win32":
                 kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
             else:
-                kwargs["start_new_session"] = True
-
                 # Attempt to run the pipe process in the user's preferred shell instead of the default behavior of using sh.
                 shell = os.environ.get("SHELL")
                 if shell:
@@ -3553,35 +3552,88 @@ class Cmd:
             )
             pipe_stderr = None if isinstance(sys.stderr, utils.StdSim) else command_toolbar.pipe_target(sys.stderr)
 
+            terminal_fd = None
+            if sys.platform != "win32":
+                # Job control installs signal handlers, which only the main thread may do.
+                # Elsewhere, keep the pipeline in its own session as before.
+                if threading.current_thread() is threading.main_thread():
+                    for stream in (pipe_stdout, pipe_stderr):
+                        if stream is not None and stream.isatty():
+                            with contextlib.suppress(OSError, ValueError):
+                                if os.tcgetpgrp(stream.fileno()) == os.getpgrp():
+                                    terminal_fd = stream.fileno()
+                                    break
+                if terminal_fd is None:
+                    kwargs["start_new_session"] = True
+                else:
+                    kwargs["process_group"] = 0
+
             with contextlib.ExitStack() as terminal_stack:
                 # The toolbar can neither draw nor hold the keyboard while a pipe process owns
                 # the terminal, so step aside until that process has finished.
                 if pipe_stdout is not None or pipe_stderr is not None:
                     terminal_stack.enter_context(self.suspend_bottom_toolbar())
 
-                proc = subprocess.Popen(  # noqa: S602
-                    statement.redirect_to,
-                    stdin=subproc_stdin,
-                    stdout=subprocess.PIPE if pipe_stdout is None else pipe_stdout,
-                    stderr=subprocess.PIPE if pipe_stderr is None else pipe_stderr,
-                    shell=True,
-                    **kwargs,
-                )
+                with contextlib.ExitStack() as spawn_stack:
+                    if terminal_fd is not None and os.getpgrp() == os.getsid(0):
+                        import signal
+
+                        # A session leader's job has no outer shell to resume it.
+                        # Its pipeline must inherit the same Ctrl-Z behavior: the
+                        # new group would otherwise make SIGTSTP actionable again.
+                        previous_tstp = signal.signal(signal.SIGTSTP, signal.SIG_IGN)
+                        spawn_stack.callback(signal.signal, signal.SIGTSTP, previous_tstp)
+                    proc = subprocess.Popen(  # noqa: S602
+                        statement.redirect_to,
+                        stdin=subproc_stdin,
+                        stdout=subprocess.PIPE if pipe_stdout is None else pipe_stdout,
+                        stderr=subprocess.PIPE if pipe_stderr is None else pipe_stderr,
+                        shell=True,
+                        **kwargs,
+                    )
+                # Only the child should own a read end. In particular, a consumer
+                # exit must unblock a producer writing to a full pipe immediately.
+                subproc_stdin.close()
+                if terminal_fd is not None:
+                    import signal
+
+                    # The producer may still write diagnostics while the consumer owns
+                    # the terminal. Block SIGTTOU after Popen so the child retains normal
+                    # job-control behavior, and restore our mask with the handoff.
+                    previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTTOU})
+                    terminal_stack.callback(signal.pthread_sigmask, signal.SIG_SETMASK, previous_mask)
+                    cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr, terminal_fd=terminal_fd)
+                    terminal_stack.enter_context(cmd_pipe_proc_reader.manage_terminal())
 
                 # Popen was called with shell=True so the user can chain pipe commands and redirect their output
                 # like: !ls -l | grep user | wc -l > out.txt. But this makes it difficult to know if the pipe process
                 # started OK, since the shell itself always starts. Therefore, we will wait a short time and check
                 # if the pipe process is still running.
                 with contextlib.suppress(subprocess.TimeoutExpired):
-                    proc.wait(0.2)
+                    if cmd_pipe_proc_reader is None:
+                        proc.wait(0.2)
+                    else:
+                        cmd_pipe_proc_reader.wait_for_exit(0.2)
 
                 # Check if the pipe process already exited
                 if proc.returncode is not None:
+                    if cmd_pipe_proc_reader is not None:
+                        cmd_pipe_proc_reader.wait()
                     subproc_stdin.close()
                     new_stdout.close()
                     raise RedirectionError(f"Pipe process exited with code {proc.returncode} before command could run")
                 redir_saved_state.redirecting = True
-                cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
+                if cmd_pipe_proc_reader is None:
+                    cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
+
+                if terminal_fd is not None:
+                    import io
+
+                    pipe_fd = os.dup(new_stdout.fileno())
+                    new_stdout.close()
+                    new_stdout = io.TextIOWrapper(
+                        io.BufferedWriter(utils.PipelineWriter(pipe_fd, cmd_pipe_proc_reader)), encoding="utf-8"
+                    )
 
                 self.stdout = new_stdout
 
@@ -3662,6 +3714,8 @@ class Cmd:
 
                 with contextlib.suppress(BrokenPipeError):
                     # Close the file or pipe that stdout was redirected to
+                    if self._cur_pipe_proc_reader is not None:
+                        self._cur_pipe_proc_reader.finish_producer()
                     self.stdout.close()
 
                 # Restore self.stdout
@@ -3790,9 +3844,9 @@ class Cmd:
         The command display is stopped either way, but only some prompts give the terminal
         away with it. The main prompt is the one the reservation exists for: it renders
         through the reserved output, and the toolbar has to still be there while the user is
-        typing -- that is what "stable across ordinary commands" means. Any other session is
-        an application prompt cmd2 has not bound to the reservation, so it gets the terminal
-        to itself, rows included.
+        typing. Managed nested prompts on the same terminal borrow that reservation with
+        their own bridge after the command input reader stops. Other terminals and prompts
+        inside an external handoff retain the exclusive-terminal path.
 
         :param prompt: the prompt text or a callable that returns the prompt.
         :param session: the PromptSession instance to use for reading.
@@ -3800,11 +3854,13 @@ class Cmd:
         :return: the stripped input string.
         :raises EOFError: if the input stream is closed or the user signals EOF (e.g., Ctrl+D)
         """
-        owns_the_reservation = session is self.main_session
+        reserved = self._reserved_toolbar
+        owns_the_reservation = session is self.main_session or (reserved is not None and reserved.can_manage(session))
         with self._quiesce_bottom_toolbar() if owns_the_reservation else self.suspend_bottom_toolbar():
-            reserved = self._reserved_toolbar
             if owns_the_reservation and reserved is not None and reserved.bridge is not None:
                 reserved.bridge.finish_command_output()
+                with reserved.prompt_session(session):
+                    return self._read_raw_input_now(prompt, session, **prompt_kwargs)
             return self._read_raw_input_now(prompt, session, **prompt_kwargs)
 
     def _read_raw_input_now(
@@ -3932,7 +3988,7 @@ class Cmd:
 
         temp_session: PromptSession[str] = PromptSession(
             auto_suggest=self.main_session.auto_suggest,
-            bottom_toolbar=self.get_bottom_toolbar if self.main_session.bottom_toolbar is not None else None,
+            bottom_toolbar=self.main_session.bottom_toolbar,
             color_depth=self.main_session.color_depth,
             complete_style=self.main_session.complete_style,
             complete_in_thread=self.main_session.complete_in_thread,
@@ -3961,7 +4017,7 @@ class Cmd:
         :raises Exception: any other exceptions raised by prompt()
         """
         temp_session: PromptSession[str] = PromptSession(
-            bottom_toolbar=self.get_bottom_toolbar if self.main_session.bottom_toolbar is not None else None,
+            bottom_toolbar=self.main_session.bottom_toolbar,
             color_depth=self.main_session.color_depth,
             enable_suspend=self.main_session.enable_suspend,
             input=self.main_session.input,
@@ -4937,7 +4993,7 @@ class Cmd:
         self.last_result = True
         return True
 
-    @command_toolbar.suspend_toolbar
+    @command_toolbar.quiesce_toolbar
     def select(self, opts: str | Iterable[str] | Iterable[tuple[Any, str | None]], prompt: str = "Your choice? ") -> Any:
         """Present a menu to the user.
 
@@ -4972,7 +5028,22 @@ class Cmd:
             try:
                 while True:
                     with create_app_session(input=self.main_session.input, output=self.main_session.output):
-                        result = choice(message=prompt, options=fulloptions)
+                        reserved = self._reserved_toolbar
+                        if reserved is not None and reserved.can_manage(self.main_session):
+                            if reserved.bridge is not None:
+                                reserved.bridge.finish_command_output()
+                            # ChoiceInput.prompt() constructs and runs in one step. Binding
+                            # its application first gives the initial frame reserved geometry.
+                            selection = ChoiceInput(
+                                message=prompt,
+                                options=fulloptions,
+                                style=self.main_session.style,
+                                enable_suspend=self.main_session.enable_suspend,
+                            )._create_application()
+                            with reserved.prompt_application(selection):
+                                result = selection.run()
+                        else:
+                            result = choice(message=prompt, options=fulloptions)
                     if result is not None:
                         return result
             except KeyboardInterrupt:
@@ -5180,19 +5251,49 @@ class Cmd:
         utils.expand_user_in_tokens(tokens)
         expanded_command = " ".join(tokens)
 
-        # Prevent KeyboardInterrupts while in the shell process. The shell process will
-        # still receive the SIGINT since it is in the same process group as us.
-        with self.sigint_protection:
-            # For any stream that is a StdSim, we will use a pipe so we can capture its output
-            proc = subprocess.Popen(  # noqa: S602
-                expanded_command,
-                stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]
-                stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
-                shell=True,
-                **kwargs,
-            )
+        # A terminal pipeline's consumer needs the terminal to drain the pipe, but a shell
+        # command writes into that pipe itself rather than through self.stdout, which lends
+        # the terminal per write. Run the command inside the pipeline's job instead, for as
+        # long as it runs: the consumer keeps the terminal, and Ctrl-C and Ctrl-Z reach both
+        # processes, as they would in a shell pipeline.
+        pipeline = self._cur_pipe_proc_reader
+        pipeline_group = None
+        if pipeline is not None and not isinstance(self.stdout, utils.StdSim):  # type: ignore[unreachable]
+            pipeline_group = pipeline.terminal_group
+
+        # Prevent KeyboardInterrupts while in the shell process. The shell process still
+        # receives the SIGINT: it is in our process group or in the foreground pipeline's.
+        with self.sigint_protection, contextlib.ExitStack() as terminal_stack:
+            if pipeline is not None and pipeline_group is not None:
+                kwargs["process_group"] = pipeline_group
+                terminal_stack.enter_context(pipeline.lend_terminal())
+            while True:
+                try:
+                    # For any stream that is a StdSim, we will use a pipe so we can capture its output
+                    proc = subprocess.Popen(  # noqa: S602
+                        expanded_command,
+                        stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]
+                        stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
+                        shell=True,
+                        **kwargs,
+                    )
+                    break
+                except PermissionError:
+                    # The pipeline exited before the command could join its group.
+                    if kwargs.pop("process_group", None) is None:
+                        raise
 
             proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
+            if pipeline_group is not None:
+                # Only the main thread runs Python signal handlers, and the job-control
+                # stop the pipeline's watcher relays may wake another thread. Return from
+                # the wait regularly so the handler runs while the command is still going.
+                while True:
+                    try:
+                        proc_reader.wait_for_exit(0.1)
+                        break
+                    except subprocess.TimeoutExpired:
+                        continue
             proc_reader.wait()
 
             # Save the return code of the application for use in a pyscript

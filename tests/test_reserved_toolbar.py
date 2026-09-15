@@ -7,6 +7,7 @@ a backend left wrapped after the loop ends would report a short terminal to what
 """
 
 import io
+import signal
 from typing import Any
 
 import pytest
@@ -59,6 +60,34 @@ class Harness:
     def app(self) -> Any:
         """The session's application."""
         return self.session.app
+
+
+@pytest.mark.parametrize("guest_fails", [False, True])
+def test_failed_reacquisition_releases_bindings_without_masking_the_guest(monkeypatch, guest_fails) -> None:
+    harness = Harness()
+    try:
+        with harness.toolbar:
+            display = harness.toolbar.display
+
+            def fail():
+                raise OSError("resume failed")
+
+            monkeypatch.setattr(display, "reacquire_region_after_handoff", fail)
+            expected = ValueError if guest_fails else OSError
+
+            def run_guest():
+                with harness.toolbar.suspended():
+                    if guest_fails:
+                        raise ValueError("guest failed")
+
+            with pytest.raises(expected, match="guest failed" if guest_fails else "resume failed"):
+                run_guest()
+            assert harness.toolbar.bridge is None
+            assert harness.app.output is harness.backend
+            assert display.lease_depth == 0
+            assert isinstance(harness.toolbar.take_pending_error(), OSError)
+    finally:
+        harness.close()
 
 
 class TestBinding:
@@ -804,5 +833,65 @@ class TestAbandonedEmission:
             with harness.toolbar.suspended():
                 pass
             assert harness.written() == ""
+        finally:
+            harness.close()
+
+
+class TestNestedPrompts:
+    def test_a_nested_session_without_a_toolbar_window_is_refused(self) -> None:
+        """Lending the reservation to a layout with no toolbar window would leave two toolbars."""
+        harness = Harness()
+        try:
+            harness.toolbar.start()
+            main_bridge = harness.toolbar.bridge
+            nested: PromptSession[str] = PromptSession(input=harness.pipe, output=harness.backend)
+            nested.app.layout = Layout(Window())
+            with pytest.raises(RuntimeError, match="nested session"), harness.toolbar.prompt_session(nested):
+                pass
+            assert nested.app.output is harness.backend
+            assert harness.toolbar.bridge is main_bridge
+        finally:
+            harness.close()
+
+    def test_suspending_invalidates_a_nested_prompt_bridge_too(self) -> None:
+        """The guest program writes over the nested prompt's screen as much as the main one's."""
+        harness = Harness()
+        try:
+            harness.toolbar.start()
+            nested: PromptSession[str] = PromptSession(input=harness.pipe, output=harness.backend, bottom_toolbar="NESTED")
+            with harness.toolbar.prompt_session(nested):
+                bridge = harness.toolbar.bridge
+                assert bridge is not None
+                assert bridge is not harness.toolbar._bridge
+                bridge.set_prompt_anchor(5)
+                with harness.toolbar.suspended():
+                    assert bridge.prompt_anchor is None
+                    assert bridge.needs_resynchronization is True
+                    assert "handed to another program" in (bridge.resynchronization_reason or "")
+                assert "came back from another program" in (bridge.resynchronization_reason or "")
+        finally:
+            harness.close()
+
+
+class TestJobControl:
+    @pytest.mark.parametrize("missing", ["support", "signal"])
+    def test_suspending_to_background_does_nothing_where_it_is_unsupported(
+        self, monkeypatch: pytest.MonkeyPatch, missing: str
+    ) -> None:
+        """Without a stop signal or a supporting platform there is no process to stop."""
+        harness = Harness()
+        try:
+            harness.toolbar.start()
+            calls: list[Any] = []
+            monkeypatch.setattr("cmd2.reserved_toolbar.run_in_terminal", calls.append)
+            if missing == "support":
+                monkeypatch.setattr("cmd2.reserved_toolbar.suspend_to_background_supported", lambda: False)
+            else:
+                monkeypatch.delattr(signal, "SIGTSTP", raising=False)
+            harness.clear()
+            harness.app.suspend_to_background()
+            assert calls == []
+            assert harness.written() == ""
+            assert harness.toolbar.is_active is True
         finally:
             harness.close()

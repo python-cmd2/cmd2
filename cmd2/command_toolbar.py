@@ -8,12 +8,13 @@ import os
 import signal
 import sys
 import threading
+import time
 from collections.abc import Callable, Iterator
 from concurrent.futures import Future
 from concurrent.futures import TimeoutError as FutureTimeoutError
 from typing import TYPE_CHECKING, Any, TextIO, TypeVar, cast
 
-from prompt_toolkit.application import Application, create_app_session
+from prompt_toolkit.application import Application, create_app_session, run_in_terminal
 from prompt_toolkit.application.current import _current_app_session, get_app_session
 from prompt_toolkit.enums import EditingMode
 from prompt_toolkit.filters import Condition, to_filter
@@ -41,6 +42,33 @@ _SHUTDOWN_TIMEOUT = 10.0
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 _R = TypeVar("_R")
+
+
+def suspend_process_group(suspend_group: bool = True) -> None:
+    """Stop this process, or its whole process group, with SIGTSTP from any thread.
+
+    A process-directed stop signal can be taken by a thread other than the sender. Sent
+    from the display thread, it lands on the main thread, and the display thread carries
+    on for a few milliseconds: it puts the terminal back into raw mode and redraws before
+    the job has stopped. When the shell resumes the job it restores the modes it saved
+    beforehand, and nothing is left to undo that -- the terminal stays cooked, keys are
+    held until Enter, and every cursor-position query is echoed as ``^[[row;colR``.
+
+    So after sending the signal this thread waits for the stop to take it too. A stop
+    shows as time passing while asleep; a signal that was ignored, or discarded for an
+    orphaned process group, shows as nothing, and the wait ends on its own.
+
+    :param suspend_group: stop the whole process group, as a shell's Ctrl-Z would, rather
+        than only this process
+    """
+    if not hasattr(signal, "SIGTSTP"):  # pragma: no cover - POSIX only
+        return
+    os.kill(0 if suspend_group else os.getpid(), signal.SIGTSTP)
+    deadline = time.monotonic() + 0.25
+    while (before := time.monotonic()) < deadline:
+        time.sleep(0.01)
+        if time.monotonic() - before > 0.1:
+            return
 
 
 def suspend_toolbar(func: _F) -> _F:
@@ -217,6 +245,12 @@ class CommandToolbar:
 
         session = cmd.main_session
         self.app = session.app
+        # Ctrl-Z during a command is handled on the display's thread, where upstream's
+        # version would not hold the thread until the job has stopped. The reserved toolbar
+        # layers its row release over whatever is installed, so one it put there first is
+        # left in place; it releases the rows and then stops the process the same way.
+        if "suspend_to_background" not in vars(self.app):
+            cast("Any", self.app).suspend_to_background = self._suspend_to_background
         # PromptSession has no public hook for replacing just its input area.
         # Keep this small dependency on its layout shape in one place, and fail
         # explicitly if upstream changes it. Reuse the actual toolbar container,
@@ -281,6 +315,11 @@ class CommandToolbar:
 
         self._bindings = bindings
         self._suspend_binding = suspend
+
+    @staticmethod
+    def _suspend_to_background(suspend_group: bool = True) -> None:
+        """Suspend like upstream's ``Application.suspend_to_background()``, from any thread."""
+        run_in_terminal(functools.partial(suspend_process_group, suspend_group))
 
     def _display_started(self, app: Application[str]) -> None:  # noqa: ARG002
         """Report that the display is up and has finished its first frame."""
@@ -721,7 +760,9 @@ class CommandToolbar:
         # Measuring the toolbar can invoke its callback; keep that work on the
         # UI thread along with rendering and layout changes.
         toolbar_height = self._call_in_ui(lambda: self.toolbar.preferred_height(size.columns, size.rows).preferred)
-        if output_fits(text, size.columns, max(0, size.rows - toolbar_height), chop=chop):
+        reserved = self.cmd.reserved_toolbar
+        available_rows = size.rows if reserved is not None and reserved.is_active else max(0, size.rows - toolbar_height)
+        if output_fits(text, size.columns, available_rows, chop=chop):
             self.cmd.stdout.write(text)
             self.cmd.stdout.flush()
             return
@@ -736,6 +777,7 @@ class CommandToolbar:
         entered = False
         restored = False
         close_error: BaseException | None = None
+        handoff = contextlib.ExitStack()
 
         def restore() -> None:
             """Give the application back to the display, whichever thread is doing it.
@@ -763,6 +805,10 @@ class CommandToolbar:
             # duration -- otherwise the pager swaps in its layout and nothing is ever painted.
             self._set_render_suppressed(False)
             self.app.renderer.erase()
+            if reserved is not None:
+                # The very first pager layout must see the physical size. Releasing from
+                # enter_alternate_screen during replay is too late: that frame was measured.
+                handoff.enter_context(reserved.suspended(defer_band_clear=True))
             self.app.layout = layout
             self.app.key_bindings = pager.bindings
             self.app.editing_mode = EditingMode.EMACS
@@ -776,8 +822,20 @@ class CommandToolbar:
             entered = False
             try:
                 self.app.renderer.erase()
+            except BaseException:
+                # An erase can fail before quitting the alternate screen. Complete upstream's
+                # mode/buffer cleanup before returning the main-screen reservation; never
+                # retry the erase itself, which may already have changed visible output.
+                with contextlib.suppress(Exception):
+                    transaction = (
+                        reserved.lock.transaction("pager cleanup") if reserved is not None else contextlib.nullcontext()
+                    )
+                    with transaction:
+                        self.app.renderer.reset()
+                raise
             finally:
                 restore()
+                handoff.__exit__(*sys.exc_info())
             self.app.renderer.request_absolute_cursor_position()
             self.app.invalidate()
 
@@ -813,6 +871,7 @@ class CommandToolbar:
                 # the full-screen flag and editing mode would carry into the next prompt.
                 if not restored:
                     restore()
+                handoff.__exit__(*sys.exc_info())
         # A reservation abandoned while the pager was open deferred its legacy fallback until
         # the pager closed; now that it has, on the main screen, finish it.
         if self._legacy_fallback_pending and self.thread_is_alive:

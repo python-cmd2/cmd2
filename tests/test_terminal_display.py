@@ -52,6 +52,17 @@ def make_resizable_output(rows: int = 24, columns: int = 80) -> tuple[Vt100_Outp
 
 
 class TestGeometry:
+    def test_shutdown_clears_a_bar_retained_for_an_unfinished_pager(self) -> None:
+        output, stream = make_output()
+        display = TerminalDisplay(output)
+        display.acquire()
+        display.release_region_for_handoff(defer_band_clear=True)
+        stream.seek(0)
+        stream.truncate()
+        display.release()
+        assert "\x1b[24;1H\x1b[0m\x1b[J" in stream.getvalue()
+        assert display._deferred_band is None
+
     def test_usable_rows_subtracts_the_reservation_exactly_once(self) -> None:
         """The double-subtraction mutation: at 24 rows with 1 reserved, 22 is the wrong answer."""
         geometry = Geometry(generation=1, physical_rows=24, columns=80, reserved_rows=1)

@@ -300,6 +300,13 @@ class PromptToolkitBridge:
         """
         self._unfinished_command_output = False
 
+    def before_managed_write(self) -> None:
+        """Remove retained pager-startup cells before output can scroll them into history.
+
+        Called inside the writer's transaction, before emitting any command text.
+        """
+        self._display.clear_deferred_band()
+
     def finish_command_output(self) -> None:
         """Start the next prompt on a fresh line if command output left one unfinished.
 
@@ -831,6 +838,9 @@ class PromptToolkitBridge:
                 self.require_resynchronization("the frame was laid out for a different size")
                 return False
             try:
+                # Preparation may be expensive for a large pager. Its main-screen bar is
+                # retained until this validated batch is ready to replace the screen.
+                self._display.clear_deferred_band()
                 prepared.batch.replay(self._display.output)
                 self._display.output.flush()
             except Exception as error:  # noqa: BLE001 - the terminal's state is now unknown

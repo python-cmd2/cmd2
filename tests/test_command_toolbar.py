@@ -1,6 +1,7 @@
 """Command toolbar lifecycle and terminal integration tests."""
 
 import contextlib
+import subprocess
 import sys
 import threading
 import time
@@ -119,6 +120,24 @@ class FileTerminal:
         return getattr(self.file, name)
 
 
+@pytest.mark.parametrize(("stdout_tty", "stderr_tty"), [(False, False), (True, False), (False, True), (True, True)])
+def test_pipeline_process_group_selection(toolbar_app, tmp_path, monkeypatch, running_pipe_process, stdout_tty, stderr_tty):
+    app, _, _ = toolbar_app
+    with (tmp_path / "stdout").open("w+") as out, (tmp_path / "stderr").open("w+") as err:
+        app.stdout = FileTerminal(out) if stdout_tty else out
+        monkeypatch.setattr(sys, "stderr", FileTerminal(err) if stderr_tty else err)
+        with mock.patch("subprocess.Popen", wraps=subprocess.Popen) as popen:
+            app.onecmd_plus_hooks(f'help | "{sys.executable}" -S -c "import sys; print(sys.stdin.read())"')
+        options = popen.call_args.kwargs
+        # A stream claiming isatty() is insufficient: these files do not refer to our
+        # controlling terminal, so no foreground handoff is safe. The pipeline is isolated
+        # the ordinary way instead: a new process group on Windows, a new session on POSIX.
+        isolation = "creationflags" if sys.platform == "win32" else "start_new_session"
+        expected = subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else True
+        assert options[isolation] == expected
+        assert options.keys().isdisjoint({"process_group", "start_new_session", "creationflags"} - {isolation})
+
+
 @pytest.mark.parametrize("builtin_pager", [False, True])
 def test_command_toolbar_pipe_process_inherits_terminal(toolbar_app, tmp_path, builtin_pager, running_pipe_process) -> None:
     app, _, _ = toolbar_app
@@ -221,6 +240,37 @@ def test_command_toolbar_ctrl_z(toolbar_app, supported, enabled) -> None:
 
     keys = get_typeahead(pipe)
     assert [key.key for key in keys] == ([] if supported and enabled else [Keys.ControlZ])
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX job control")
+@pytest.mark.parametrize("stopped", [True, False])
+def test_suspend_process_group_waits_for_the_stop_to_take_its_thread(stopped) -> None:
+    """The sender sleeps until the stop reaches it, or gives up once nothing has happened.
+
+    A stop shows as time passing while asleep, so a clock that jumps across the first sleep
+    stands in for a job that was stopped and then resumed. A signal that was ignored, or
+    discarded for an orphaned group, lets the clock advance only by what was slept.
+    """
+    import signal
+
+    clock = [100.0]
+    sleeps = []
+
+    def sleep(seconds):
+        sleeps.append(seconds)
+        clock[0] += 5.0 if stopped and len(sleeps) == 1 else seconds
+
+    with (
+        mock.patch("cmd2.command_toolbar.time", SimpleNamespace(monotonic=lambda: clock[0], sleep=sleep)),
+        mock.patch("cmd2.command_toolbar.os.kill") as kill,
+    ):
+        command_toolbar.suspend_process_group()
+    kill.assert_called_once_with(0, signal.SIGTSTP)
+    if stopped:
+        assert sleeps == [0.01]
+    else:
+        assert len(sleeps) > 1
+        assert clock[0] >= 100.25 - 1e-6
 
 
 def test_command_toolbar_script_output_has_no_batching_delay(toolbar_app) -> None:

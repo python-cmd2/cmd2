@@ -106,6 +106,8 @@ warn_unused_ignores = false
 testpaths = ["tests"]
 addopts = [
     "-n=auto",
+    # Spread slow terminal cases across workers instead of queuing them in one batch.
+    "--maxschedchunk=1",
     "--cov=cmd2",
     "--cov-config=pyproject.toml",
     "--cov-report=xml",
@@ -114,6 +116,8 @@ addopts = [
 ]
 
 [tool.coverage.run]
+# Include the cmd2 applications launched by the terminal integration tests.
+patch = ["subprocess"]
 # Use sys.monitoring on Python 3.12+; coverage falls back with a warning on 3.11.
 core = "sysmon"
 source = ["cmd2"]
