@@ -242,6 +242,37 @@ def test_command_toolbar_ctrl_z(toolbar_app, supported, enabled) -> None:
     assert [key.key for key in keys] == ([] if supported and enabled else [Keys.ControlZ])
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX job control")
+@pytest.mark.parametrize("stopped", [True, False])
+def test_suspend_process_group_waits_for_the_stop_to_take_its_thread(stopped) -> None:
+    """The sender sleeps until the stop reaches it, or gives up once nothing has happened.
+
+    A stop shows as time passing while asleep, so a clock that jumps across the first sleep
+    stands in for a job that was stopped and then resumed. A signal that was ignored, or
+    discarded for an orphaned group, lets the clock advance only by what was slept.
+    """
+    import signal
+
+    clock = [100.0]
+    sleeps = []
+
+    def sleep(seconds):
+        sleeps.append(seconds)
+        clock[0] += 5.0 if stopped and len(sleeps) == 1 else seconds
+
+    with (
+        mock.patch("cmd2.command_toolbar.time", SimpleNamespace(monotonic=lambda: clock[0], sleep=sleep)),
+        mock.patch("cmd2.command_toolbar.os.kill") as kill,
+    ):
+        command_toolbar.suspend_process_group()
+    kill.assert_called_once_with(0, signal.SIGTSTP)
+    if stopped:
+        assert sleeps == [0.01]
+    else:
+        assert len(sleeps) > 1
+        assert clock[0] >= 100.25 - 1e-6
+
+
 def test_command_toolbar_script_output_has_no_batching_delay(toolbar_app) -> None:
     app, _, output = toolbar_app
     sleep = mock.Mock()
