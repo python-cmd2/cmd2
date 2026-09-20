@@ -543,7 +543,13 @@ class ProcReader:
     """
 
     def __init__(
-        self, proc: PopenTextIO, stdout: StdSim | TextIO, stderr: StdSim | TextIO, *, terminal_fd: int | None = None
+        self,
+        proc: PopenTextIO,
+        stdout: StdSim | TextIO,
+        stderr: StdSim | TextIO,
+        *,
+        terminal_fd: int | None = None,
+        pipeline: "ProcReader | None" = None,
     ) -> None:
         """ProcReader initializer.
 
@@ -551,11 +557,13 @@ class ProcReader:
         :param stdout: the stream to write captured stdout
         :param stderr: the stream to write captured stderr.
         :param terminal_fd: controlling terminal to lend to a POSIX process in its own group
+        :param pipeline: terminal pipeline whose process group proc joined as a producer
         """
         self._proc = proc
         self._stdout = stdout
         self._stderr = stderr
         self._terminal_fd = terminal_fd
+        self._pipeline = pipeline
         self._process_done = threading.Event()
         self._producer_finished = False
         self._terminal_available = threading.Event()
@@ -755,6 +763,49 @@ class ProcReader:
             finally:
                 self._process_done.set()
 
+    def _relay_producer_stop(self) -> None:
+        """Suspend the shell's whole job for a stopped producer that outlived the consumer.
+
+        Ctrl-Z reaches only the foreground group, and the producer may be all that is
+        left of it. The watcher ended with the consumer, so nothing else relays the stop.
+        """
+        import signal
+
+        terminal_fd = self._terminal_fd
+        if terminal_fd is None or not self._process_done.is_set():
+            # A live watcher relays the consumer's stop and continues the whole group.
+            return
+        with self._terminal_lock:
+            if os.tcgetpgrp(terminal_fd) == self._proc.pid:
+                self._set_foreground_group(terminal_fd, self._original_group)
+        with contextlib.suppress(ProcessLookupError):
+            os.killpg(self._proc.pid, signal.SIGSTOP)
+        self._job_resumed.clear()
+        signal.pthread_kill(threading.main_thread().ident or 0, signal.SIGTSTP)
+        self._job_resumed.wait()
+        with contextlib.suppress(ProcessLookupError):
+            os.killpg(self._proc.pid, signal.SIGCONT)
+
+    def _wait_for_producer(self, pipeline: "ProcReader", timeout: float | None) -> None:
+        """Wait for a producer in a terminal pipeline's job, relaying its job-control stops.
+
+        This is the only waitpid caller for such a producer. It polls so that the main
+        thread keeps returning to Python code, where signal handlers run.
+        """
+        import time
+
+        deadline = None if timeout is None else time.monotonic() + timeout
+        while self._proc.returncode is None:
+            pid, status = os.waitpid(self._proc.pid, os.WNOHANG | os.WUNTRACED)
+            if not pid:
+                if deadline is not None and time.monotonic() >= deadline:
+                    raise subprocess.TimeoutExpired(self._proc.args, timeout or 0)
+                time.sleep(0.05)
+            elif os.WIFSTOPPED(status):
+                pipeline._relay_producer_stop()
+            else:
+                self._proc.returncode = os.waitstatus_to_exitcode(status)
+
     def finish_producer(self) -> None:
         """Disable producer cancellation before flushing and closing its pipe."""
         self._producer_finished = True
@@ -765,7 +816,9 @@ class ProcReader:
         :param timeout: maximum seconds to wait, or None to wait indefinitely
         :raises subprocess.TimeoutExpired: if the process is still running after timeout
         """
-        if self._terminal_fd is None:
+        if self._pipeline is not None:
+            self._wait_for_producer(self._pipeline, timeout)
+        elif self._terminal_fd is None:
             self._proc.wait(timeout)
         elif timeout is None:
             # A process-directed signal may reach a worker thread. Python still runs
@@ -812,7 +865,8 @@ class ProcReader:
             raise ValueError("read_stream is None")
 
         # Run until process completes
-        while (self._proc.poll() if self._terminal_fd is None else self._proc.returncode) is None:
+        polled = self._terminal_fd is None and self._pipeline is None
+        while (self._proc.poll() if polled else self._proc.returncode) is None:
             available = read_stream.peek()  # type: ignore[attr-defined, ty:unresolved-attribute]
             if available:
                 read_stream.read(len(available))

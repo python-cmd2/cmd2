@@ -639,12 +639,17 @@ def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path, mode) -> Non
         process.wait(timeout=5)
 
 
-def test_shell_producer_keeps_the_terminal_after_its_consumer_exits(tmp_path) -> None:
+@pytest.mark.parametrize("suspend", [False, True])
+def test_shell_producer_keeps_the_terminal_after_its_consumer_exits(tmp_path, suspend) -> None:
     """A shell producer that outlives its consumer still reads the terminal.
 
     do_shell() lends the terminal to the pipeline's group for as long as the producer runs.
     The consumer's exit must not take it back early: the producer would stop with SIGTTIN on
     its next terminal read, and nothing watches an ordinary shell command for stops.
+
+    Ctrl-Z then reaches the producer alone, since it is all that is left of the foreground
+    group. With the consumer's watcher gone, do_shell() has to relay that stop to the
+    whole job itself, or it waits forever on a stopped child.
     """
     import pty
 
@@ -706,6 +711,12 @@ def test_shell_producer_keeps_the_terminal_after_its_consumer_exits(tmp_path) ->
         os.write(master, f"shell {python} {shlex.quote(str(producer))} | {python} {shlex.quote(str(consumer))}\n".encode())
         wait_until(lambda: "CONSUMER_DONE\r\n" in transcript)
         wait_until(lambda: "PRODUCER> " in transcript)
+        if suspend:
+            start = len(transcript)
+            os.write(master, b"\x1a")
+            wait_until(lambda: os.tcgetpgrp(master) == process.pid and "OUTER> " in transcript[start:])
+            os.write(master, b"fg\n")
+            wait_until(lambda: os.tcgetpgrp(master) not in (process.pid, os.getpgid(process.pid)))
         os.write(master, b"answer\n")
         wait_until(lambda: "GOT answer" in transcript)
         # cmd2 owns the terminal again once the producer is done.

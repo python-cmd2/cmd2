@@ -6,6 +6,7 @@ import math
 import os
 import signal
 import sys
+import threading
 import time
 from unittest import (
     mock,
@@ -754,3 +755,58 @@ def test_categorize() -> None:
     cu.categorize([func2, b.bar_method], category)
     assert getattr(func2, attr_name) == category
     assert getattr(Bar.bar_method, attr_name) == category
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+def test_proc_reader_producer_wait_times_out() -> None:
+    import subprocess
+
+    pipeline = mock.Mock()
+    proc = mock.Mock(pid=321, stdout=None, stderr=None, returncode=None)
+    reader = cu.ProcReader(proc, sys.stdout, sys.stderr, pipeline=pipeline)
+    with mock.patch("os.waitpid", return_value=(0, 0)), pytest.raises(subprocess.TimeoutExpired):
+        reader.wait_for_exit(0)
+    pipeline._relay_producer_stop.assert_not_called()
+    proc.wait.assert_not_called()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+@pytest.mark.parametrize("watcher_done", [False, True])
+@pytest.mark.parametrize("foreground_group", [123, 456])
+def test_proc_reader_relays_producer_stop_once_the_watcher_is_gone(watcher_done, foreground_group) -> None:
+    consumer = mock.Mock(pid=123, stdout=None, stderr=None, returncode=0)
+    pipeline = cu.ProcReader(consumer, sys.stdout, sys.stderr)
+    pipeline._terminal_fd = 10
+    pipeline._original_group = 456
+    if watcher_done:
+        pipeline._process_done.set()
+    proc = mock.Mock(pid=321, stdout=None, stderr=None, returncode=None)
+    reader = cu.ProcReader(proc, sys.stdout, sys.stderr, pipeline=pipeline)
+    stopped_status = (signal.SIGTSTP << 8) | 0x7F
+
+    def resume(thread_id, signum):
+        assert thread_id == threading.main_thread().ident
+        assert signum == signal.SIGTSTP
+        pipeline._job_resumed.set()
+
+    with (
+        mock.patch("os.waitpid", side_effect=[(proc.pid, stopped_status), (proc.pid, 0)]),
+        mock.patch("os.tcgetpgrp", return_value=foreground_group),
+        mock.patch.object(pipeline, "_set_foreground_group") as foreground,
+        mock.patch("os.killpg") as killpg,
+        mock.patch("signal.pthread_kill", side_effect=resume) as relay,
+    ):
+        reader.wait_for_exit()
+    assert proc.returncode == 0
+    if not watcher_done:
+        # The consumer's watcher sees the same Ctrl-Z and suspends the job itself.
+        relay.assert_not_called()
+        killpg.assert_not_called()
+        foreground.assert_not_called()
+        return
+    relay.assert_called_once()
+    assert killpg.call_args_list == [mock.call(consumer.pid, signal.SIGSTOP), mock.call(consumer.pid, signal.SIGCONT)]
+    if foreground_group == consumer.pid:
+        foreground.assert_called_once_with(10, pipeline._original_group)
+    else:
+        foreground.assert_not_called()

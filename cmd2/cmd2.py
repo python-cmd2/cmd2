@@ -5289,17 +5289,14 @@ class Cmd:
                     if kwargs.pop("process_group", None) is None:
                         raise
 
-            proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
-            if pipeline_group is not None:
-                # Only the main thread runs Python signal handlers, and the job-control
-                # stop the pipeline's watcher relays may wake another thread. Return from
-                # the wait regularly so the handler runs while the command is still going.
-                while True:
-                    try:
-                        proc_reader.wait_for_exit(0.1)
-                        break
-                    except subprocess.TimeoutExpired:
-                        continue
+            # A command that joined the pipeline's job is waited for in short polls. Only the
+            # main thread runs Python signal handlers, and the job-control stop the pipeline's
+            # watcher relays may wake another thread. Once the consumer and its watcher are
+            # gone, the same wait relays the command's own stops, such as Ctrl-Z.
+            joined_pipeline = pipeline if "process_group" in kwargs else None
+            proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr, pipeline=joined_pipeline)
+            if joined_pipeline is not None:
+                proc_reader.wait_for_exit()
             proc_reader.wait()
 
             # Save the return code of the application for use in a pyscript
