@@ -3613,7 +3613,13 @@ class Cmd:
                     if cmd_pipe_proc_reader is None:
                         proc.wait(0.2)
                     else:
-                        cmd_pipe_proc_reader.wait_for_exit(0.2)
+                        # A pager such as less sets its terminal modes as it starts, before it
+                        # reads the pipe. It must own the terminal by then: a background
+                        # tcsetattr() stops it with SIGTTOU, and on macOS that call fails with
+                        # EINTR when the process is continued instead of being restarted. less
+                        # ignores the failure and runs on a cooked terminal.
+                        with cmd_pipe_proc_reader.lend_terminal():
+                            cmd_pipe_proc_reader.wait_for_exit(0.2)
 
                 # Check if the pipe process already exited
                 if proc.returncode is not None:

@@ -547,3 +547,93 @@ def test_pager_resumes_with_raw_terminal_after_suspend(tmp_path, mode) -> None:
         os.close(master)
         process.kill()
         process.wait(timeout=5)
+
+
+@pytest.mark.parametrize("mode", ["off", "reserved"])
+def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path, mode) -> None:
+    """A pager such as less puts the terminal in raw mode as it starts, before reading its pipe.
+
+    It has to own the terminal by then. A background tcsetattr() stops it with SIGTTOU, and
+    on macOS the call then fails with EINTR once it is continued rather than being restarted.
+    less ignores that failure, leaving a cooked terminal: q needs Enter and keys are echoed.
+    """
+    import pty
+    import termios
+
+    shell = shutil.which("bash")
+    if shell is None:
+        pytest.skip("requires an interactive bash shell")
+    pager = tmp_path / "pager.py"
+    outcome = tmp_path / "outcome"
+    pager.write_text(
+        "import os, pathlib, sys, termios, tty\n"
+        "with os.fdopen(os.dup(sys.stderr.fileno()), 'rb', buffering=0) as terminal:\n"
+        "    saved = termios.tcgetattr(terminal)\n"
+        "    try:\n"
+        # Like less, make a single attempt and carry on whatever comes of it.
+        "        try:\n"
+        "            tty.setcbreak(terminal)\n"
+        "            result = 'ok'\n"
+        "        except termios.error as error:\n"
+        "            result = repr(error)\n"
+        f"        pathlib.Path({str(outcome)!r}).write_text(result)\n"
+        "        while os.read(terminal.fileno(), 1) != b'q': pass\n"
+        "    finally:\n"
+        "        termios.tcsetattr(terminal, termios.TCSANOW, saved)\n",
+        encoding="utf-8",
+    )
+    application = tmp_path / "application.py"
+    application.write_text(
+        "from cmd2 import Cmd, ToolbarMode\n"
+        f"app = Cmd(bottom_toolbar_mode=ToolbarMode.{mode.upper()})\n"
+        "app.prompt = 'TEST> '\n"
+        "app.main_session.bottom_toolbar = 'STATUS'\n"
+        "app.cmdloop()\n",
+        encoding="utf-8",
+    )
+    master, slave = pty.openpty()
+    bootstrap = (
+        "import os, fcntl, termios; os.setsid(); "
+        "fcntl.ioctl(0, termios.TIOCSCTTY, 0); "
+        "os.execv(os.environ['TEST_SHELL'], ['bash', '--noprofile', '--norc', '-i'])"
+    )
+    env = dict(os.environ, TERM="xterm-256color", PS1="OUTER> ", TEST_SHELL=shell, SHELL=shell)
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
+    process = subprocess.Popen([sys.executable, "-c", bootstrap], stdin=slave, stdout=slave, stderr=slave, env=env)
+    os.close(slave)
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    transcript = ""
+
+    def wait_until(predicate):
+        nonlocal transcript
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if select.select([master], [], [], 0.05)[0]:
+                data = decoder.decode(os.read(master, 65536))
+                transcript += data
+                if "\x1b[6n" in data:
+                    # Answer prompt-toolkit's cursor-position request as a terminal would.
+                    os.write(master, b"\x1b[1;1R")
+            if predicate():
+                return
+        pytest.fail(f"terminal condition timed out:\n{transcript}\n{describe_processes(process.pid, master)}")
+
+    try:
+        wait_until(lambda: "OUTER> " in transcript)
+        os.write(master, f"{shlex.quote(sys.executable)} {shlex.quote(str(application))}\n".encode())
+        wait_until(lambda: "TEST>" in transcript)
+        os.write(master, f"help -v | {shlex.quote(sys.executable)} {shlex.quote(str(pager))}\n".encode())
+        wait_until(outcome.exists)
+        wait_until(lambda: outcome.read_text() != "")
+        assert outcome.read_text() == "ok"
+        assert not termios.tcgetattr(master)[3] & termios.ICANON
+        # A cooked terminal would hold the key back until Enter.
+        start = len(transcript)
+        os.write(master, b"q")
+        wait_until(lambda: "TEST>" in transcript[start:])
+        os.write(master, b"quit\n")
+        wait_until(lambda: os.tcgetpgrp(master) == process.pid)
+    finally:
+        os.close(master)
+        process.kill()
+        process.wait(timeout=5)
