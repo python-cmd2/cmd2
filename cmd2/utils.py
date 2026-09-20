@@ -747,8 +747,11 @@ class ProcReader:
                 os.killpg(self._proc.pid, signal.SIGCONT)
         finally:
             try:
-                if os.tcgetpgrp(terminal_fd) == self._proc.pid:
-                    self._set_foreground_group(terminal_fd, self._original_group)
+                with self._terminal_lock:
+                    # A shell producer in this group may outlive the consumer and still read
+                    # the terminal. While a lend is active, its holder returns the terminal.
+                    if not self._terminal_available.is_set() and os.tcgetpgrp(terminal_fd) == self._proc.pid:
+                        self._set_foreground_group(terminal_fd, self._original_group)
             finally:
                 self._process_done.set()
 

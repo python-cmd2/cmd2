@@ -392,8 +392,32 @@ def test_proc_reader_resumes_terminal_access_after_handoff(stop_signal, expired_
     assert available.call_count == (2 if expired_handoff else 1)
     killpg.assert_called_once_with(proc.pid, signal.SIGCONT)
     stop.assert_not_called()
-    foreground.assert_called_once_with(10, reader._original_group)
+    # The lend is still active: its holder returns the terminal, not the watcher.
+    foreground.assert_not_called()
     assert proc.returncode == 0
+    assert reader._process_done.is_set()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+@pytest.mark.parametrize("lent", [False, True])
+def test_proc_reader_exit_returns_terminal_unless_lent(lent) -> None:
+    """A shell producer in a lent pipeline group may outlive the consumer and still need the terminal."""
+    proc = mock.Mock(pid=123, stdout=None, stderr=None, returncode=None)
+    reader = cu.ProcReader(proc, sys.stdout, sys.stderr)
+    reader._terminal_fd = 10
+    reader._original_group = 456
+    if lent:
+        reader._terminal_available.set()
+    with (
+        mock.patch("os.waitpid", return_value=(proc.pid, 0)),
+        mock.patch("os.tcgetpgrp", return_value=proc.pid),
+        mock.patch.object(reader, "_set_foreground_group") as foreground,
+    ):
+        reader._wait_for_job(10)
+    if lent:
+        foreground.assert_not_called()
+    else:
+        foreground.assert_called_once_with(10, reader._original_group)
     assert reader._process_done.is_set()
 
 

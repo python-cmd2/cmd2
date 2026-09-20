@@ -637,3 +637,85 @@ def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path, mode) -> Non
         os.close(master)
         process.kill()
         process.wait(timeout=5)
+
+
+def test_shell_producer_keeps_the_terminal_after_its_consumer_exits(tmp_path) -> None:
+    """A shell producer that outlives its consumer still reads the terminal.
+
+    do_shell() lends the terminal to the pipeline's group for as long as the producer runs.
+    The consumer's exit must not take it back early: the producer would stop with SIGTTIN on
+    its next terminal read, and nothing watches an ordinary shell command for stops.
+    """
+    import pty
+
+    shell = shutil.which("bash")
+    if shell is None:
+        pytest.skip("requires an interactive bash shell")
+    consumer = tmp_path / "consumer.py"
+    consumer.write_text("import os, time\ntime.sleep(0.5)\nos.write(2, b'CONSUMER_DONE\\n')\n", encoding="utf-8")
+    producer = tmp_path / "producer.py"
+    producer.write_text(
+        "import os, signal, time\n"
+        # Interactive bash leaves TTIN ignored in what it execs, which turns a background read into EIO.
+        "signal.signal(signal.SIGTTIN, signal.SIG_DFL)\n"
+        "time.sleep(1.5)\n"
+        "os.write(2, b'PRODUCER> ')\n"
+        "os.write(2, b'GOT ' + os.read(0, 7))\n",
+        encoding="utf-8",
+    )
+    application = tmp_path / "application.py"
+    application.write_text(
+        "from cmd2 import Cmd, ToolbarMode\n"
+        "app = Cmd(bottom_toolbar_mode=ToolbarMode.OFF)\n"
+        "app.prompt = 'TEST> '\n"
+        "app.cmdloop()\n",
+        encoding="utf-8",
+    )
+    master, slave = pty.openpty()
+    bootstrap = (
+        "import os, fcntl, termios; os.setsid(); "
+        "fcntl.ioctl(0, termios.TIOCSCTTY, 0); "
+        "os.execv(os.environ['TEST_SHELL'], ['bash', '--noprofile', '--norc', '-i'])"
+    )
+    env = dict(os.environ, TERM="xterm-256color", PS1="OUTER> ", TEST_SHELL=shell, SHELL=shell)
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
+    process = subprocess.Popen([sys.executable, "-c", bootstrap], stdin=slave, stdout=slave, stderr=slave, env=env)
+    os.close(slave)
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    transcript = ""
+
+    def wait_until(predicate):
+        nonlocal transcript
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if select.select([master], [], [], 0.05)[0]:
+                data = decoder.decode(os.read(master, 65536))
+                transcript += data
+                if "\x1b[6n" in data:
+                    # Answer prompt-toolkit's cursor-position request as a terminal would.
+                    os.write(master, b"\x1b[1;1R")
+            if predicate():
+                return
+        pytest.fail(f"terminal condition timed out:\n{transcript}\n{describe_processes(process.pid, master)}")
+
+    python = shlex.quote(sys.executable)
+    try:
+        wait_until(lambda: "OUTER> " in transcript)
+        os.write(master, f"{python} {shlex.quote(str(application))}\n".encode())
+        wait_until(lambda: "TEST>" in transcript)
+        os.write(master, f"shell {python} {shlex.quote(str(producer))} | {python} {shlex.quote(str(consumer))}\n".encode())
+        wait_until(lambda: "CONSUMER_DONE\r\n" in transcript)
+        wait_until(lambda: "PRODUCER> " in transcript)
+        os.write(master, b"answer\n")
+        wait_until(lambda: "GOT answer" in transcript)
+        # cmd2 owns the terminal again once the producer is done.
+        start = len(transcript)
+        wait_until(lambda: "TEST>" in transcript[start:])
+        os.write(master, b"help quit\n")
+        wait_until(lambda: "Exit this application" in transcript[start:])
+        os.write(master, b"quit\n")
+        wait_until(lambda: os.tcgetpgrp(master) == process.pid)
+    finally:
+        os.close(master)
+        process.kill()
+        process.wait(timeout=5)
