@@ -642,6 +642,85 @@ def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path, mode) -> Non
         process.wait(timeout=5)
 
 
+@pytest.mark.parametrize("producer", ["command", "shell"])
+def test_pipeline_children_inherit_an_ordinary_signal_mask(tmp_path, producer) -> None:
+    """Processes started during a terminal pipeline must not inherit a blocked SIGTTOU.
+
+    cmd2 blocks SIGTTOU for itself while it lends the terminal. A signal mask survives fork
+    and exec, so a child spawned with it blocked -- a shell producer, or a subprocess run by
+    command code -- would keep it for life, and change terminal modes from the background
+    where it should be stopped.
+    """
+    import pty
+
+    shell = shutil.which("bash")
+    if shell is None:
+        pytest.skip("requires an interactive bash shell")
+    probe = tmp_path / "probe.py"
+    outcome = tmp_path / "outcome"
+    probe.write_text(
+        "import pathlib, signal\n"
+        "blocked = signal.SIGTTOU in signal.pthread_sigmask(signal.SIG_BLOCK, [])\n"
+        f"pathlib.Path({str(outcome)!r}).write_text(repr(blocked))\n",
+        encoding="utf-8",
+    )
+    application = tmp_path / "application.py"
+    application.write_text(
+        "import subprocess, sys\n"
+        "from cmd2 import Cmd\n"
+        "class App(Cmd):\n"
+        "    def do_probe(self, _):\n"
+        "        self.poutput('probing')\n"
+        f"        subprocess.run([sys.executable, {str(probe)!r}], check=True)\n"
+        "app = App()\n"
+        "app.prompt = 'TEST> '\n"
+        "app.cmdloop()\n",
+        encoding="utf-8",
+    )
+    master, slave = pty.openpty()
+    bootstrap = (
+        "import os, fcntl, termios; os.setsid(); "
+        "fcntl.ioctl(0, termios.TIOCSCTTY, 0); "
+        "os.execv(os.environ['TEST_SHELL'], ['bash', '--noprofile', '--norc', '-i'])"
+    )
+    env = dict(os.environ, TERM="xterm-256color", PS1="OUTER> ", TEST_SHELL=shell, SHELL=shell)
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
+    process = subprocess.Popen([sys.executable, "-c", bootstrap], stdin=slave, stdout=slave, stderr=slave, env=env)
+    os.close(slave)
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    transcript = ""
+
+    def wait_until(predicate):
+        nonlocal transcript
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if select.select([master], [], [], 0.05)[0]:
+                data = decoder.decode(os.read(master, 65536))
+                transcript += data
+                if "\x1b[6n" in data:
+                    # Answer prompt-toolkit's cursor-position request as a terminal would.
+                    os.write(master, b"\x1b[1;1R")
+            if predicate():
+                return
+        pytest.fail(f"terminal condition timed out:\n{transcript}\n{describe_processes(process.pid, master)}")
+
+    command = "probe" if producer == "command" else f"shell {shlex.quote(sys.executable)} {shlex.quote(str(probe))}"
+    try:
+        wait_until(lambda: "OUTER> " in transcript)
+        os.write(master, f"{shlex.quote(sys.executable)} {shlex.quote(str(application))}\n".encode())
+        wait_until(lambda: "TEST>" in transcript)
+        start = len(transcript)
+        os.write(master, f"{command} | cat\n".encode())
+        wait_until(lambda: outcome.exists() and outcome.read_text() != "" and "TEST>" in transcript[start:])
+        assert outcome.read_text() == "False"
+        os.write(master, b"quit\n")
+        wait_until(lambda: os.tcgetpgrp(master) == process.pid)
+    finally:
+        os.close(master)
+        process.kill()
+        process.wait(timeout=5)
+
+
 @pytest.mark.parametrize("suspend", [False, True])
 def test_shell_producer_keeps_the_terminal_after_its_consumer_exits(tmp_path, suspend) -> None:
     """A shell producer that outlives its consumer still reads the terminal.

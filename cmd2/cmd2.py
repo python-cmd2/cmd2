@@ -3621,13 +3621,6 @@ class Cmd:
                 # exit must unblock a producer writing to a full pipe immediately.
                 subproc_stdin.close()
                 if terminal_fd is not None:
-                    import signal
-
-                    # The producer may still write diagnostics while the consumer owns
-                    # the terminal. Block SIGTTOU after Popen so the child retains normal
-                    # job-control behavior, and restore our mask with the handoff.
-                    previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTTOU})
-                    terminal_stack.callback(signal.pthread_sigmask, signal.SIG_SETMASK, previous_mask)
                     cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr, terminal_fd=terminal_fd)
                     terminal_stack.enter_context(cmd_pipe_proc_reader.manage_terminal())
 
@@ -5304,14 +5297,16 @@ class Cmd:
                 terminal_stack.enter_context(pipeline.lend_terminal())
             while True:
                 try:
-                    # For any stream that is a StdSim, we will use a pipe so we can capture its output
-                    proc = subprocess.Popen(  # noqa: S602
-                        expanded_command,
-                        stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]
-                        stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
-                        shell=True,
-                        **kwargs,
-                    )
+                    # For any stream that is a StdSim, we will use a pipe so we can capture its output.
+                    # A command joining the pipeline is spawned inside the lend, which blocks SIGTTOU.
+                    with utils.unblocked_sigttou() if "process_group" in kwargs else contextlib.nullcontext():
+                        proc = subprocess.Popen(  # noqa: S602
+                            expanded_command,
+                            stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]
+                            stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
+                            shell=True,
+                            **kwargs,
+                        )
                     break
                 except PermissionError:
                     # The pipeline exited before the command could join its group.

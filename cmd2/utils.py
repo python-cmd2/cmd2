@@ -536,6 +536,22 @@ class ByteBuf:
                 self.std_sim_instance.flush()
 
 
+@contextlib.contextmanager
+def unblocked_sigttou() -> Iterator[None]:
+    """Let a child started inside :meth:`ProcReader.lend_terminal` keep normal job control.
+
+    The lend blocks SIGTTOU for its thread, and a child inherits that mask for life. Spawning
+    touches no terminal, so unblocking it for the spawn alone cannot stop this thread.
+    """
+    import signal
+
+    previous_mask = signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGTTOU})
+    try:
+        yield
+    finally:
+        signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+
+
 class ProcReader:
     """Used to capture stdout and stderr from a Popen process if any of those were set to subprocess.PIPE.
 
@@ -685,25 +701,35 @@ class ProcReader:
         reads through input(), getpass(), or third-party libraries. Lending during
         writes lets an interactive consumer drain a full pipe without deadlocking.
         """
+        import signal
+
         terminal_fd = self._terminal_fd
         if terminal_fd is None or self._proc.returncode is not None:
             yield
             return
-        with self._terminal_lock:
-            try:
-                self._set_foreground_group(terminal_fd, self._proc.pid)
-            except OSError as error:
-                # The group can disappear before the watcher has reaped its leader.
-                if error.errno not in (errno.ESRCH, errno.EINVAL):
-                    raise
-            self._terminal_available.set()
+        # While the consumer owns the terminal, a signal handler run on this thread may still
+        # write diagnostics to it. Block SIGTTOU for the lend only: a signal mask survives fork
+        # and exec, so blocking it for the whole pipeline would leak into every child the
+        # command starts. A child started during a lend must unblock it; see unblocked_sigttou().
+        previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTTOU})
         try:
-            yield
-        finally:
             with self._terminal_lock:
-                self._terminal_available.clear()
-                if os.tcgetpgrp(terminal_fd) == self._proc.pid:
-                    self._set_foreground_group(terminal_fd, self._original_group)
+                try:
+                    self._set_foreground_group(terminal_fd, self._proc.pid)
+                except OSError as error:
+                    # The group can disappear before the watcher has reaped its leader.
+                    if error.errno not in (errno.ESRCH, errno.EINVAL):
+                        raise
+                self._terminal_available.set()
+            try:
+                yield
+            finally:
+                with self._terminal_lock:
+                    self._terminal_available.clear()
+                    if os.tcgetpgrp(terminal_fd) == self._proc.pid:
+                        self._set_foreground_group(terminal_fd, self._original_group)
+        finally:
+            signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
 
     def _wait_for_job(self, terminal_fd: int) -> None:
         """Reap a foreground pipeline and relay its stops to the outer shell's job.

@@ -963,10 +963,9 @@ def test_pipe_to_shell_error(redirection_app, mocker, capsys, terminal) -> None:
         reader.wait_for_exit.assert_called_once_with(0.2)
         reader.wait.assert_called_once_with()
         process.wait.assert_not_called()
-        assert sigmask.call_args_list == [
-            mock.call(signal.SIG_BLOCK, {signal.SIGTTOU}),
-            mock.call(signal.SIG_SETMASK, set()),
-        ]
+        # SIGTTOU is blocked only inside ProcReader's lends. Blocking it for the whole
+        # pipeline would leak the mask into every child the command starts.
+        sigmask.assert_not_called()
     else:
         process.wait.assert_called_once()
     assert popen.call_args.kwargs["stdin"].closed
