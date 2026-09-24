@@ -583,6 +583,8 @@ class ProcReader:
         self._process_done = threading.Event()
         self._producer_finished = False
         self._terminal_available = threading.Event()
+        # Lends in progress, guarded by _terminal_lock. The terminal is available while any is.
+        self._lends = 0
         self._terminal_lock = threading.RLock()
         self._job_resumed = threading.Event()
         if terminal_fd is not None:
@@ -720,14 +722,20 @@ class ProcReader:
                     # The group can disappear before the watcher has reaped its leader.
                     if error.errno not in (errno.ESRCH, errno.EINVAL):
                         raise
+                self._lends += 1
                 self._terminal_available.set()
             try:
                 yield
             finally:
                 with self._terminal_lock:
-                    self._terminal_available.clear()
-                    if os.tcgetpgrp(terminal_fd) == self._proc.pid:
-                        self._set_foreground_group(terminal_fd, self._original_group)
+                    self._lends -= 1
+                    # Lends overlap: do_shell() lends for as long as a shell producer runs,
+                    # while a pipe write from another thread lends and returns. Only the last
+                    # to end takes the terminal back, or the producer would stop with SIGTTIN.
+                    if not self._lends:
+                        self._terminal_available.clear()
+                        if os.tcgetpgrp(terminal_fd) == self._proc.pid:
+                            self._set_foreground_group(terminal_fd, self._original_group)
         finally:
             signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
 

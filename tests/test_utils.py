@@ -499,6 +499,42 @@ def test_proc_reader_lending_restores_terminal_on_write_error() -> None:
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+@pytest.mark.parametrize("inner", ["nested", "thread"])
+def test_proc_reader_keeps_the_terminal_lent_until_the_last_lend_ends(inner) -> None:
+    """A shorter lend inside a longer one must not take the terminal back early.
+
+    do_shell() lends for as long as a shell producer runs. A pipe write from another thread
+    meanwhile lends and returns. If its return took the terminal back, the producer would stop
+    with SIGTTIN on its next terminal read, and nothing would resume it.
+    """
+    import threading
+
+    reader = cu.ProcReader(mock.Mock(pid=123, stdout=None, stderr=None, returncode=None), sys.stdout, sys.stderr)
+    reader._terminal_fd = 10
+    reader._original_group = 456
+
+    def short_lend() -> None:
+        with reader.lend_terminal():
+            pass
+
+    with (
+        mock.patch("os.tcgetpgrp", return_value=123),
+        mock.patch.object(reader, "_set_foreground_group") as foreground,
+    ):
+        with reader.lend_terminal():
+            if inner == "nested":
+                short_lend()
+            else:
+                worker = threading.Thread(target=short_lend)
+                worker.start()
+                worker.join()
+            assert reader._terminal_available.is_set()
+            assert mock.call(10, 456) not in foreground.call_args_list
+        assert not reader._terminal_available.is_set()
+        assert foreground.call_args_list[-1] == mock.call(10, 456)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
 @pytest.mark.parametrize("error_number", [errno.ESRCH, errno.EINVAL, errno.EBADF])
 def test_proc_reader_handoff_to_disappearing_group(error_number) -> None:
     reader = cu.ProcReader(mock.Mock(pid=123, stdout=None, stderr=None, returncode=None), sys.stdout, sys.stderr)
