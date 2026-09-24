@@ -2170,6 +2170,27 @@ class Cmd:
             return
         raise RuntimeError("the bottom toolbar's display has not released the terminal")
 
+    def _await_terminal_ownership(self) -> bool:
+        """Wait for a display that would not stop to release the terminal before the main prompt.
+
+        Prompting while its thread is still inside the application would put two readers on one
+        terminal, so the command loop waits rather than failing. The thread usually finishes once
+        its toolbar callback returns. If it never does, Ctrl-C gives up on it and ends the loop.
+
+        :return: whether the terminal is ours to prompt on
+        """
+        display = self._display_holding_terminal
+        if display is None:
+            return True
+        self.perror("Waiting for the bottom toolbar to release the terminal. Press Ctrl-C to quit.")
+        try:
+            while display.thread_is_alive:
+                time.sleep(0.05)
+        except KeyboardInterrupt:
+            return False
+        self._require_terminal_ownership()
+        return True
+
     @contextlib.contextmanager
     def suspend_bottom_toolbar(self) -> Iterator[None]:
         """Temporarily hide the command toolbar and give exclusive access to the terminal.
@@ -2278,6 +2299,11 @@ class Cmd:
             with self.sigint_protection:
                 try:
                     toolbar.stop()
+                except command_toolbar._DisplayStillRunningError as exc:
+                    # The display has already disabled itself and kept hold of the terminal,
+                    # which the next prompt waits for. Like a display that cannot start, it
+                    # must not escape cmdloop() over a toolbar callback that will not return.
+                    self.perror(f"Disabling the bottom toolbar during commands: {exc}")
                 finally:
                     # Always forget a toolbar that has been torn down. Keeping a failed
                     # one would disable the toolbar for the rest of the session.
@@ -4158,6 +4184,9 @@ class Cmd:
             self._startup_commands.clear()
 
             while not stop:
+                if not self._await_terminal_ownership():
+                    break
+
                 # Get commands from user
                 try:
                     line = self._read_command_line(self.prompt)

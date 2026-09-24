@@ -1188,6 +1188,65 @@ def test_the_refusal_lifts_when_the_display_finally_exits(toolbar_app, expire_st
     assert app.main_session.app.erase_when_done == prompt_erase
 
 
+def test_cmdloop_waits_for_a_display_that_would_not_stop(toolbar_app, monkeypatch, capsys) -> None:
+    """A toolbar callback that will not return must not end the session.
+
+    The loop reports the display it gave up on, then waits for the terminal back before
+    prompting on it again rather than failing out of cmdloop().
+    """
+    app, _, _ = toolbar_app
+    blocked = threading.Event()
+    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.01)
+    lines = iter(["wedge", "quit"])
+    holders = []
+
+    def read_command_line(_prompt):
+        holders.append(app._display_holding_terminal)
+        return next(lines)
+
+    def release_once_abandoned():
+        deadline = time.monotonic() + 5
+        while app._display_holding_terminal is None and time.monotonic() < deadline:
+            time.sleep(0.01)
+        blocked.set()
+
+    def command(line, **kwargs):
+        if line == "wedge":
+            _block_the_display(app, blocked)
+            threading.Thread(target=release_once_abandoned, daemon=True).start()
+        return line == "quit"
+
+    monkeypatch.setattr(app, "_read_command_line", read_command_line)
+    monkeypatch.setattr(app, "onecmd_plus_hooks", command)
+    try:
+        app._cmdloop()
+    finally:
+        blocked.set()
+
+    assert holders == [None, None]
+    assert app.main_session.app.layout is app.main_session.layout
+    err = capsys.readouterr().err
+    assert "did not stop" in err
+    assert "Waiting for the bottom toolbar" in err
+
+
+def test_cmdloop_gives_up_on_a_stuck_display_at_ctrl_c(toolbar_app, monkeypatch) -> None:
+    """A callback that never returns leaves Ctrl-C as the way out, which ends the loop cleanly."""
+    app, _, _ = toolbar_app
+
+    class Interrupted:
+        @property
+        def thread_is_alive(self) -> bool:
+            raise KeyboardInterrupt
+
+    app._display_holding_terminal = Interrupted()
+    read = mock.Mock()
+    monkeypatch.setattr(app, "_read_command_line", read)
+
+    app._cmdloop()
+    read.assert_not_called()
+
+
 def test_a_surviving_display_stops_another_from_starting(toolbar_app, expire_startup) -> None:
     app, _, _ = toolbar_app
     blocked = expire_startup(app)
