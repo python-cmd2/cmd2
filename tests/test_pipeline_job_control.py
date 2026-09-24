@@ -622,7 +622,10 @@ def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path, mode) -> Non
         wait_until(lambda: "OUTER> " in transcript)
         os.write(master, f"{shlex.quote(sys.executable)} {shlex.quote(str(application))}\n".encode())
         wait_until(lambda: "TEST>" in transcript)
-        os.write(master, f"help -v | {shlex.quote(sys.executable)} {shlex.quote(str(pager))}\n".encode())
+        # cmd2 lends the terminal for its 0.2s startup check. Like less, the pager must set its modes
+        # within it. -S skips site-packages, where coverage's subprocess hook would otherwise start
+        # coverage in the pager and slow its startup enough on a busy CI runner to miss that window.
+        os.write(master, f"help -v | {shlex.quote(sys.executable)} -S {shlex.quote(str(pager))}\n".encode())
         wait_until(outcome.exists)
         wait_until(lambda: outcome.read_text() != "")
         assert outcome.read_text() == "ok"
