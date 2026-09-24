@@ -3733,31 +3733,35 @@ class Cmd:
                 terminal_stack.callback(saved_redir_state.toolbar_suspension.close)
                 saved_redir_state.toolbar_suspension = None
 
-            if saved_redir_state.redirecting:
-                # If we redirected output to the clipboard
-                if (
-                    statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND)
-                    and not statement.redirect_to
-                ):
-                    self.stdout.seek(0)
-                    write_to_paste_buffer(self.stdout.read())
+            try:
+                if saved_redir_state.redirecting:
+                    # If we redirected output to the clipboard
+                    if (
+                        statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND)
+                        and not statement.redirect_to
+                    ):
+                        self.stdout.seek(0)
+                        write_to_paste_buffer(self.stdout.read())
 
-                with contextlib.suppress(BrokenPipeError):
-                    # Close the file or pipe that stdout was redirected to
+                    with contextlib.suppress(BrokenPipeError):
+                        # Close the file or pipe that stdout was redirected to
+                        if self._cur_pipe_proc_reader is not None:
+                            self._cur_pipe_proc_reader.finish_producer()
+                        self.stdout.close()
+
+                    # Restore self.stdout
+                    self.stdout = cast(TextIO, saved_redir_state.saved_self_stdout)
+
+                    # Check if we need to wait for the process being piped to. Handing the
+                    # terminal back as it finishes can fail, for example after a hangup.
                     if self._cur_pipe_proc_reader is not None:
-                        self._cur_pipe_proc_reader.finish_producer()
-                    self.stdout.close()
-
-                # Restore self.stdout
-                self.stdout = cast(TextIO, saved_redir_state.saved_self_stdout)
-
-                # Check if we need to wait for the process being piped to
-                if self._cur_pipe_proc_reader is not None:
-                    self._cur_pipe_proc_reader.wait()
-
-            # These are restored regardless of whether the command redirected
-            self._cur_pipe_proc_reader = saved_redir_state.saved_pipe_proc_reader
-            self._redirecting = saved_redir_state.saved_redirecting
+                        self._cur_pipe_proc_reader.wait()
+            finally:
+                # These are restored regardless of whether the command redirected, or whether
+                # restoring it failed: a pipeline left current would keep ppaged() from paging
+                # and send Ctrl-C to a process group that is gone.
+                self._cur_pipe_proc_reader = saved_redir_state.saved_pipe_proc_reader
+                self._redirecting = saved_redir_state.saved_redirecting
 
     def get_command_func(self, command: str) -> BoundCommandFunc[...] | None:
         """Get the bound command function for a command.

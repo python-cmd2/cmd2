@@ -971,6 +971,31 @@ def test_pipe_to_shell_error(redirection_app, mocker, capsys, terminal) -> None:
     assert popen.call_args.kwargs["stdin"].closed
 
 
+def test_restore_output_resets_pipe_state_when_the_wait_fails(base_app) -> None:
+    """A failed handback while waiting for the pipe process must not leave it current.
+
+    Otherwise ppaged() would never page again, and Ctrl-C would keep going to a dead group.
+    """
+    import errno
+
+    statement = base_app.statement_parser.parse("help | less")
+    saved_stdout = base_app.stdout
+    saved = cmd2.utils.RedirectionSavedState(saved_stdout, None, False)
+    saved.redirecting = True
+    reader = mock.Mock()
+    reader.wait.side_effect = OSError(errno.EIO, "terminal hung up")
+    base_app._cur_pipe_proc_reader = reader
+    base_app._redirecting = True
+    base_app.stdout = io.StringIO()
+
+    with pytest.raises(OSError, match="terminal hung up"):
+        base_app._restore_output(statement, saved)
+
+    assert base_app.stdout is saved_stdout
+    assert base_app._cur_pipe_proc_reader is None
+    assert base_app._redirecting is False
+
+
 def test_send_to_paste_buffer(redirection_app: RedirectionApp, capsys: pytest.CaptureFixture[str], mocker) -> None:
     # Exercise cmd2's real clipboard redirection against a private backend, not the
     # shared OS clipboard (which another test run or desktop application can alter).
