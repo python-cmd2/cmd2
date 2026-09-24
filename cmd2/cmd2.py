@@ -2182,6 +2182,11 @@ class Cmd:
         display = self._display_holding_terminal
         if display is None:
             return True
+        # The display left the terminal in raw mode, where Ctrl-C is only a key, and the binding
+        # that would signal it runs on the event loop the stuck callback is blocking. Cook the
+        # terminal so its driver sends SIGINT again. This is not undone: a display that finishes
+        # restores the modes it found, and one given up on should leave the terminal cooked.
+        self.main_session.app.input.cooked_mode().__enter__()
         self.perror("Waiting for the bottom toolbar to release the terminal. Press Ctrl-C to quit.")
         try:
             while display.thread_is_alive:

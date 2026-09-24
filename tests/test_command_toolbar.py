@@ -1247,6 +1247,86 @@ def test_cmdloop_gives_up_on_a_stuck_display_at_ctrl_c(toolbar_app, monkeypatch)
     read.assert_not_called()
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX pseudo-terminal")
+def test_ctrl_c_reaches_the_wait_for_a_stuck_display(tmp_path) -> None:
+    """A real Ctrl-C, not a simulated KeyboardInterrupt, has to end the wait.
+
+    The stuck display left the terminal in raw mode, where the driver does not turn Ctrl-C
+    into SIGINT. Only the display's own key binding does that, and its event loop is the one
+    blocked in the toolbar callback.
+    """
+    import codecs
+    import os
+    import pty
+    import select
+
+    application = tmp_path / "application.py"
+    application.write_text(
+        "import threading\n"
+        "from cmd2 import Cmd, ToolbarMode, command_toolbar\n"
+        "command_toolbar._SHUTDOWN_TIMEOUT = 0.2\n"
+        "wedged = threading.Event()\n"
+        "entered = threading.Event()\n"
+        "def toolbar():\n"
+        "    if wedged.is_set():\n"
+        "        entered.set()\n"
+        "        threading.Event().wait()\n"
+        "    return 'STATUS'\n"
+        "class App(Cmd):\n"
+        "    def do_wedge(self, _):\n"
+        "        wedged.set()\n"
+        "        self._command_toolbar.app.invalidate()\n"
+        "        assert entered.wait(5)\n"
+        "app = App(bottom_toolbar_mode=ToolbarMode.LEGACY)\n"
+        "app.prompt = 'TEST> '\n"
+        "app.main_session.bottom_toolbar = toolbar\n"
+        "app.cmdloop()\n"
+        "print('LOOP_ENDED', flush=True)\n",
+        encoding="utf-8",
+    )
+    master, slave = pty.openpty()
+    bootstrap = (
+        "import os, fcntl, sys, termios; os.setsid(); "
+        "fcntl.ioctl(0, termios.TIOCSCTTY, 0); "
+        "os.execv(sys.executable, [sys.executable, sys.argv[1]])"
+    )
+    env = dict(os.environ, TERM="xterm-256color")
+    process = subprocess.Popen(
+        [sys.executable, "-c", bootstrap, str(application)], stdin=slave, stdout=slave, stderr=slave, env=env
+    )
+    os.close(slave)
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    transcript = ""
+
+    def wait_until(predicate):
+        nonlocal transcript
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if select.select([master], [], [], 0.05)[0]:
+                try:
+                    data = decoder.decode(os.read(master, 65536))
+                except OSError:
+                    data = ""
+                transcript += data
+                if "\x1b[6n" in data:
+                    # Answer prompt-toolkit's cursor-position request as a terminal would.
+                    os.write(master, b"\x1b[1;1R")
+            if predicate():
+                return
+        pytest.fail(f"terminal condition timed out:\n{transcript}")
+
+    try:
+        wait_until(lambda: "TEST>" in transcript)
+        os.write(master, b"wedge\r")
+        wait_until(lambda: "Waiting for the bottom toolbar" in transcript)
+        os.write(master, b"\x03")
+        wait_until(lambda: "LOOP_ENDED" in transcript)
+    finally:
+        os.close(master)
+        process.kill()
+        process.wait(timeout=5)
+
+
 def test_a_surviving_display_stops_another_from_starting(toolbar_app, expire_startup) -> None:
     app, _, _ = toolbar_app
     blocked = expire_startup(app)
