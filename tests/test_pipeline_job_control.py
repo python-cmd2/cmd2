@@ -570,12 +570,14 @@ def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path, mode) -> Non
         "with os.fdopen(os.dup(sys.stderr.fileno()), 'rb', buffering=0) as terminal:\n"
         "    saved = termios.tcgetattr(terminal)\n"
         "    try:\n"
+        # Whether cmd2 had lent the terminal yet, should the attempt fail.
+        "        foreground = os.tcgetpgrp(terminal.fileno()) == os.getpgrp()\n"
         # Like less, make a single attempt and carry on whatever comes of it.
         "        try:\n"
         "            tty.setcbreak(terminal)\n"
         "            result = 'ok'\n"
         "        except termios.error as error:\n"
-        "            result = repr(error)\n"
+        "            result = f'{error!r}, foreground before the attempt: {foreground}'\n"
         f"        pathlib.Path({str(outcome)!r}).write_text(result)\n"
         "        while os.read(terminal.fileno(), 1) != b'q': pass\n"
         "    finally:\n"
@@ -584,7 +586,20 @@ def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path, mode) -> Non
     )
     application = tmp_path / "application.py"
     application.write_text(
-        "from cmd2 import Cmd, ToolbarMode\n"
+        "import pathlib, time\n"
+        "from cmd2 import Cmd, ToolbarMode, utils\n"
+        # The pipeline's first wait is cmd2's 0.2s startup check. Hold it open until the pager
+        # has reported, so the test does not race that timer on a busy CI runner: what it checks
+        # is that the pager owns the terminal throughout the check, however slowly it starts.
+        "startup_wait = utils.ProcReader.wait_for_exit\n"
+        "def held_startup_wait(reader, timeout=None):\n"
+        "    utils.ProcReader.wait_for_exit = startup_wait\n"
+        f"    outcome = pathlib.Path({str(outcome)!r})\n"
+        "    deadline = time.monotonic() + 5\n"
+        "    while time.monotonic() < deadline and not (outcome.exists() and outcome.read_text()):\n"
+        "        time.sleep(0.01)\n"
+        "    return startup_wait(reader, timeout)\n"
+        "utils.ProcReader.wait_for_exit = held_startup_wait\n"
         f"app = Cmd(bottom_toolbar_mode=ToolbarMode.{mode.upper()})\n"
         "app.prompt = 'TEST> '\n"
         "app.main_session.bottom_toolbar = 'STATUS'\n"
@@ -622,10 +637,7 @@ def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path, mode) -> Non
         wait_until(lambda: "OUTER> " in transcript)
         os.write(master, f"{shlex.quote(sys.executable)} {shlex.quote(str(application))}\n".encode())
         wait_until(lambda: "TEST>" in transcript)
-        # cmd2 lends the terminal for its 0.2s startup check. Like less, the pager must set its modes
-        # within it. -S skips site-packages, where coverage's subprocess hook would otherwise start
-        # coverage in the pager and slow its startup enough on a busy CI runner to miss that window.
-        os.write(master, f"help -v | {shlex.quote(sys.executable)} -S {shlex.quote(str(pager))}\n".encode())
+        os.write(master, f"help -v | {shlex.quote(sys.executable)} {shlex.quote(str(pager))}\n".encode())
         wait_until(outcome.exists)
         wait_until(lambda: outcome.read_text() != "")
         assert outcome.read_text() == "ok"
