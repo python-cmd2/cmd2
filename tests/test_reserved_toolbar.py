@@ -874,6 +874,29 @@ class TestNestedPrompts:
 
 
 class TestJobControl:
+    def test_stopping_leaves_the_application_as_it_found_it(self) -> None:
+        """Upstream's method is not put back as an instance attribute when the toolbar stops.
+
+        The command display installs its thread-safe Ctrl-Z handler only where the application
+        has none of its own, so a restored bound method would keep it out for the rest of the
+        session after a fallback from reserved rendering.
+        """
+        harness = Harness()
+        try:
+            with harness.toolbar:
+                assert "suspend_to_background" in vars(harness.app)
+            assert "suspend_to_background" not in vars(harness.app)
+
+            def installed() -> None:
+                pass
+
+            harness.app.suspend_to_background = installed
+            with harness.toolbar:
+                assert harness.app.suspend_to_background is not installed
+            assert harness.app.suspend_to_background is installed
+        finally:
+            harness.close()
+
     @pytest.mark.parametrize("missing", ["support", "signal"])
     def test_suspending_to_background_does_nothing_where_it_is_unsupported(
         self, monkeypatch: pytest.MonkeyPatch, missing: str

@@ -251,6 +251,9 @@ class ReservedToolbar:
     def _job_control(self, app: Any) -> "Iterator[None]":
         """Release the physical reservation inside upstream's cooked-mode handoff."""
         original = app.suspend_to_background
+        # Whether anything had replaced upstream's method. The command display installs its own
+        # only where nothing has, so writing the bound method back would shut it out for good.
+        replaced = "suspend_to_background" in vars(app)
 
         def suspend_to_background(suspend_group: bool = True) -> None:
             suspend_signal = getattr(signal, "SIGTSTP", None)
@@ -270,7 +273,10 @@ class ReservedToolbar:
             yield
         finally:
             if app.suspend_to_background is suspend_to_background:
-                app.suspend_to_background = original
+                if replaced:
+                    app.suspend_to_background = original
+                else:
+                    del app.suspend_to_background
 
     def can_manage(self, session: "PromptSession[Any]") -> bool:
         """Whether a temporary prompt uses this terminal and its managed input reader."""
