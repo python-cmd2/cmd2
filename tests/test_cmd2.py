@@ -438,13 +438,33 @@ def test_shell_falls_back_to_own_group_when_pipeline_exited(base_app, tmp_path) 
     # pipeline can exit between the check and the spawn, like `shell sleep 1 | true`.
     leader = subprocess.Popen([sys.executable, "-c", "pass"], process_group=0)
     leader.wait()
-    base_app._cur_pipe_proc_reader = mock.Mock(terminal_group=leader.pid, lend_terminal=contextlib.nullcontext)
-    with (tmp_path / "output").open("w+") as output:
+    lent = []
+
+    @contextlib.contextmanager
+    def lend_terminal():
+        lent.append(True)
+        try:
+            yield
+        finally:
+            lent.pop()
+
+    # The retry runs in our own group, so the terminal has to come back from the dead
+    # pipeline first. Otherwise the command stops with SIGTTIN on its first terminal read.
+    spawned_while_lent = []
+    real_popen = subprocess.Popen
+
+    def popen(*args, **kwargs):
+        spawned_while_lent.append(bool(lent))
+        return real_popen(*args, **kwargs)
+
+    base_app._cur_pipe_proc_reader = mock.Mock(terminal_group=leader.pid, lend_terminal=lend_terminal)
+    with (tmp_path / "output").open("w+") as output, mock.patch("subprocess.Popen", popen):
         base_app.stdout = output
         base_app.do_shell("echo joined")
         output.seek(0)
         assert output.read() == "joined\n"
     assert base_app.last_result == 0
+    assert spawned_while_lent == [True, False]
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX shell executable")

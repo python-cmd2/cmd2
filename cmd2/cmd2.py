@@ -5317,6 +5317,10 @@ class Cmd:
                     # The pipeline exited before the command could join its group.
                     if kwargs.pop("process_group", None) is None:
                         raise
+                    # The retry runs in our own group, so take the terminal back from the dead
+                    # pipeline first. Its watcher left it lent, and the command would otherwise
+                    # stop with SIGTTIN on its first terminal read, with nothing to resume it.
+                    terminal_stack.close()
 
             # A command that joined the pipeline's job is waited for in short polls. Only the
             # main thread runs Python signal handlers, and the job-control stop the pipeline's
