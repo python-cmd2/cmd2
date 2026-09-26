@@ -205,6 +205,13 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
     stream = pyte.Stream(screen)
     decoder = codecs.getincrementaldecoder("utf-8")("replace")
     transcript = ""
+    # Each resize with the size read back straight after it, to tell a resize that never
+    # took effect from one undone later.
+    resizes: list[str] = []
+
+    def terminal_size() -> tuple[int, int]:
+        rows, columns, _, _ = struct.unpack("HHHH", fcntl.ioctl(master, termios.TIOCGWINSZ, b"\0" * 8))
+        return rows, columns
 
     def send(data):
         os.write(master, data.encode())
@@ -219,7 +226,10 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
                 stream.feed(data)
             if predicate():
                 return
-        pytest.fail(f"terminal condition timed out:\n{transcript}\n{describe_processes(process.pid, master)}")
+        pytest.fail(
+            f"terminal condition timed out:\n{transcript}\n{describe_processes(process.pid, master)}\n"
+            f"resizes: {resizes}\nterminal size at timeout: {terminal_size()}"
+        )
 
     def stopped(*pids: int) -> bool:
         """Whether every process is stopped, not merely deprived of the terminal.
@@ -323,6 +333,7 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
             send("printf 'SHELL_%s\\n' OWNS_INPUT\n")
             wait_until(lambda start=start: "SHELL_OWNS_INPUT" in transcript[start:])
             fcntl.ioctl(master, termios.TIOCSWINSZ, struct.pack("HHHH", rows, 80, 0, 0))
+            resizes.append(f"requested {rows}x80, read back {terminal_size()}")
             screen.resize(lines=rows, columns=80)
             start = len(transcript)
             send("stty size\n")
