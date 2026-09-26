@@ -1,6 +1,7 @@
 """Command toolbar lifecycle and terminal integration tests."""
 
 import contextlib
+import subprocess
 import sys
 import threading
 import time
@@ -119,6 +120,24 @@ class FileTerminal:
         return getattr(self.file, name)
 
 
+@pytest.mark.parametrize(("stdout_tty", "stderr_tty"), [(False, False), (True, False), (False, True), (True, True)])
+def test_pipeline_process_group_selection(toolbar_app, tmp_path, monkeypatch, running_pipe_process, stdout_tty, stderr_tty):
+    app, _, _ = toolbar_app
+    with (tmp_path / "stdout").open("w+") as out, (tmp_path / "stderr").open("w+") as err:
+        app.stdout = FileTerminal(out) if stdout_tty else out
+        monkeypatch.setattr(sys, "stderr", FileTerminal(err) if stderr_tty else err)
+        with mock.patch("subprocess.Popen", wraps=subprocess.Popen) as popen:
+            app.onecmd_plus_hooks(f'help | "{sys.executable}" -S -c "import sys; print(sys.stdin.read())"')
+        options = popen.call_args.kwargs
+        # A stream claiming isatty() is insufficient: these files do not refer to our
+        # controlling terminal, so no foreground handoff is safe. The pipeline is isolated
+        # the ordinary way instead: a new process group on Windows, a new session on POSIX.
+        isolation = "creationflags" if sys.platform == "win32" else "start_new_session"
+        expected = subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else True
+        assert options[isolation] == expected
+        assert options.keys().isdisjoint({"process_group", "start_new_session", "creationflags"} - {isolation})
+
+
 @pytest.mark.parametrize("builtin_pager", [False, True])
 def test_command_toolbar_pipe_process_inherits_terminal(toolbar_app, tmp_path, builtin_pager, running_pipe_process) -> None:
     app, _, _ = toolbar_app
@@ -221,6 +240,37 @@ def test_command_toolbar_ctrl_z(toolbar_app, supported, enabled) -> None:
 
     keys = get_typeahead(pipe)
     assert [key.key for key in keys] == ([] if supported and enabled else [Keys.ControlZ])
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX job control")
+@pytest.mark.parametrize("stopped", [True, False])
+def test_suspend_process_group_waits_for_the_stop_to_take_its_thread(stopped) -> None:
+    """The sender sleeps until the stop reaches it, or gives up once nothing has happened.
+
+    A stop shows as time passing while asleep, so a clock that jumps across the first sleep
+    stands in for a job that was stopped and then resumed. A signal that was ignored, or
+    discarded for an orphaned group, lets the clock advance only by what was slept.
+    """
+    import signal
+
+    clock = [100.0]
+    sleeps = []
+
+    def sleep(seconds):
+        sleeps.append(seconds)
+        clock[0] += 5.0 if stopped and len(sleeps) == 1 else seconds
+
+    with (
+        mock.patch("cmd2.command_toolbar.time", SimpleNamespace(monotonic=lambda: clock[0], sleep=sleep)),
+        mock.patch("cmd2.command_toolbar.os.kill") as kill,
+    ):
+        command_toolbar.suspend_process_group()
+    kill.assert_called_once_with(0, signal.SIGTSTP)
+    if stopped:
+        assert sleeps == [0.01]
+    else:
+        assert len(sleeps) > 1
+        assert clock[0] >= 100.25 - 1e-6
 
 
 def test_command_toolbar_script_output_has_no_batching_delay(toolbar_app) -> None:
@@ -1136,6 +1186,164 @@ def test_the_refusal_lifts_when_the_display_finally_exits(toolbar_app, expire_st
     assert app.main_session.app.layout is prompt_layout
     assert app.main_session.app.key_bindings is prompt_bindings
     assert app.main_session.app.erase_when_done == prompt_erase
+
+
+def test_cmdloop_waits_for_a_display_that_would_not_stop(toolbar_app, monkeypatch, capsys) -> None:
+    """A toolbar callback that will not return must not end the session.
+
+    The loop reports the display it gave up on, then waits for the terminal back before
+    prompting on it again rather than failing out of cmdloop().
+    """
+    app, _, _ = toolbar_app
+    blocked = threading.Event()
+    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.01)
+    lines = iter(["wedge", "quit"])
+    holders = []
+
+    def read_command_line(_prompt):
+        holders.append(app._display_holding_terminal)
+        return next(lines)
+
+    def release_once_abandoned():
+        deadline = time.monotonic() + 5
+        while app._display_holding_terminal is None and time.monotonic() < deadline:
+            time.sleep(0.01)
+        blocked.set()
+
+    def command(line, **kwargs):
+        if line == "wedge":
+            _block_the_display(app, blocked)
+            threading.Thread(target=release_once_abandoned, daemon=True).start()
+        return line == "quit"
+
+    monkeypatch.setattr(app, "_read_command_line", read_command_line)
+    monkeypatch.setattr(app, "onecmd_plus_hooks", command)
+    try:
+        app._cmdloop()
+    finally:
+        blocked.set()
+
+    assert holders == [None, None]
+    assert app.main_session.app.layout is app.main_session.layout
+    err = capsys.readouterr().err
+    assert "did not stop" in err
+    assert "Waiting for the bottom toolbar" in err
+
+
+def test_cmdloop_gives_up_on_a_stuck_display_at_ctrl_c(toolbar_app, monkeypatch) -> None:
+    """A callback that never returns leaves Ctrl-C as the way out, which ends the loop cleanly."""
+    app, _, _ = toolbar_app
+
+    class Interrupted:
+        @property
+        def thread_is_alive(self) -> bool:
+            raise KeyboardInterrupt
+
+    app._display_holding_terminal = Interrupted()
+    read = mock.Mock()
+    monkeypatch.setattr(app, "_read_command_line", read)
+
+    app._cmdloop()
+    read.assert_not_called()
+
+
+def test_ctrl_c_while_announcing_the_wait_ends_the_loop(toolbar_app, monkeypatch) -> None:
+    """The terminal is cooked before the notice, so Ctrl-C may land while it is still printing."""
+    app, _, _ = toolbar_app
+
+    class Stuck:
+        thread_is_alive = True
+
+    def interrupted(*args, **kwargs):
+        raise KeyboardInterrupt
+
+    app._display_holding_terminal = Stuck()
+    monkeypatch.setattr(app, "perror", interrupted)
+    read = mock.Mock()
+    monkeypatch.setattr(app, "_read_command_line", read)
+
+    app._cmdloop()
+    read.assert_not_called()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX pseudo-terminal")
+def test_ctrl_c_reaches_the_wait_for_a_stuck_display(tmp_path) -> None:
+    """A real Ctrl-C, not a simulated KeyboardInterrupt, has to end the wait.
+
+    The stuck display left the terminal in raw mode, where the driver does not turn Ctrl-C
+    into SIGINT. Only the display's own key binding does that, and its event loop is the one
+    blocked in the toolbar callback.
+    """
+    import codecs
+    import os
+    import pty
+    import select
+
+    application = tmp_path / "application.py"
+    application.write_text(
+        "import threading\n"
+        "from cmd2 import Cmd, ToolbarMode, command_toolbar\n"
+        "command_toolbar._SHUTDOWN_TIMEOUT = 0.2\n"
+        "wedged = threading.Event()\n"
+        "entered = threading.Event()\n"
+        "def toolbar():\n"
+        "    if wedged.is_set():\n"
+        "        entered.set()\n"
+        "        threading.Event().wait()\n"
+        "    return 'STATUS'\n"
+        "class App(Cmd):\n"
+        "    def do_wedge(self, _):\n"
+        "        wedged.set()\n"
+        "        self._command_toolbar.app.invalidate()\n"
+        "        assert entered.wait(5)\n"
+        "app = App(bottom_toolbar_mode=ToolbarMode.LEGACY)\n"
+        "app.prompt = 'TEST> '\n"
+        "app.main_session.bottom_toolbar = toolbar\n"
+        "app.cmdloop()\n"
+        "print('LOOP_ENDED', flush=True)\n",
+        encoding="utf-8",
+    )
+    master, slave = pty.openpty()
+    bootstrap = (
+        "import os, fcntl, sys, termios; os.setsid(); "
+        "fcntl.ioctl(0, termios.TIOCSCTTY, 0); "
+        "os.execv(sys.executable, [sys.executable, sys.argv[1]])"
+    )
+    env = dict(os.environ, TERM="xterm-256color")
+    process = subprocess.Popen(
+        [sys.executable, "-c", bootstrap, str(application)], stdin=slave, stdout=slave, stderr=slave, env=env
+    )
+    os.close(slave)
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    transcript = ""
+
+    def wait_until(predicate):
+        nonlocal transcript
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if select.select([master], [], [], 0.05)[0]:
+                try:
+                    data = decoder.decode(os.read(master, 65536))
+                except OSError:
+                    data = ""
+                transcript += data
+                if "\x1b[6n" in data:
+                    # Answer prompt-toolkit's cursor-position request as a terminal would.
+                    os.write(master, b"\x1b[1;1R")
+            if predicate():
+                return
+        pytest.fail(f"terminal condition timed out:\n{transcript}")
+
+    try:
+        wait_until(lambda: "TEST>" in transcript)
+        os.write(master, b"wedge\r")
+        wait_until(lambda: "Waiting for the bottom toolbar" in transcript)
+        os.write(master, b"\x03")
+        wait_until(lambda: "LOOP_ENDED" in transcript)
+    finally:
+        os.close(master)
+        process.kill()
+        process.wait(timeout=5)
 
 
 def test_a_surviving_display_stops_another_from_starting(toolbar_app, expire_startup) -> None:

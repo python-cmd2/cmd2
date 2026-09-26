@@ -25,6 +25,7 @@ tested against, and it grows only when a version has been through the qualificat
 """
 
 from enum import StrEnum
+from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _installed_version
 from typing import TYPE_CHECKING
 
@@ -84,7 +85,15 @@ def _dependency_capability(version: str | None = None) -> tuple[bool, str]:
     :param version: the version to judge; the installed one by default
     :return: whether it is qualified, and a reason suitable for diagnostics
     """
-    installed = version if version is not None else _installed_version("prompt_toolkit")
+    if version is not None:
+        installed = version
+    else:
+        try:
+            installed = _installed_version("prompt_toolkit")
+        except PackageNotFoundError:
+            # A frozen or vendored application may ship without package metadata. An unknown
+            # version is not a qualified one, and auto has to fall back rather than fail.
+            return False, "the installed prompt-toolkit version cannot be determined"
     if installed in QUALIFIED_PROMPT_TOOLKIT_VERSIONS:
         return True, "qualified prompt-toolkit"
     qualified = ", ".join(sorted(QUALIFIED_PROMPT_TOOLKIT_VERSIONS))
