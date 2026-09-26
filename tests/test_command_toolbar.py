@@ -1247,6 +1247,25 @@ def test_cmdloop_gives_up_on_a_stuck_display_at_ctrl_c(toolbar_app, monkeypatch)
     read.assert_not_called()
 
 
+def test_ctrl_c_while_announcing_the_wait_ends_the_loop(toolbar_app, monkeypatch) -> None:
+    """The terminal is cooked before the notice, so Ctrl-C may land while it is still printing."""
+    app, _, _ = toolbar_app
+
+    class Stuck:
+        thread_is_alive = True
+
+    def interrupted(*args, **kwargs):
+        raise KeyboardInterrupt
+
+    app._display_holding_terminal = Stuck()
+    monkeypatch.setattr(app, "perror", interrupted)
+    read = mock.Mock()
+    monkeypatch.setattr(app, "_read_command_line", read)
+
+    app._cmdloop()
+    read.assert_not_called()
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX pseudo-terminal")
 def test_ctrl_c_reaches_the_wait_for_a_stuck_display(tmp_path) -> None:
     """A real Ctrl-C, not a simulated KeyboardInterrupt, has to end the wait.
