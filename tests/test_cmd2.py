@@ -428,6 +428,55 @@ def test_shell_manual_call(base_app) -> None:
     base_app.do_shell(cmd)
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
+def test_shell_falls_back_to_own_group_when_pipeline_exited(base_app, tmp_path) -> None:
+    import contextlib
+    import subprocess
+    from unittest import mock
+
+    # A group whose only member has exited cannot be joined. The consumer of a terminal
+    # pipeline can exit between the check and the spawn, like `shell sleep 1 | true`.
+    leader = subprocess.Popen([sys.executable, "-c", "pass"], process_group=0)
+    leader.wait()
+    lent = []
+
+    @contextlib.contextmanager
+    def lend_terminal():
+        lent.append(True)
+        try:
+            yield
+        finally:
+            lent.pop()
+
+    # The retry runs in our own group, so the terminal has to come back from the dead
+    # pipeline first. Otherwise the command stops with SIGTTIN on its first terminal read.
+    spawned_while_lent = []
+    real_popen = subprocess.Popen
+
+    def popen(*args, **kwargs):
+        spawned_while_lent.append(bool(lent))
+        return real_popen(*args, **kwargs)
+
+    base_app._cur_pipe_proc_reader = mock.Mock(terminal_group=leader.pid, lend_terminal=lend_terminal)
+    with (tmp_path / "output").open("w+") as output, mock.patch("subprocess.Popen", popen):
+        base_app.stdout = output
+        base_app.do_shell("echo joined")
+        output.seek(0)
+        assert output.read() == "joined\n"
+    assert base_app.last_result == 0
+    assert spawned_while_lent == [True, False]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX shell executable")
+def test_shell_permission_error_unrelated_to_pipeline(base_app, tmp_path, monkeypatch) -> None:
+    unusable_shell = tmp_path / "shell"
+    unusable_shell.write_text("#!/bin/sh\n")
+    unusable_shell.chmod(0o644)
+    monkeypatch.setenv("SHELL", str(unusable_shell))
+    with pytest.raises(PermissionError):
+        base_app.do_shell("echo hi")
+
+
 def test_base_error(base_app) -> None:
     _out, err = run_cmd(base_app, "meow")
     assert "is not a recognized command" in err[0]
@@ -865,7 +914,11 @@ def test_pipe_to_shell_and_redirect(redirection_app, running_pipe_process) -> No
     os.remove(filename)
 
 
-def test_pipe_to_shell_error(redirection_app, mocker, capsys) -> None:
+@pytest.mark.parametrize(
+    "terminal",
+    [False, pytest.param(True, marks=pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control"))],
+)
+def test_pipe_to_shell_error(redirection_app, mocker, capsys, terminal) -> None:
     """An already-exited pipe process must be reported before the command runs.
 
     A real nonexistent command may take longer than the startup probe under load.
@@ -876,13 +929,71 @@ def test_pipe_to_shell_error(redirection_app, mocker, capsys) -> None:
     process = popen.return_value
     process.returncode = 127
     process.wait.return_value = 127
+    if terminal:
+        terminal_stream = mocker.Mock()
+        terminal_stream.isatty.return_value = True
+        terminal_stream.fileno.return_value = 10
+        redirection_app.stdout = terminal_stream
+        mocker.patch("os.tcgetpgrp", return_value=os.getpgrp())
+        mocker.patch("os.getsid", return_value=os.getpgrp())
+        sigmask = mocker.patch("signal.pthread_sigmask", return_value=set())
+        reader = mocker.patch("cmd2.utils.ProcReader").return_value
+        previous_tstp = signal.getsignal(signal.SIGTSTP)
 
-    out, err = run_cmd(redirection_app, "print_output | foobarbaz.this_does_not_exist")
+        def start_pipe(*args, **kwargs):
+            # Session-led pipelines inherit ignored Ctrl-Z, but the caller's
+            # handler must be restored even when startup reports an early exit.
+            assert signal.getsignal(signal.SIGTSTP) == signal.SIG_IGN
+            return process
+
+        popen.side_effect = start_pipe
+
+    if terminal:
+        # run_cmd captures stderr in a StdSim, which deliberately disables terminal handoff.
+        redirection_app.onecmd_plus_hooks("print_output | foobarbaz.this_does_not_exist")
+        out, error_text = capsys.readouterr()
+        err = error_text.splitlines()
+    else:
+        out, err = run_cmd(redirection_app, "print_output | foobarbaz.this_does_not_exist")
     assert not out
     assert "Pipe process exited with code 127 before command could run" in " ".join(err)
     assert capsys.readouterr().out == ""
-    process.wait.assert_called_once()
+    if terminal:
+        assert signal.getsignal(signal.SIGTSTP) == previous_tstp
+        reader.wait_for_exit.assert_called_once_with(0.2)
+        reader.wait.assert_called_once_with()
+        process.wait.assert_not_called()
+        # SIGTTOU is blocked only inside ProcReader's lends. Blocking it for the whole
+        # pipeline would leak the mask into every child the command starts.
+        sigmask.assert_not_called()
+    else:
+        process.wait.assert_called_once()
     assert popen.call_args.kwargs["stdin"].closed
+
+
+def test_restore_output_resets_pipe_state_when_the_wait_fails(base_app) -> None:
+    """A failed handback while waiting for the pipe process must not leave it current.
+
+    Otherwise ppaged() would never page again, and Ctrl-C would keep going to a dead group.
+    """
+    import errno
+
+    statement = base_app.statement_parser.parse("help | less")
+    saved_stdout = base_app.stdout
+    saved = cmd2.utils.RedirectionSavedState(saved_stdout, None, False)
+    saved.redirecting = True
+    reader = mock.Mock()
+    reader.wait.side_effect = OSError(errno.EIO, "terminal hung up")
+    base_app._cur_pipe_proc_reader = reader
+    base_app._redirecting = True
+    base_app.stdout = io.StringIO()
+
+    with pytest.raises(OSError, match="terminal hung up"):
+        base_app._restore_output(statement, saved)
+
+    assert base_app.stdout is saved_stdout
+    assert base_app._cur_pipe_proc_reader is None
+    assert base_app._redirecting is False
 
 
 def test_send_to_paste_buffer(redirection_app: RedirectionApp, capsys: pytest.CaptureFixture[str], mocker) -> None:

@@ -1,3 +1,16 @@
+## 4.2.5 (TBD)
+
+- Bug Fixes
+    - On POSIX, piping a command's output to an interactive program such as `less`
+      (`help -v | less`) now runs that program as the terminal's foreground job, as a shell pipeline
+      does. It had run in a separate session that never received the terminal, so Ctrl-Z and `fg`
+      did not suspend and resume it together with cmd2. The program now owns the terminal as it
+      starts, so a pager can set its terminal modes, and Ctrl-C and Ctrl-Z reach the whole pipeline.
+      Pipes started from a worker thread, or whose output cmd2 captures, still run in their own
+      session
+    - A `shell` command piped to an interactive program, such as `shell git log | less`, now joins
+      the pipeline's job, so both processes receive Ctrl-C and Ctrl-Z
+
 ## 4.2.4 (September 8, 2026)
 
 - Bug Fixes

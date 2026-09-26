@@ -1,9 +1,12 @@
 """Unit testing for cmd2/utils.py module."""
 
+import contextlib
+import errno
 import math
 import os
 import signal
 import sys
+import threading
 import time
 from unittest import (
     mock,
@@ -219,6 +222,108 @@ def test_proc_reader_send_sigint(pr_none) -> None:
         assert ret_code == -signal.SIGINT
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
+def test_proc_reader_does_not_resignal_its_own_group(pr_none) -> None:
+    try:
+        with mock.patch("os.getpgrp", return_value=pr_none._proc.pid), mock.patch("os.killpg") as killpg:
+            pr_none.send_sigint()
+        killpg.assert_not_called()
+    finally:
+        pr_none.terminate()
+        pr_none.wait()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
+def test_proc_reader_sigint_after_pipeline_exit() -> None:
+    reader = cu.ProcReader(mock.Mock(pid=os.getpid() + 1, stdout=None, stderr=None), sys.stdout, sys.stderr)
+    with (
+        mock.patch("os.getpgid", side_effect=ProcessLookupError),
+        mock.patch("os.killpg", side_effect=ProcessLookupError) as killpg,
+    ):
+        reader.send_sigint()
+    killpg.assert_called_once_with(reader._proc.pid, signal.SIGINT)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
+def test_proc_reader_sigint_reaches_group_after_leader_exit() -> None:
+    """A shell producer joins the pipeline's group and can outlive the consumer that led it."""
+    import subprocess
+
+    # A terminal pipeline leads its own group within our session, so a producer may join it.
+    leader = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"], process_group=0)
+    reader = cu.ProcReader(leader, sys.stdout, sys.stderr)
+    member_code = (
+        "import signal, time; signal.signal(signal.SIGINT, signal.SIG_DFL); print('ready', flush=True); time.sleep(30)"
+    )
+    member = subprocess.Popen([sys.executable, "-c", member_code], stdout=subprocess.PIPE, process_group=leader.pid)
+    try:
+        assert member.stdout is not None
+        assert member.stdout.readline().strip() == b"ready"
+        reader.terminate()
+        reader.wait()
+        assert leader.returncode == -signal.SIGTERM
+
+        reader.send_sigint()
+        assert member.wait(timeout=5) == -signal.SIGINT
+    finally:
+        member.kill()
+        member.wait()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
+def test_proc_reader_terminal_group() -> None:
+    proc = mock.Mock(pid=4242, returncode=None, stdout=None, stderr=None)
+    assert cu.ProcReader(proc, sys.stdout, sys.stderr).terminal_group is None
+
+    with mock.patch("os.tcgetpgrp", return_value=os.getpgrp()):
+        reader = cu.ProcReader(proc, sys.stdout, sys.stderr, terminal_fd=0)
+    assert reader.terminal_group == proc.pid
+    proc.returncode = 0
+    assert reader.terminal_group is None
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX pipes")
+@pytest.mark.parametrize("producer", ["writer", "child"])
+def test_pipeline_writer_delivers_more_than_the_pipe_holds(producer) -> None:
+    """Both cmd2's writes and a child inheriting the descriptor must wait for a slow consumer.
+
+    A shell producer gets the descriptor itself, so it must stay blocking: a child that
+    inherits O_NONBLOCK fails with EAGAIN once the pipe is full.
+    """
+    import subprocess
+    import threading
+
+    payload = b"x" * 4 * 1024 * 1024
+    read_fd, write_fd = os.pipe()
+    received = bytearray()
+
+    def drain() -> None:
+        while chunk := os.read(read_fd, 65536):
+            received.extend(chunk)
+            time.sleep(0.001)
+
+    reader = mock.Mock(lend_terminal=contextlib.nullcontext)
+    writer = cu.PipelineWriter(write_fd, reader)
+    consumer = threading.Thread(target=drain)
+    consumer.start()
+    try:
+        if producer == "writer":
+            assert writer.write(payload) == len(payload)
+        else:
+            child = subprocess.run(
+                [sys.executable, "-c", f"import sys; sys.stdout.buffer.write(b'x' * {len(payload)})"],
+                stdout=writer.fileno(),
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            assert child.returncode == 0, child.stderr.decode()
+    finally:
+        writer.close()
+        consumer.join()
+        os.close(read_fd)
+    assert bytes(received) == payload
+
+
 def test_proc_reader_terminate(pr_none) -> None:
     assert pr_none._proc.poll() is None
     pr_none.terminate()
@@ -236,6 +341,254 @@ def test_proc_reader_terminate(pr_none) -> None:
         assert ret_code is not None
     else:
         assert ret_code == -signal.SIGTERM
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+@pytest.mark.parametrize("already_exited", [False, True])
+def test_proc_reader_terminate_terminal_job(already_exited) -> None:
+    proc = mock.Mock(stdout=None, stderr=None)
+    reader = cu.ProcReader(proc, sys.stdout, sys.stderr)
+    reader._terminal_fd = 10
+    with mock.patch("os.kill", side_effect=ProcessLookupError if already_exited else None) as kill:
+        reader.terminate()
+    kill.assert_called_once_with(proc.pid, signal.SIGTERM)
+    # Only the job watcher may reap this process; Popen.terminate() would poll it.
+    proc.terminate.assert_not_called()
+    proc.poll.assert_not_called()
+    proc.wait.assert_not_called()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+@pytest.mark.parametrize("stop_signal", ["SIGTTIN", "SIGTTOU"])
+@pytest.mark.parametrize("expired_handoff", [False, True])
+def test_proc_reader_resumes_terminal_access_after_handoff(stop_signal, expired_handoff) -> None:
+    proc = mock.Mock(pid=123, stdout=None, stderr=None, returncode=None)
+    reader = cu.ProcReader(proc, sys.stdout, sys.stderr)
+    reader._terminal_fd = 10
+    reader._original_group = 456
+    reader._terminal_available.set()
+    stopped_status = (getattr(signal, stop_signal) << 8) | 0x7F
+    handoffs = iter([False, True] if expired_handoff else [True])
+
+    def handoff(timeout):
+        assert timeout == 0.1
+        if next(handoffs):
+            reader._terminal_available.set()
+        else:
+            reader._terminal_available.clear()
+        return True
+
+    with (
+        mock.patch(
+            "os.waitpid",
+            side_effect=[(proc.pid, stopped_status), *([(0, 0)] * (2 if expired_handoff else 1)), (proc.pid, 0)],
+        ),
+        mock.patch("os.tcgetpgrp", return_value=proc.pid),
+        mock.patch.object(reader, "_set_foreground_group") as foreground,
+        mock.patch.object(reader._terminal_available, "wait", side_effect=handoff) as available,
+        mock.patch("os.killpg") as killpg,
+        mock.patch("signal.raise_signal") as stop,
+    ):
+        reader._wait_for_job(10)
+    assert available.call_count == (2 if expired_handoff else 1)
+    killpg.assert_called_once_with(proc.pid, signal.SIGCONT)
+    stop.assert_not_called()
+    # The lend is still active: its holder returns the terminal, not the watcher.
+    foreground.assert_not_called()
+    assert proc.returncode == 0
+    assert reader._process_done.is_set()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+@pytest.mark.parametrize("lent", [False, True])
+def test_proc_reader_exit_returns_terminal_unless_lent(lent) -> None:
+    """A shell producer in a lent pipeline group may outlive the consumer and still need the terminal."""
+    proc = mock.Mock(pid=123, stdout=None, stderr=None, returncode=None)
+    reader = cu.ProcReader(proc, sys.stdout, sys.stderr)
+    reader._terminal_fd = 10
+    reader._original_group = 456
+    if lent:
+        reader._terminal_available.set()
+    with (
+        mock.patch("os.waitpid", return_value=(proc.pid, 0)),
+        mock.patch("os.tcgetpgrp", return_value=proc.pid),
+        mock.patch.object(reader, "_set_foreground_group") as foreground,
+    ):
+        reader._wait_for_job(10)
+    if lent:
+        foreground.assert_not_called()
+    else:
+        foreground.assert_called_once_with(10, reader._original_group)
+    assert reader._process_done.is_set()
+
+
+def test_proc_reader_wait_for_exit_without_terminal() -> None:
+    proc = mock.Mock(stdout=None, stderr=None)
+    reader = cu.ProcReader(proc, sys.stdout, sys.stderr)
+    reader.wait_for_exit(timeout=0.2)
+    proc.wait.assert_called_once_with(0.2)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+@pytest.mark.parametrize("handler_kind", ["default", "ignored", "custom"])
+def test_proc_reader_suspend_restores_signal_handler(handler_kind) -> None:
+    proc = mock.Mock(pid=123, stdout=None, stderr=None, returncode=None)
+    reader = cu.ProcReader(proc, sys.stdout, sys.stderr)
+    reader._terminal_fd = 10
+    reader._original_group = 456
+    reader._terminal_available.set()
+    previous = {"default": signal.SIG_DFL, "ignored": signal.SIG_IGN, "custom": mock.Mock()}[handler_kind]
+    groups = [proc.pid, reader._original_group] if handler_kind == "default" else [reader._original_group]
+    with (
+        mock.patch("signal.getsignal", return_value=previous),
+        mock.patch("signal.signal") as set_handler,
+        mock.patch("signal.raise_signal") as stop,
+        mock.patch("os.killpg") as killpg,
+        mock.patch("os.tcgetpgrp", side_effect=groups),
+        mock.patch("threading.Thread"),
+        mock.patch.object(reader, "_set_foreground_group") as foreground,
+        reader.manage_terminal(),
+    ):
+        handler = set_handler.call_args.args[1]
+        handler(signal.SIGTSTP, None)
+        assert reader._job_resumed.is_set()
+    set_handler.assert_called_with(signal.SIGTSTP, previous)
+    foreground.assert_called_with(10, proc.pid)
+    if handler_kind == "default":
+        killpg.assert_called_once_with(reader._original_group, signal.SIGTSTP)
+        stop.assert_called_once_with(signal.SIGTSTP)
+        assert set_handler.call_args_list == [
+            mock.call(signal.SIGTSTP, handler),
+            mock.call(signal.SIGTSTP, signal.SIG_IGN),
+            mock.call(signal.SIGTSTP, signal.SIG_DFL),
+            mock.call(signal.SIGTSTP, handler),
+            mock.call(signal.SIGTSTP, previous),
+        ]
+    else:
+        killpg.assert_not_called()
+        stop.assert_not_called()
+        if handler_kind == "custom":
+            previous.assert_called_once_with(signal.SIGTSTP, None)
+
+
+def test_proc_reader_captured_pipeline_needs_no_terminal() -> None:
+    reader = cu.ProcReader(mock.Mock(stdout=None, stderr=None), sys.stdout, sys.stderr)
+    with reader.manage_terminal(), reader.lend_terminal():
+        assert not reader._terminal_available.is_set()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+def test_proc_reader_lending_restores_terminal_on_write_error() -> None:
+    reader = cu.ProcReader(mock.Mock(pid=123, stdout=None, stderr=None, returncode=None), sys.stdout, sys.stderr)
+    reader._terminal_fd = 10
+    reader._original_group = 456
+
+    def failing_write():
+        with reader.lend_terminal():
+            assert reader._terminal_available.is_set()
+            raise BrokenPipeError
+
+    with (
+        mock.patch("os.tcgetpgrp", return_value=123),
+        mock.patch.object(reader, "_set_foreground_group") as foreground,
+        pytest.raises(BrokenPipeError),
+    ):
+        failing_write()
+    assert not reader._terminal_available.is_set()
+    assert foreground.call_args_list == [mock.call(10, 123), mock.call(10, 456)]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+@pytest.mark.parametrize("inner", ["nested", "thread"])
+def test_proc_reader_keeps_the_terminal_lent_until_the_last_lend_ends(inner) -> None:
+    """A shorter lend inside a longer one must not take the terminal back early.
+
+    do_shell() lends for as long as a shell producer runs. A pipe write from another thread
+    meanwhile lends and returns. If its return took the terminal back, the producer would stop
+    with SIGTTIN on its next terminal read, and nothing would resume it.
+    """
+    import threading
+
+    reader = cu.ProcReader(mock.Mock(pid=123, stdout=None, stderr=None, returncode=None), sys.stdout, sys.stderr)
+    reader._terminal_fd = 10
+    reader._original_group = 456
+
+    def short_lend() -> None:
+        with reader.lend_terminal():
+            pass
+
+    with (
+        mock.patch("os.tcgetpgrp", return_value=123),
+        mock.patch.object(reader, "_set_foreground_group") as foreground,
+    ):
+        with reader.lend_terminal():
+            if inner == "nested":
+                short_lend()
+            else:
+                worker = threading.Thread(target=short_lend)
+                worker.start()
+                worker.join()
+            assert reader._terminal_available.is_set()
+            assert mock.call(10, 456) not in foreground.call_args_list
+        assert not reader._terminal_available.is_set()
+        assert foreground.call_args_list[-1] == mock.call(10, 456)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+@pytest.mark.parametrize("error_number", [errno.ESRCH, errno.EINVAL, errno.EBADF])
+def test_proc_reader_handoff_to_disappearing_group(error_number) -> None:
+    reader = cu.ProcReader(mock.Mock(pid=123, stdout=None, stderr=None, returncode=None), sys.stdout, sys.stderr)
+    reader._terminal_fd = 10
+    reader._original_group = 456
+
+    def write():
+        with reader.lend_terminal():
+            assert reader._terminal_available.is_set()
+
+    with (
+        mock.patch("os.tcgetpgrp", return_value=456),
+        mock.patch.object(reader, "_set_foreground_group", side_effect=OSError(error_number, "handoff failed")),
+    ):
+        if error_number == errno.EBADF:
+            with pytest.raises(OSError, match="handoff failed"):
+                write()
+        else:
+            write()
+    assert not reader._terminal_available.is_set()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+def test_proc_reader_reaps_killed_consumer_without_another_handoff() -> None:
+    proc = mock.Mock(pid=123, stdout=None, stderr=None, returncode=None)
+    reader = cu.ProcReader(proc, sys.stdout, sys.stderr)
+    reader._terminal_fd = 10
+    reader._original_group = 456
+    stopped_status = (signal.SIGTTIN << 8) | 0x7F
+    with (
+        mock.patch("os.waitpid", side_effect=[(123, stopped_status), (123, signal.SIGKILL)]),
+        mock.patch("os.tcgetpgrp", return_value=456),
+        mock.patch.object(reader._terminal_available, "wait", return_value=False),
+        mock.patch("os.killpg") as killpg,
+    ):
+        reader._wait_for_job(10)
+    assert proc.returncode == -signal.SIGKILL
+    assert reader._process_done.is_set()
+    killpg.assert_not_called()
+    proc.wait.assert_not_called()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal pipeline writer")
+@pytest.mark.parametrize("returncode", [-signal.SIGINT, 128 + signal.SIGINT, 0])
+@pytest.mark.parametrize("finished", [False, True])
+def test_pipeline_writer_cancels_interrupted_producer_but_not_cleanup(returncode, finished) -> None:
+    reader = cu.ProcReader(mock.Mock(stdout=None, stderr=None, returncode=returncode), sys.stdout, sys.stderr)
+    if finished:
+        reader.finish_producer()
+    read_fd, write_fd = os.pipe()
+    os.close(read_fd)
+    expected = KeyboardInterrupt if returncode != 0 and not finished else BrokenPipeError
+    with cu.PipelineWriter(write_fd, reader) as writer, pytest.raises(expected):
+        writer.write(b"output")
 
 
 @pytest.fixture
@@ -438,3 +791,58 @@ def test_categorize() -> None:
     cu.categorize([func2, b.bar_method], category)
     assert getattr(func2, attr_name) == category
     assert getattr(Bar.bar_method, attr_name) == category
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+def test_proc_reader_producer_wait_times_out() -> None:
+    import subprocess
+
+    pipeline = mock.Mock()
+    proc = mock.Mock(pid=321, stdout=None, stderr=None, returncode=None)
+    reader = cu.ProcReader(proc, sys.stdout, sys.stderr, pipeline=pipeline)
+    with mock.patch("os.waitpid", return_value=(0, 0)), pytest.raises(subprocess.TimeoutExpired):
+        reader.wait_for_exit(0)
+    pipeline._relay_producer_stop.assert_not_called()
+    proc.wait.assert_not_called()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+@pytest.mark.parametrize("watcher_done", [False, True])
+@pytest.mark.parametrize("foreground_group", [123, 456])
+def test_proc_reader_relays_producer_stop_once_the_watcher_is_gone(watcher_done, foreground_group) -> None:
+    consumer = mock.Mock(pid=123, stdout=None, stderr=None, returncode=0)
+    pipeline = cu.ProcReader(consumer, sys.stdout, sys.stderr)
+    pipeline._terminal_fd = 10
+    pipeline._original_group = 456
+    if watcher_done:
+        pipeline._process_done.set()
+    proc = mock.Mock(pid=321, stdout=None, stderr=None, returncode=None)
+    reader = cu.ProcReader(proc, sys.stdout, sys.stderr, pipeline=pipeline)
+    stopped_status = (signal.SIGTSTP << 8) | 0x7F
+
+    def resume(thread_id, signum):
+        assert thread_id == threading.main_thread().ident
+        assert signum == signal.SIGTSTP
+        pipeline._job_resumed.set()
+
+    with (
+        mock.patch("os.waitpid", side_effect=[(proc.pid, stopped_status), (proc.pid, 0)]),
+        mock.patch("os.tcgetpgrp", return_value=foreground_group),
+        mock.patch.object(pipeline, "_set_foreground_group") as foreground,
+        mock.patch("os.killpg") as killpg,
+        mock.patch("signal.pthread_kill", side_effect=resume) as relay,
+    ):
+        reader.wait_for_exit()
+    assert proc.returncode == 0
+    if not watcher_done:
+        # The consumer's watcher sees the same Ctrl-Z and suspends the job itself.
+        relay.assert_not_called()
+        killpg.assert_not_called()
+        foreground.assert_not_called()
+        return
+    relay.assert_called_once()
+    assert killpg.call_args_list == [mock.call(consumer.pid, signal.SIGSTOP), mock.call(consumer.pid, signal.SIGCONT)]
+    if foreground_group == consumer.pid:
+        foreground.assert_called_once_with(10, pipeline._original_group)
+    else:
+        foreground.assert_not_called()

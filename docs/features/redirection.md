@@ -30,6 +30,10 @@ Piping the output of a `cmd2` command to a shell command works just like in POSI
 
 - pipe as input to a shell command with `|`, as in `mycommand args | wc`
 
+On POSIX systems, a pipe to an interactive program such as `less` runs as the terminal's foreground
+job, as it would in a shell: the program can read the keyboard, and Ctrl-C and Ctrl-Z reach it. A
+`shell` command whose output is piped this way, as in `shell git log | less`, joins the same job.
+
 ## Multiple Pipes and Redirection
 
 Multiple pipes, optionally followed by a redirect, are supported. Thus, it is possible to do
