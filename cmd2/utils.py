@@ -926,8 +926,13 @@ class ProcReader:
         import signal
 
         while True:
+            # The suspensions finished before this wait. One that finishes during it continues the
+            # consumer, which is reported too, even when the continue discards a stop the wait has
+            # not collected. So the count is read afresh after each change of state.
             seen = self._suspensions
-            _, status = os.waitpid(self._proc.pid, os.WUNTRACED)
+            _, status = os.waitpid(self._proc.pid, os.WUNTRACED | os.WCONTINUED)
+            if os.WIFCONTINUED(status):
+                continue
             if not os.WIFSTOPPED(status):
                 self._proc.returncode = os.waitstatus_to_exitcode(status)
                 return
@@ -1022,14 +1027,15 @@ class ProcReader:
 
         deadline = None if timeout is None else time.monotonic() + timeout
         while self._proc.returncode is None:
+            # As in _watch_job(), a suspension's continue is reported, so the count stays current.
             seen = pipeline._suspensions
             try:
-                pid, status = os.waitpid(self._proc.pid, os.WNOHANG | os.WUNTRACED)
+                pid, status = os.waitpid(self._proc.pid, os.WNOHANG | os.WUNTRACED | os.WCONTINUED)
             except ChildProcessError:
                 # The application ignores SIGCHLD. As Popen.wait() does, report success.
                 self._proc.returncode = 0
                 return
-            if not pid:
+            if not pid or os.WIFCONTINUED(status):
                 if deadline is not None and time.monotonic() >= deadline:
                     raise subprocess.TimeoutExpired(self._proc.args, timeout or 0)
                 time.sleep(0.05)

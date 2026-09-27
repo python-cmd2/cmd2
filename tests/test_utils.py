@@ -952,6 +952,81 @@ def test_proc_reader_suspend_restores_signal_handler(handler_kind, relayed) -> N
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+def test_proc_reader_watcher_relays_a_stop_after_a_suspension_it_never_saw() -> None:
+    """A suspension can stop and continue the consumer before the watcher collects the stop.
+
+    The continue then discards the stop report, so the watcher never sees it. It must still
+    count that suspension, or it would take the next genuine stop for one the suspension
+    already dealt with, and leave the consumer stopped for good.
+    """
+    import subprocess
+    import threading
+
+    child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"], process_group=0)
+    reader = cu.ProcReader(child, sys.stdout, sys.stderr)
+    reader._terminal_fd = 10
+    reader._original_group = 456
+    real_waitpid = os.waitpid
+    first = []
+    relayed = threading.Event()
+
+    def waitpid(pid, options):
+        if not first:
+            first.append(True)
+            # A whole suspension happens before the watcher's first wait, as a direct Ctrl-Z
+            # to cmd2 and fg would: the consumer is stopped, then continued.
+            os.killpg(child.pid, signal.SIGSTOP)
+            time.sleep(0.2)
+            os.killpg(child.pid, signal.SIGCONT)
+            reader._suspensions += 1
+        return real_waitpid(pid, options)
+
+    def relay(thread_id, signum):
+        relayed.set()
+        reader._job_resumed.set()
+
+    try:
+        with (
+            mock.patch("os.waitpid", side_effect=waitpid),
+            mock.patch("os.tcgetpgrp", return_value=456),
+            mock.patch.object(reader, "_set_foreground_group"),
+            mock.patch("signal.pthread_kill", side_effect=relay),
+        ):
+            watcher = threading.Thread(target=reader._wait_for_job, args=(10,), daemon=True)
+            watcher.start()
+            deadline = time.monotonic() + 5
+            while not first and time.monotonic() < deadline:
+                time.sleep(0.01)
+            time.sleep(0.3)
+            # A genuine Ctrl-Z
+            os.killpg(child.pid, signal.SIGTSTP)
+            assert relayed.wait(5)
+    finally:
+        child.kill()
+        watcher.join(5)
+    assert reader._process_done.is_set()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+def test_proc_reader_producer_wait_reads_a_continue_as_neither_stop_nor_exit() -> None:
+    """The producer's wait asks to hear of continues, to keep its suspension count current."""
+    pipeline = cu.ProcReader(mock.Mock(pid=123, stdout=None, stderr=None, returncode=None), sys.stdout, sys.stderr)
+    proc = mock.Mock(pid=321, stdout=None, stderr=None, returncode=None)
+    producer = cu.ProcReader(proc, sys.stdout, sys.stderr, pipeline=pipeline)
+    # Linux reports a continue as 0xffff, BSDs and macOS as a stop by SIGCONT
+    continued = next(status for status in (0xFFFF, (signal.SIGCONT << 8) | 0x7F) if os.WIFCONTINUED(status))
+    with (
+        mock.patch("os.waitpid", side_effect=[(proc.pid, continued), (proc.pid, 3 << 8)]) as waitpid,
+        mock.patch("time.sleep"),
+        mock.patch.object(pipeline, "_relay_producer_stop") as relay,
+    ):
+        producer._wait_for_exit()
+    assert waitpid.call_args.args[1] & os.WCONTINUED
+    relay.assert_not_called()
+    assert proc.returncode == 3
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
 def test_proc_reader_suspension_waits_for_one_in_progress() -> None:
     """A stop reported during another suspension waits for it, then needs nothing more: that one continued the pipeline."""
     import threading
