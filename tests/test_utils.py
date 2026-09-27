@@ -244,6 +244,7 @@ def test_proc_reader_sigint_to_a_group_cmd2_may_not_signal() -> None:
     killpg.assert_called_once_with(reader._proc.pid, signal.SIGINT)
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
 @pytest.mark.parametrize("producer", ["none", "reaped"])
 def test_proc_reader_sigint_after_pipeline_exit(producer) -> None:
     """Once the pipeline is gone, its ID may belong to another process group. Signal nothing."""
