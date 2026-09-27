@@ -230,10 +230,12 @@ def test_code_page_encoding(code_page, sample, codec) -> None:
     assert sample.encode(encoding) == sample.encode(codec)
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32" and sys.version_info >= (3, 14),
+    reason="Python 3.14 on Windows has a codec for every code page Windows accepts, including pseudo code pages such as 1",
+)
 @pytest.mark.parametrize("code_page", [50220, 1])
 def test_code_page_encoding_without_a_codec(code_page) -> None:
-    if sys.platform == "win32" and sys.version_info >= (3, 14) and code_page == 50220:
-        pytest.skip("Python 3.14 on Windows may support every code page Windows does")
     assert cu._code_page_encoding(code_page) is None
 
 
