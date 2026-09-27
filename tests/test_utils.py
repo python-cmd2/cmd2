@@ -324,6 +324,137 @@ def test_pipeline_writer_delivers_more_than_the_pipe_holds(producer) -> None:
     assert bytes(received) == payload
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX pipes")
+@pytest.mark.parametrize("pauses", [False, True])
+def test_pipeline_writer_relay_lends_only_while_a_producer_waits(pauses) -> None:
+    """Output a child writes to fileno() is relayed. The consumer gets the terminal only while the child is blocked.
+
+    A consumer such as less stops reading the pipe until it can read the keyboard. A child that
+    has filled the relay's pipe waits on it, so the relay lends the terminal. Once no child is
+    waiting, command code gets the terminal back, whether or not the consumer has read all
+    its output yet. That is as between cmd2's own writes.
+    """
+    import subprocess
+    import threading
+
+    # More than the relay and both pipes hold, so the child blocks until the consumer reads.
+    # What remains after the consumer's first read fits, so the child can then finish.
+    payload = b"x" * 280000
+    first_read = 200000 if pauses else len(payload)
+    read_fd, write_fd = os.pipe()
+    received = bytearray()
+    lent = threading.Event()
+    resume = threading.Event()
+    lends = []
+
+    @contextlib.contextmanager
+    def lend_terminal():
+        lends.append(1)
+        lent.set()
+        try:
+            yield
+        finally:
+            lends.pop()
+
+    def drain() -> None:
+        # Like a pager waiting for a key, drain nothing until lent the terminal. Then read
+        # a page, or all of it, and wait for the next key.
+        lent.wait(10)
+        while len(received) < first_read:
+            received.extend(os.read(read_fd, min(65536, first_read - len(received))))
+        resume.wait(10)
+        while chunk := os.read(read_fd, 65536):
+            received.extend(chunk)
+
+    writer = cu.PipelineWriter(write_fd, mock.Mock(lend_terminal=lend_terminal))
+    consumer = threading.Thread(target=drain)
+    consumer.start()
+    try:
+        child = subprocess.run(
+            [sys.executable, "-c", f"import sys; sys.stdout.buffer.write(b'x' * {len(payload)})"],
+            stdout=writer.fileno(),
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=10,
+        )
+        assert child.returncode == 0, child.stderr.decode()
+        assert lent.is_set()
+        deadline = time.monotonic() + 5
+        while lends and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert not lends
+        if pauses:
+            assert len(received) == first_read
+        # cmd2's own writes follow what the child wrote, which is still pending.
+        threading.Timer(0.3, resume.set).start()
+        assert writer.write(b"end") == 3
+    finally:
+        resume.set()
+        writer.close()
+        consumer.join(10)
+        os.close(read_fd)
+    assert bytes(received) == payload + b"end"
+    assert not lends
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX pipes")
+def test_pipeline_writer_relay_leaves_the_terminal_after_a_producer_finishes() -> None:
+    import subprocess
+
+    payload = b"x" * 70000
+    read_fd, write_fd = os.pipe()
+    reader = mock.Mock(lend_terminal=mock.Mock(side_effect=contextlib.nullcontext))
+    writer = cu.PipelineWriter(write_fd, reader)
+    try:
+        # More than the consumer's pipe holds, but it fits in the relay: the child exits
+        # without waiting on the consumer, so the consumer is not lent the terminal.
+        subprocess.run(
+            [sys.executable, "-c", f"import sys; sys.stdout.buffer.write(b'x' * {len(payload)})"],
+            stdout=writer.fileno(),
+            check=True,
+        )
+        time.sleep(0.3)
+        # Nor once the command is done: waiting for the consumer lends it the terminal then.
+        writer.close()
+        time.sleep(0.3)
+        reader.lend_terminal.assert_not_called()
+        # A closed writer hands out no descriptor.
+        with pytest.raises(ValueError, match="closed file"):
+            writer.fileno()
+        received = bytearray()
+        while chunk := os.read(read_fd, 65536):
+            received.extend(chunk)
+        assert received == payload
+    finally:
+        writer.close()
+        os.close(read_fd)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX pipes")
+def test_pipeline_writer_relay_passes_consumer_exit_to_the_producer() -> None:
+    import subprocess
+
+    read_fd, write_fd = os.pipe()
+    writer = cu.PipelineWriter(write_fd, mock.Mock(lend_terminal=contextlib.nullcontext))
+    try:
+        os.close(read_fd)
+        # The child would block forever on a full pipe if the relay kept reading nothing out.
+        child = subprocess.run(
+            [sys.executable, "-c", "import sys\nwhile True: sys.stdout.buffer.write(b'x' * 65536)"],
+            stdout=writer.fileno(),
+            stderr=subprocess.DEVNULL,
+            check=False,
+            timeout=10,
+        )
+        assert child.returncode != 0
+        # With the relay gone, cmd2's own writes see the consumer's exit too.
+        with pytest.raises(BrokenPipeError):
+            writer.write(b"more")
+    finally:
+        with contextlib.suppress(BrokenPipeError):
+            writer.close()
+
+
 def test_proc_reader_terminate(pr_none) -> None:
     assert pr_none._proc.poll() is None
     pr_none.terminate()

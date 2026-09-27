@@ -921,6 +921,129 @@ class ProcReader:
             stream.buffer.write(to_write)
 
 
+class _DescriptorRelay:
+    """Carry output that subprocesses write to a terminal pipeline's descriptor.
+
+    A subprocess given :meth:`PipelineWriter.fileno` writes on its own, so cmd2 cannot lend
+    the terminal write by write. It writes into this relay's pipe instead, and a thread passes
+    that output on to the consumer. The consumer is lent the terminal while a producer is
+    blocked on the relay's full pipe, since only then does it need the terminal to make
+    progress. Otherwise command code keeps it, as it does between cmd2's own writes.
+    """
+
+    def __init__(self, out_fd: int, reader: ProcReader) -> None:
+        """Start relaying to out_fd, a descriptor the relay takes ownership of.
+
+        :param out_fd: the consumer's pipe
+        :param reader: the terminal pipeline that reads out_fd
+        """
+        self._out_fd = out_fd
+        self._reader = reader
+        # write_fd is the descriptor handed to producers. PipelineWriter closes it; once every
+        # producer has closed its copy too, the relay reads EOF and closes the consumer's pipe.
+        self._in_fd, self.write_fd = os.pipe()
+        self._write_fd_open = True
+        self._lock = threading.Condition()
+        # Bytes read from the relay's pipe, and bytes passed on to the consumer's pipe
+        self._received = 0
+        self._sent = 0
+        self._done = False
+        threading.Thread(name="pipe_relay", target=self._relay, daemon=True).start()
+
+    def close_write_fd(self) -> None:
+        """Close cmd2's copy of the producers' descriptor. The relay finishes once theirs close."""
+        with self._lock:
+            if self._write_fd_open:
+                os.close(self.write_fd)
+                self._write_fd_open = False
+
+    def _unread(self) -> int:
+        """Bytes producers have written that the relay has not read yet. Requires _lock."""
+        import fcntl
+        import struct
+        import termios
+
+        if self._done:
+            return 0
+        return int(struct.unpack("i", fcntl.ioctl(self._in_fd, termios.FIONREAD, b"\0" * 4))[0])
+
+    def _producer_blocked(self) -> bool:
+        """Whether the relay's pipe is full, which means a producer is waiting on the consumer."""
+        import select
+
+        with self._lock:
+            if not self._write_fd_open:
+                # The command is done. ProcReader.wait() lends the terminal from here on.
+                return False
+            poller = select.poll()
+            poller.register(self.write_fd, select.POLLOUT)
+            return not poller.poll(0)
+
+    def flush(self) -> None:
+        """Wait until output already written to the relay has reached the consumer's pipe.
+
+        cmd2's own writes go straight to the consumer's pipe, so they wait for this first to
+        keep their order with the output of a producer that has finished. The wait is in short
+        polls so that the main thread still runs Python signal handlers.
+        """
+        with self._lock:
+            target = self._received + self._unread()
+            while not self._done and self._sent < target:
+                self._lock.wait(0.1)
+
+    def _relay(self) -> None:
+        """Pass producer output on to the consumer until producers close or the consumer exits."""
+        import select
+
+        poller = select.poll()
+        poller.register(self._out_fd, select.POLLOUT)
+        lend = contextlib.ExitStack()
+        lending = False
+        try:
+            while True:
+                with self._lock:
+                    idle = not self._unread()
+                if idle and lending:
+                    # No producer is waiting. Let command code have the terminal back.
+                    lend.close()
+                    lending = False
+                data = os.read(self._in_fd, 65536)
+                if not data:
+                    return
+                with self._lock:
+                    self._received += len(data)
+                view = memoryview(data)
+                written = 0
+                while written < len(view):
+                    # Once there is room, a write of at most PIPE_BUF bytes does not block.
+                    if poller.poll(100):
+                        count = os.write(self._out_fd, view[written : written + select.PIPE_BUF])
+                        written += count
+                        with self._lock:
+                            self._sent += count
+                            self._lock.notify_all()
+                    elif self._producer_blocked():
+                        if not lending:
+                            lend.enter_context(self._reader.lend_terminal())
+                            lending = True
+                    elif lending:
+                        # A producer that stopped writing does not need the consumer to go on.
+                        lend.close()
+                        lending = False
+        except OSError:
+            # The consumer exited. Closing the relay's pipe below passes that on to producers,
+            # which get EPIPE or SIGPIPE just as they would writing to the consumer directly.
+            return
+        finally:
+            with contextlib.suppress(OSError):
+                lend.close()
+            with self._lock:
+                self._done = True
+                os.close(self._in_fd)
+                os.close(self._out_fd)
+                self._lock.notify_all()
+
+
 class PipelineWriter(io.FileIO):
     """A pipe whose blocking writes temporarily give the consumer terminal access."""
 
@@ -928,6 +1051,28 @@ class PipelineWriter(io.FileIO):
         """Take ownership of a pipe descriptor managed by reader."""
         super().__init__(fd, "w")
         self._reader = reader
+        self._relay: _DescriptorRelay | None = None
+
+    def fileno(self) -> int:
+        """Return a descriptor for subprocesses, such as a shell command's stdout.
+
+        A subprocess writes to it directly, bypassing :meth:`write`. It is the write end of a
+        relay (see :class:`_DescriptorRelay`), which lends the consumer the terminal whenever
+        such a producer is waiting for the consumer to drain the pipe.
+        """
+        if self.closed:
+            raise ValueError("I/O operation on closed file")
+        if self._relay is None:
+            self._relay = _DescriptorRelay(os.dup(super().fileno()), self._reader)
+        return self._relay.write_fd
+
+    def close(self) -> None:
+        """Close the pipe. The consumer sees EOF once every producer has closed its descriptor too."""
+        try:
+            super().close()
+        finally:
+            if self._relay is not None:
+                self._relay.close_write_fd()
 
     def write(self, b: Any) -> int:
         """Write all of b while the consumer can interact with the terminal.
@@ -947,11 +1092,13 @@ class PipelineWriter(io.FileIO):
         import signal
 
         view = memoryview(b).cast("B")
-        fd = self.fileno()
+        fd = super().fileno()
         poller = select.poll()
         poller.register(fd, select.POLLOUT)
         try:
             with self._reader.lend_terminal():
+                if self._relay is not None:
+                    self._relay.flush()
                 written = 0
                 while written < len(view):
                     # Once there is room, a write of at most PIPE_BUF bytes does not block.

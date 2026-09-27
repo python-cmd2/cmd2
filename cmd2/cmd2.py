@@ -3346,22 +3346,40 @@ class Cmd:
             pipe_stderr = None if isinstance(sys.stderr, utils.StdSim) else sys.stderr
 
             terminal_fd = None
+            popen_command = statement.redirect_to
             if sys.platform != "win32":
-                # Job control installs signal handlers, which only the main thread may do.
-                # Elsewhere, keep the pipeline in its own session as before.
-                if threading.current_thread() is threading.main_thread():
-                    for stream in (pipe_stdout, pipe_stderr):
-                        if stream is not None and stream.isatty():
-                            with contextlib.suppress(OSError, ValueError):
-                                if os.tcgetpgrp(stream.fileno()) == os.getpgrp():
-                                    terminal_fd = stream.fileno()
-                                    break
+                # Only a pipeline whose output goes to the terminal is the terminal's job. One
+                # nested in a command whose output is piped, for instance, feeds that outer
+                # pipeline, whose consumer needs the terminal instead. Job control installs
+                # signal handlers, which only the main thread may do. Otherwise, keep the
+                # pipeline in its own session as before.
+                if threading.current_thread() is threading.main_thread() and pipe_stdout is not None and pipe_stdout.isatty():
+                    with contextlib.suppress(OSError, ValueError):
+                        if os.tcgetpgrp(pipe_stdout.fileno()) == os.getpgrp():
+                            terminal_fd = pipe_stdout.fileno()
                 if terminal_fd is None:
                     kwargs["start_new_session"] = True
                 else:
                     kwargs["process_group"] = 0
 
-            with contextlib.ExitStack() as terminal_stack:
+                    # A pager such as less sets its terminal modes as it starts, before it reads
+                    # the pipe. It must own the terminal by then: a background tcsetattr() stops
+                    # it with SIGTTOU, and on macOS that call fails with EINTR when the process
+                    # is continued instead of being restarted. less ignores the failure and runs
+                    # on a cooked terminal. So hold the pipeline in a POSIX sh until cmd2 has
+                    # made its group the foreground one and sent a newline down the pipe. The
+                    # read builtin takes no more than that line from a pipe. Then exec the
+                    # user's shell as before.
+                    import shlex
+
+                    user_shell = shlex.quote(kwargs.get("executable", "/bin/sh"))
+                    popen_command = f"read -r _ || exit 1; exec {user_shell} -c {shlex.quote(statement.redirect_to)}"
+                    kwargs["executable"] = "/bin/sh"
+
+            with contextlib.ExitStack() as terminal_stack, contextlib.ExitStack() as gate_stack:
+                if terminal_fd is not None:
+                    # Should cmd2 fail before opening the gate, the held pipeline reads EOF and exits.
+                    gate_stack.callback(new_stdout.close)
                 with contextlib.ExitStack() as spawn_stack:
                     if terminal_fd is not None and os.getpgrp() == os.getsid(0):
                         import signal
@@ -3372,7 +3390,7 @@ class Cmd:
                         previous_tstp = signal.signal(signal.SIGTSTP, signal.SIG_IGN)
                         spawn_stack.callback(signal.signal, signal.SIGTSTP, previous_tstp)
                     proc = subprocess.Popen(  # noqa: S602
-                        statement.redirect_to,
+                        popen_command,
                         stdin=subproc_stdin,
                         stdout=subprocess.PIPE if pipe_stdout is None else pipe_stdout,
                         stderr=subprocess.PIPE if pipe_stderr is None else pipe_stderr,
@@ -3394,12 +3412,11 @@ class Cmd:
                     if cmd_pipe_proc_reader is None:
                         proc.wait(0.2)
                     else:
-                        # A pager such as less sets its terminal modes as it starts, before it
-                        # reads the pipe. It must own the terminal by then: a background
-                        # tcsetattr() stops it with SIGTTOU, and on macOS that call fails with
-                        # EINTR when the process is continued instead of being restarted. less
-                        # ignores the failure and runs on a cooked terminal.
+                        # Open the start gate only once the pipeline owns the terminal.
                         with cmd_pipe_proc_reader.lend_terminal():
+                            with contextlib.suppress(OSError):
+                                os.write(new_stdout.fileno(), b"\n")
+                            gate_stack.pop_all()
                             cmd_pipe_proc_reader.wait_for_exit(0.2)
 
                 # Check if the pipe process already exited

@@ -6,8 +6,8 @@
       does. It had run in a separate session that never received the terminal, so Ctrl-Z and `fg`
       did not suspend and resume it together with cmd2. The program now owns the terminal as it
       starts, so a pager can set its terminal modes, and Ctrl-C and Ctrl-Z reach the whole pipeline.
-      Pipes started from a worker thread, or whose output cmd2 captures, still run in their own
-      session
+      Pipes started from a worker thread, or whose output does not go to the terminal, such as one
+      nested in a command whose own output is piped, still run in their own session
     - A `shell` command piped to an interactive program, such as `shell git log | less`, now joins
       the pipeline's job, so both processes receive Ctrl-C and Ctrl-Z
 

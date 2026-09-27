@@ -461,12 +461,16 @@ def test_pipeline_from_worker_thread_stays_isolated(tmp_path) -> None:
         process.wait(timeout=5)
 
 
-def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path) -> None:
+@pytest.mark.parametrize("parent_delay", [False, True])
+def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path, parent_delay) -> None:
     """A pager such as less puts the terminal in raw mode as it starts, before reading its pipe.
 
     It has to own the terminal by then. A background tcsetattr() stops it with SIGTTOU, and
     on macOS the call then fails with EINTR once it is continued rather than being restarted.
     less ignores that failure, leaving a cooked terminal: q needs Enter and keys are echoed.
+
+    However late cmd2 gets to hand the terminal over after starting the pipeline, the pager
+    must not start before it has.
     """
     import pty
     import termios
@@ -511,6 +515,13 @@ def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path) -> None:
         "        time.sleep(0.01)\n"
         "    return startup_wait(reader, timeout)\n"
         "utils.ProcReader.wait_for_exit = held_startup_wait\n"
+        f"if {parent_delay!r}:\n"
+        # Stall between starting the pipeline and handing it the terminal.
+        "    start_job_control = utils.ProcReader.manage_terminal\n"
+        "    def late_job_control(reader):\n"
+        "        time.sleep(0.5)\n"
+        "        return start_job_control(reader)\n"
+        "    utils.ProcReader.manage_terminal = late_job_control\n"
         "app = Cmd()\n"
         "app.prompt = 'TEST> '\n"
         "app.cmdloop()\n",
@@ -725,6 +736,101 @@ def test_shell_producer_keeps_the_terminal_after_its_consumer_exits(tmp_path, su
         wait_until(lambda: "TEST>" in transcript[start:])
         os.write(master, b"help quit\n")
         wait_until(lambda: "Exit this application" in transcript[start:])
+        os.write(master, b"quit\n")
+        wait_until(lambda: os.tcgetpgrp(master) == process.pid)
+    finally:
+        os.close(master)
+        process.kill()
+        process.wait(timeout=5)
+
+
+@pytest.mark.parametrize("producer", ["subprocess", "script_shell", "nested_pipe"])
+def test_pager_gets_the_terminal_for_output_written_to_the_descriptor(tmp_path, producer) -> None:
+    """A producer that writes to the pipe's descriptor itself, bypassing cmd2's writes, cannot trigger a lend per write.
+
+    Such as a subprocess given self.stdout, a shell command run by a script, or a pipeline nested
+    in a piped command. Once the pipe is full, the pager has to be lent the terminal to read the
+    keys that let it go on. Otherwise it stops with SIGTTIN while the producer waits on it forever.
+    """
+    import pty
+
+    shell = shutil.which("bash")
+    if shell is None:
+        pytest.skip("requires an interactive bash shell")
+    big = tmp_path / "big.py"
+    big.write_text("import sys\nsys.stdout.write('x' * 1048576)\n", encoding="utf-8")
+    pager = tmp_path / "pager.py"
+    pager.write_text(
+        "import os, signal, sys\n"
+        # Interactive bash leaves TTIN ignored in what it execs, which turns a background read into EIO.
+        "signal.signal(signal.SIGTTIN, signal.SIG_DFL)\n"
+        "sys.stdin.buffer.read(4096)\n"
+        "os.write(2, b'PAGER_READY\\n')\n"
+        # Like less, read the keyboard from an inherited terminal descriptor. Quit without
+        # draining the pipe, which the producer must then learn of.
+        "os.write(2, b'PAGER_GOT ' + os.read(2, 1) + b'\\n')\n",
+        encoding="utf-8",
+    )
+    python = shlex.quote(sys.executable)
+    script = tmp_path / "script.txt"
+    script.write_text(
+        f"!{python} {shlex.quote(str(big))}\n" if producer == "script_shell" else "big | cat\n", encoding="utf-8"
+    )
+    application = tmp_path / "application.py"
+    application.write_text(
+        "import subprocess, sys\n"
+        "from cmd2 import Cmd\n"
+        "class App(Cmd):\n"
+        "    def do_sub(self, _):\n"
+        f"        subprocess.run([sys.executable, {str(big)!r}], stdout=self.stdout, check=False)\n"
+        "    def do_big(self, _):\n"
+        "        self.poutput('y' * 1048576)\n"
+        "app = App()\n"
+        "app.prompt = 'TEST> '\n"
+        "app.cmdloop()\n",
+        encoding="utf-8",
+    )
+    master, slave = pty.openpty()
+    bootstrap = (
+        "import os, fcntl, termios; os.setsid(); "
+        "fcntl.ioctl(0, termios.TIOCSCTTY, 0); "
+        "os.execv(os.environ['TEST_SHELL'], ['bash', '--noprofile', '--norc', '-i'])"
+    )
+    env = dict(os.environ, TERM="xterm-256color", PS1="OUTER> ", TEST_SHELL=shell, SHELL=shell)
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
+    process = subprocess.Popen([sys.executable, "-c", bootstrap], stdin=slave, stdout=slave, stderr=slave, env=env)
+    os.close(slave)
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    transcript = ""
+
+    def wait_until(predicate):
+        nonlocal transcript
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if select.select([master], [], [], 0.05)[0]:
+                data = decoder.decode(os.read(master, 65536))
+                transcript += data
+                if "\x1b[6n" in data:
+                    # Answer prompt-toolkit's cursor-position request as a terminal would.
+                    os.write(master, b"\x1b[1;1R")
+            if predicate():
+                return
+        pytest.fail(f"terminal condition timed out:\n{transcript}\n{describe_processes(process.pid, master)}")
+
+    command = "sub" if producer == "subprocess" else f"run_script {shlex.quote(str(script))}"
+    try:
+        wait_until(lambda: "OUTER> " in transcript)
+        os.write(master, f"{python} {shlex.quote(str(application))}\n".encode())
+        wait_until(lambda: "TEST>" in transcript)
+        os.write(master, f"{command} | {python} {shlex.quote(str(pager))}\n".encode())
+        wait_until(lambda: "PAGER_READY\r\n" in transcript)
+        # The pipe fills once the pager has read its first chunk.
+        time.sleep(0.5)
+        start = len(transcript)
+        # The terminal is still canonical: this pager, unlike less, sets no modes.
+        os.write(master, b"q\n")
+        wait_until(lambda: "PAGER_GOT q" in transcript[start:])
+        wait_until(lambda: "TEST>" in transcript[start:])
         os.write(master, b"quit\n")
         wait_until(lambda: os.tcgetpgrp(master) == process.pid)
     finally:
