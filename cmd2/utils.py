@@ -668,6 +668,9 @@ class ProcReader:
         self._lends = 0
         self._terminal_lock = threading.RLock()
         self._job_resumed = threading.Event()
+        # Set while the consumer is stopped, waiting for the terminal to read the keyboard or
+        # set its modes. Only then does it need to be lent the terminal to go on.
+        self._consumer_waiting = threading.Event()
         # Set by a thread that relays a pipeline's stop to cmd2's own job. Otherwise Ctrl-Z
         # reached cmd2 directly, and cmd2 stops the pipeline itself.
         self._relaying_stop = False
@@ -931,6 +934,7 @@ class ProcReader:
             if os.WSTOPSIG(status) in (signal.SIGTTIN, signal.SIGTTOU):
                 # Command code owns the terminal between pipe writes. Defer
                 # consumer terminal access until the next write or final wait.
+                self._consumer_waiting.set()
                 while True:
                     self._terminal_available.wait(0.1)
                     with self._terminal_lock:
@@ -940,6 +944,7 @@ class ProcReader:
                         pid, pending_status = os.waitpid(self._proc.pid, os.WNOHANG | os.WUNTRACED)
                         if pid:
                             if not os.WIFSTOPPED(pending_status):
+                                self._consumer_waiting.clear()
                                 self._proc.returncode = os.waitstatus_to_exitcode(pending_status)
                                 return
                             # A newer stop: the one a suspension would deal with.
@@ -948,6 +953,7 @@ class ProcReader:
                         # Do not turn that ordinary handoff into a job suspension.
                         if not self._terminal_available.is_set():
                             continue
+                        self._consumer_waiting.clear()
                         foreground = os.tcgetpgrp(terminal_fd)
                         if foreground == self._proc.pid:
                             # A group that died since is reaped by the next waitpid.
@@ -1156,7 +1162,10 @@ class _DescriptorRelay:
         return int(struct.unpack("i", fcntl.ioctl(self._in_fd, termios.FIONREAD, b"\0" * 4))[0])
 
     def _producer_blocked(self) -> bool:
-        """Whether the relay's pipe is full, which means a producer is waiting on the consumer."""
+        """Whether the relay's pipe is full, which suggests a producer is waiting on the consumer.
+
+        Only suggests: a producer that has just exited can leave the pipe full.
+        """
         import select
 
         with self._lock:
@@ -1191,12 +1200,6 @@ class _DescriptorRelay:
         lending = False
         try:
             while True:
-                with self._lock:
-                    idle = not self._unread()
-                if idle and lending:
-                    # No producer is waiting. Let command code have the terminal back.
-                    lend.close()
-                    lending = False
                 # Wait for output outside the lock, then take and count it under the lock. Output
                 # taken out of the pipe but not yet counted would look passed on to idle() and
                 # flush(), and cmd2's next write could overtake it.
@@ -1216,12 +1219,16 @@ class _DescriptorRelay:
                         with self._lock:
                             self._sent += count
                             self._lock.notify_all()
-                    elif self._producer_blocked():
-                        if not lending:
-                            lend.enter_context(self._reader._lend_terminal())
-                            lending = True
-                    elif lending:
-                        # A producer that stopped writing does not need the consumer to go on.
+                    elif not lending and self._reader._consumer_waiting.is_set() and self._producer_blocked():
+                        # Lend only to a consumer that is stopped waiting for the terminal. One that
+                        # never touches it, however slowly it reads, drains the pipe without a lend.
+                        # So a lend never outlives a producer that finishes as the consumer reads.
+                        lend.enter_context(self._reader._lend_terminal())
+                        lending = True
+                    if lending and not self._producer_blocked():
+                        # A producer that is not waiting does not need the consumer to go on. It may
+                        # have finished, and command code that resumes must own the terminal: a read
+                        # from the background would stop cmd2.
                         lend.close()
                         lending = False
         except OSError:

@@ -472,6 +472,53 @@ def test_pipeline_writer_relay_lends_only_while_a_producer_waits(pauses) -> None
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX pipes")
+def test_pipeline_writer_relay_lends_only_to_a_consumer_waiting_for_the_terminal() -> None:
+    """A slow consumer that never reads the keyboard drains the pipe without a lend.
+
+    A full relay pipe only suggests a waiting producer: one that has just finished can leave it
+    full. A lend it does not need would then outlive the producer, and command code that reads the
+    terminal next would do so from the background.
+    """
+    import subprocess
+    import threading
+
+    payload = b"x" * 262144
+    read_fd, write_fd = os.pipe()
+    received = bytearray()
+    lends = []
+
+    @contextlib.contextmanager
+    def lend_terminal():
+        lends.append(1)
+        yield
+
+    def drain() -> None:
+        # So much slower than the producer that the relay's pipe fills up and its writes stall
+        while chunk := os.read(read_fd, 16384):
+            received.extend(chunk)
+            time.sleep(0.15)
+
+    reader = mock.Mock(_lend_terminal=lend_terminal, _consumer_waiting=threading.Event())
+    writer = cu._PipelineWriter(write_fd, reader)
+    consumer = threading.Thread(target=drain)
+    consumer.start()
+    try:
+        child = subprocess.run(
+            [sys.executable, "-c", f"import sys; sys.stdout.buffer.write(b'x' * {len(payload)})"],
+            stdout=writer.fileno(),
+            check=False,
+            timeout=30,
+        )
+        assert child.returncode == 0
+    finally:
+        writer.close()
+        consumer.join(30)
+        os.close(read_fd)
+    assert bytes(received) == payload
+    assert not lends
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX pipes")
 def test_pipeline_writer_relay_leaves_the_terminal_after_a_producer_finishes() -> None:
     import subprocess
 
@@ -708,6 +755,8 @@ def test_proc_reader_resumes_terminal_access_after_handoff(stop_signal, expired_
 
     def handoff(timeout):
         assert timeout == 0.1
+        # The consumer is stopped, waiting for the terminal.
+        assert reader._consumer_waiting.is_set()
         if next(handoffs):
             reader._terminal_available.set()
         else:
@@ -733,6 +782,8 @@ def test_proc_reader_resumes_terminal_access_after_handoff(stop_signal, expired_
     foreground.assert_not_called()
     assert proc.returncode == 0
     assert reader._process_done.is_set()
+    # Continued, it no longer waits.
+    assert not reader._consumer_waiting.is_set()
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")

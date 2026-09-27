@@ -1195,3 +1195,87 @@ def test_ctrl_z_with_a_shell_producer_in_the_pipeline(tmp_path, launcher, consum
         os.close(master)
         process.kill()
         process.wait(timeout=5)
+
+
+@pytest.mark.parametrize("launcher", ["plain", "exec"])
+def test_command_reads_the_terminal_after_a_subprocess_wrote_to_a_slow_pipe(tmp_path, launcher) -> None:
+    """Command code resumes in the foreground once a subprocess writing to the pipe has finished.
+
+    Its output can still be on its way to a slow consumer. The consumer never reads the keyboard,
+    so it is never lent the terminal: were it lent, the command's next terminal read would stop
+    cmd2 with SIGTTIN, or fail with EIO in an orphaned session.
+    """
+    import pty
+
+    shell = shutil.which("bash")
+    if shell is None:
+        pytest.skip("requires an interactive bash shell")
+    python = shlex.quote(sys.executable)
+    producer = tmp_path / "producer.py"
+    producer.write_text("import sys\nsys.stdout.write('x' * 262144)\n", encoding="utf-8")
+    slow = tmp_path / "slow.py"
+    slow.write_text("import sys, time\nwhile sys.stdin.buffer.read(16384):\n    time.sleep(0.15)\n", encoding="utf-8")
+    application = tmp_path / "application.py"
+    application.write_text(
+        "import os, subprocess, sys\n"
+        "from cmd2 import Cmd\n"
+        "class App(Cmd):\n"
+        "    def do_produce(self, _):\n"
+        f"        subprocess.run([sys.executable, {str(producer)!r}], stdout=self.stdout, check=True)\n"
+        "        os.write(2, b'ASKING\\n')\n"
+        "        try:\n"
+        "            os.write(2, f'ANSWER={input()}\\n'.encode())\n"
+        "        except (OSError, EOFError) as error:\n"
+        "            os.write(2, f'READ_FAILED {error!r}\\n'.encode())\n"
+        "app = App()\n"
+        "app.prompt = 'TEST> '\n"
+        "app.cmdloop()\n",
+        encoding="utf-8",
+    )
+    master, slave = pty.openpty()
+    bootstrap = (
+        "import os, fcntl, termios; os.setsid(); "
+        "fcntl.ioctl(0, termios.TIOCSCTTY, 0); "
+        "os.execv(os.environ['TEST_SHELL'], ['bash', '--noprofile', '--norc', '-i'])"
+    )
+    env = dict(os.environ, TERM="xterm-256color", PS1="OUTER> ", TEST_SHELL=shell, SHELL=shell)
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
+    process = subprocess.Popen([sys.executable, "-c", bootstrap], stdin=slave, stdout=slave, stderr=slave, env=env)
+    os.close(slave)
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    transcript = ""
+
+    def wait_until(predicate):
+        nonlocal transcript
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
+            if select.select([master], [], [], 0.05)[0]:
+                data = decoder.decode(os.read(master, 65536))
+                transcript += data
+                if "\x1b[6n" in data:
+                    # Answer prompt-toolkit's cursor-position request as a terminal would.
+                    os.write(master, b"\x1b[1;1R")
+            if predicate():
+                return
+        pytest.fail(f"terminal condition timed out:\n{transcript}\n{describe_processes(process.pid, master)}")
+
+    try:
+        wait_until(lambda: "OUTER> " in transcript)
+        prefix = "exec " if launcher == "exec" else ""
+        os.write(master, f"{prefix}{python} {shlex.quote(str(application))}\n".encode())
+        wait_until(lambda: "TEST>" in transcript)
+        start = len(transcript)
+        os.write(master, f"produce | {python} {shlex.quote(str(slow))}\n".encode())
+        # The subprocess finishes long before the consumer has read its output.
+        wait_until(lambda: "ASKING\r\n" in transcript[start:])
+        os.write(master, b"answer\n")
+        wait_until(
+            lambda: (
+                "ANSWER=answer" in transcript[start:] or "READ_FAILED" in transcript[start:] or "Stopped" in transcript[start:]
+            )
+        )
+        assert "ANSWER=answer" in transcript[start:]
+    finally:
+        os.close(master)
+        process.kill()
+        process.wait(timeout=5)
