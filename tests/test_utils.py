@@ -1073,6 +1073,96 @@ def test_pipeline_writer_cancels_interrupted_producer_but_not_protected_code(ret
         writer.write(b"output")
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal pipeline writer")
+def test_pipeline_writer_does_not_cancel_a_worker_thread() -> None:
+    """Ctrl-C interrupts only the main thread. A worker writing to the pipe gets the BrokenPipeError."""
+    import threading
+
+    reader = cu.ProcReader(mock.Mock(stdout=None, stderr=None, returncode=-signal.SIGINT), sys.stdout, sys.stderr)
+    read_fd, write_fd = os.pipe()
+    os.close(read_fd)
+    raised = []
+
+    def write() -> None:
+        try:
+            writer.write(b"output")
+        except (BrokenPipeError, KeyboardInterrupt) as error:
+            raised.append(type(error))
+
+    with cu._PipelineWriter(write_fd, reader) as writer:
+        worker = threading.Thread(target=write)
+        worker.start()
+        worker.join(5)
+    assert raised == [BrokenPipeError]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
+@pytest.mark.parametrize("producer", [None, "running", "reaped"])
+def test_proc_reader_signals_a_reaped_pipeline_only_through_its_producer(producer) -> None:
+    """Once the watcher has reaped the consumer, its ID may belong to an unrelated process group.
+
+    Ctrl-Z stops and continues the pipeline's group only through a shell producer that joined
+    it and is still running.
+    """
+    reader = cu.ProcReader(mock.Mock(pid=123, stdout=None, stderr=None, returncode=0), sys.stdout, sys.stderr)
+    if producer is not None:
+        cu.ProcReader(
+            mock.Mock(pid=789, stdout=None, stderr=None, returncode=None if producer == "running" else 0),
+            sys.stdout,
+            sys.stderr,
+            pipeline=reader,
+        )
+    with mock.patch("os.getpgid", return_value=123) as getpgid, mock.patch("os.killpg") as killpg:
+        signaled = reader._signal_pipeline(signal.SIGSTOP)
+    if producer == "running":
+        assert signaled
+        getpgid.assert_called_once_with(789)
+        killpg.assert_called_once_with(123, signal.SIGSTOP)
+    else:
+        assert not signaled
+        killpg.assert_not_called()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+def test_proc_reader_lend_keeps_the_exception_in_flight_after_a_hangup() -> None:
+    """After a hangup, taking the terminal back fails. That must not replace SIGHUP's SystemExit."""
+    reader = cu.ProcReader(mock.Mock(pid=123, stdout=None, stderr=None, returncode=None), sys.stdout, sys.stderr)
+    reader._terminal_fd = 10
+    reader._original_group = 456
+    with (
+        mock.patch.object(reader, "_set_foreground_group"),
+        mock.patch("os.tcgetpgrp", side_effect=OSError(errno.EIO, "hung up")),
+        pytest.raises(SystemExit),
+        reader._lend_terminal(),
+    ):
+        raise SystemExit(129)
+    assert not reader._terminal_available.is_set()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+def test_proc_reader_suspend_survives_failed_terminal_handoffs() -> None:
+    """A handoff fails once the terminal or the pipeline's group is gone. The Ctrl-Z handler must not raise."""
+    reader = cu.ProcReader(mock.Mock(pid=123, stdout=None, stderr=None, returncode=None), sys.stdout, sys.stderr)
+    reader._terminal_fd = 10
+    reader._original_group = 456
+    reader._terminal_available.set()
+    with (
+        mock.patch("signal.getsignal", return_value=signal.SIG_DFL),
+        mock.patch("signal.signal") as set_handler,
+        mock.patch("signal.raise_signal") as stop,
+        mock.patch("os.killpg"),
+        mock.patch("os.tcgetpgrp", side_effect=[reader._proc.pid, reader._original_group]),
+        mock.patch("threading.Thread"),
+        mock.patch.object(reader, "_set_foreground_group", side_effect=OSError(errno.EPERM, "gone")),
+        reader._manage_terminal(),
+    ):
+        handler = set_handler.call_args.args[1]
+        handler(signal.SIGTSTP, None)
+    stop.assert_called_once_with(signal.SIGTSTP)
+    assert reader._job_resumed.is_set()
+    assert not reader._suspension_lock.locked()
+
+
 @pytest.fixture
 def context_flag():
     return cu.ContextFlag()

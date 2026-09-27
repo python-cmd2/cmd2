@@ -1965,7 +1965,8 @@ class Cmd:
                     soft_wrap=soft_wrap,
                     **(rich_print_kwargs if rich_print_kwargs is not None else {}),
                 )
-            output_bytes = capture.get().encode("utf-8", "replace")
+            # As for a pipe: on Windows, the pager decodes with the console's code page.
+            output_bytes = capture.get().encode(utils._pipe_encoding(), "replace")
 
             # Prevent KeyboardInterrupts while in the pager. The pager application will
             # still receive the SIGINT since it is in the same process group as us.

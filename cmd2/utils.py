@@ -701,14 +701,8 @@ class ProcReader:
             if self._proc.returncode is None:
                 with contextlib.suppress(ProcessLookupError):
                     group_id = os.getpgid(self._proc.pid)
-            # Pipelines lead their own group. A shell command that joined it, such as
-            # `shell sleep 100 | head -1`, can outlive the reaped consumer. Find the group
-            # through that command, which cmd2 has not reaped yet. Never signal the
-            # consumer's own ID: once its group is gone, the system may reuse it.
-            for producer in self._joined:
-                if group_id is None and producer.returncode is None:
-                    with contextlib.suppress(ProcessLookupError):
-                        group_id = os.getpgid(producer.pid)
+            if group_id is None:
+                group_id = self._joined_group()
             if group_id is None:
                 return
             # Never re-signal our own group: other ProcReader callers may share it
@@ -737,14 +731,31 @@ class ProcReader:
             return None
         return self._proc.pid
 
+    def _joined_group(self) -> int | None:
+        """Process group of the pipeline's job, found through a shell producer that joined it.
+
+        Pipelines lead their own group. A shell command that joined it, such as
+        `shell sleep 100 | head -1`, can outlive the reaped consumer. cmd2 has not reaped that
+        command yet, so its group is certain. Never use the consumer's own ID once it is
+        reaped: the system may give it to an unrelated process.
+        """
+        for producer in self._joined:
+            if producer.returncode is None:
+                with contextlib.suppress(ProcessLookupError):
+                    return os.getpgid(producer.pid)
+        return None
+
     def _signal_pipeline(self, signum: int) -> bool:
         """Signal the pipeline's process group. Return whether any process could be signaled.
 
         The group may be gone, or hold only processes cmd2 may not signal: a zombie on
         macOS, or a program running as another user, such as sudo.
         """
+        group_id = self._proc.pid if self._proc.returncode is None else self._joined_group()
+        if group_id is None:
+            return False
         try:
-            os.killpg(self._proc.pid, signum)
+            os.killpg(group_id, signum)
         except (ProcessLookupError, PermissionError):
             return False
         return True
@@ -780,8 +791,11 @@ class ProcReader:
                     if callable(previous_handler):
                         previous_handler(signum, frame)
                     return
-                if os.tcgetpgrp(terminal_fd) == self._proc.pid:
-                    self._set_foreground_group(terminal_fd, self._original_group)
+                # A signal handler must not raise into whatever the main thread was doing. A
+                # handoff fails only once the terminal or the pipeline's group is gone.
+                with contextlib.suppress(OSError):
+                    if os.tcgetpgrp(terminal_fd) == self._proc.pid:
+                        self._set_foreground_group(terminal_fd, self._original_group)
                 # Ctrl-Z reached only cmd2's group, which owns the terminal between pipe writes.
                 # Stop the pipeline too, as a shell stops its whole job. Should another thread
                 # be relaying a stop already, it has stopped the pipeline.
@@ -800,8 +814,9 @@ class ProcReader:
                     signal.signal(signal.SIGTSTP, suspend_job)
             finally:
                 try:
-                    if self._terminal_available.is_set() and os.tcgetpgrp(terminal_fd) == self._original_group:
-                        self._set_foreground_group(terminal_fd, self._proc.pid)
+                    with contextlib.suppress(OSError):
+                        if self._terminal_available.is_set() and os.tcgetpgrp(terminal_fd) == self._original_group:
+                            self._set_foreground_group(terminal_fd, self._proc.pid)
                 finally:
                     if own_suspension:
                         self._signal_pipeline(signal.SIGCONT)
@@ -856,8 +871,11 @@ class ProcReader:
                     # to end takes the terminal back, or the producer would stop with SIGTTIN.
                     if not self._lends:
                         self._terminal_available.clear()
-                        if os.tcgetpgrp(terminal_fd) == self._proc.pid:
-                            self._set_foreground_group(terminal_fd, self._original_group)
+                        # This fails only once the terminal is gone, as after a hangup. It must
+                        # not replace an exception in flight, such as the SystemExit of SIGHUP.
+                        with contextlib.suppress(OSError):
+                            if os.tcgetpgrp(terminal_fd) == self._proc.pid:
+                                self._set_foreground_group(terminal_fd, self._original_group)
         finally:
             signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
 
@@ -1297,8 +1315,9 @@ class _PipelineWriter(io.FileIO):
             # normally catches BrokenPipeError. Raise here rather than signaling
             # asynchronously: a late signal could interrupt redirection cleanup.
             # Code that cmd2's SIGINT handler would not interrupt, such as that
-            # cleanup, gets the BrokenPipeError instead.
-            if self._interruptible():
+            # cleanup, gets the BrokenPipeError instead. So does any thread but the
+            # main one, which Ctrl-C does not interrupt either.
+            if threading.current_thread() is threading.main_thread() and self._interruptible():
                 with contextlib.suppress(subprocess.TimeoutExpired):
                     self._reader._wait_for_exit(0.2)
                 if self._reader._proc.returncode in (-signal.SIGINT, 128 + signal.SIGINT):
