@@ -591,15 +591,19 @@ def _pipe_encoding() -> str:
 
 
 @contextlib.contextmanager
-def _unblocked_sigttou() -> Iterator[None]:
-    """Let a child started inside :meth:`ProcReader._lend_terminal` keep normal job control.
+def _sigttou_mask(*, block: bool) -> Iterator[None]:
+    """Block or unblock SIGTTOU for the calling thread, then restore its signal mask.
 
-    The lend blocks SIGTTOU for its thread, and a child inherits that mask for life. Spawning
-    touches no terminal, so unblocking it for the spawn alone cannot stop this thread.
+    Blocked, SIGTTOU cannot stop a thread that changes the terminal from the background, as a
+    handoff does, and the mask is the thread's own, so other threads keep normal job control.
+    A child inherits the mask for life, though, so a child started during a lend is spawned
+    with SIGTTOU unblocked. Spawning touches no terminal, so that cannot stop this thread.
+
+    :param block: True to block SIGTTOU, False to unblock it
     """
     import signal
 
-    previous_mask = signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGTTOU})
+    previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK if block else signal.SIG_UNBLOCK, {signal.SIGTTOU})
     try:
         yield
     finally:
@@ -672,6 +676,8 @@ class ProcReader:
         # already dealt with: see _suspend_with_cmd2().
         self._suspension_lock = threading.Lock()
         self._suspensions = 0
+        # Set once job control has ended, which the watcher may outlive: see _manage_terminal()
+        self._detached = False
         if terminal_fd is not None:
             self._original_group = os.tcgetpgrp(terminal_fd)
 
@@ -763,13 +769,8 @@ class ProcReader:
     @staticmethod
     def _set_foreground_group(terminal_fd: int, group_id: int) -> None:
         """Transfer the terminal without stopping this background thread with SIGTTOU."""
-        import signal
-
-        previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTTOU})
-        try:
+        with _sigttou_mask(block=True):
             os.tcsetpgrp(terminal_fd, group_id)
-        finally:
-            signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
 
     @contextlib.contextmanager
     def _manage_terminal(self) -> Iterator[None]:
@@ -829,7 +830,17 @@ class ProcReader:
             threading.Thread(name="pipe_job", target=self._wait_for_job, args=(terminal_fd,), daemon=True).start()
             yield
         finally:
-            signal.signal(signal.SIGTSTP, previous_handler)
+            # The watcher may outlive job control, if waiting for the pipeline failed. Without
+            # suspend_job(), a stop it relayed would stop cmd2 with nothing to resume either.
+            # So detach it first, under the lock a suspension holds, and it relays no more. Wait
+            # in short polls: a suspension in progress needs this thread to run suspend_job().
+            while not self._suspension_lock.acquire(timeout=0.1):
+                pass
+            try:
+                self._detached = True
+                signal.signal(signal.SIGTSTP, previous_handler)
+            finally:
+                self._suspension_lock.release()
 
     @contextlib.contextmanager
     def _lend_terminal(self) -> Iterator[None]:
@@ -839,8 +850,6 @@ class ProcReader:
         reads through input(), getpass(), or third-party libraries. Lending during
         writes lets an interactive consumer drain a full pipe without deadlocking.
         """
-        import signal
-
         terminal_fd = self._terminal_fd
         if terminal_fd is None or self._proc.returncode is not None:
             yield
@@ -848,9 +857,8 @@ class ProcReader:
         # While the consumer owns the terminal, a signal handler run on this thread may still
         # write diagnostics to it. Block SIGTTOU for the lend only: a signal mask survives fork
         # and exec, so blocking it for the whole pipeline would leak into every child the
-        # command starts. A child started during a lend must unblock it; see _unblocked_sigttou().
-        previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTTOU})
-        try:
+        # command starts. A child started during a lend must unblock it; see _sigttou_mask().
+        with _sigttou_mask(block=True):
             with self._terminal_lock:
                 try:
                     self._set_foreground_group(terminal_fd, self._proc.pid)
@@ -876,8 +884,6 @@ class ProcReader:
                         with contextlib.suppress(OSError):
                             if os.tcgetpgrp(terminal_fd) == self._proc.pid:
                                 self._set_foreground_group(terminal_fd, self._original_group)
-        finally:
-            signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
 
     def _wait_for_job(self, terminal_fd: int) -> None:
         """Reap a foreground pipeline and relay its stops to the outer shell's job.
@@ -970,7 +976,7 @@ class ProcReader:
         while not self._suspension_lock.acquire(timeout=0.1):
             pass
         try:
-            if self._suspensions != seen:
+            if self._suspensions != seen or self._detached:
                 return
             with self._terminal_lock:
                 if os.tcgetpgrp(terminal_fd) == self._proc.pid:
@@ -1265,6 +1271,20 @@ class _PipelineWriter(io.FileIO):
             self._relay = _DescriptorRelay(os.dup(super().fileno()), self._reader)
         return self._relay.write_fd
 
+    def feeds(self, pipeline: ProcReader) -> bool:
+        """Whether this is the pipe to pipeline's consumer."""
+        return self._reader is pipeline
+
+    def producer_fileno(self) -> int:
+        """Return the consumer's pipe itself, for a shell producer that joins the pipeline's job.
+
+        Such a producer runs with the terminal lent for as long as it runs, so it needs no relay.
+        Output producers already wrote to the relay goes first, which needs that lend too.
+        """
+        if self._relay is not None:
+            self._relay.flush()
+        return super().fileno()
+
     def close(self) -> None:
         """Close the pipe. The consumer sees EOF once every producer has closed its descriptor too."""
         try:
@@ -1324,6 +1344,12 @@ class _PipelineWriter(io.FileIO):
                     raise KeyboardInterrupt from None
             raise
         return written
+
+
+def _pipeline_writer_of(stream: object) -> _PipelineWriter | None:
+    """Return the terminal pipeline's pipe a text stream writes to, or None if it writes to anything else."""
+    raw = getattr(getattr(stream, "buffer", None), "raw", None)
+    return raw if isinstance(raw, _PipelineWriter) else None
 
 
 class ContextFlag:

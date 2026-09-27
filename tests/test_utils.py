@@ -603,6 +603,26 @@ def test_pipeline_writer_lends_every_write_once_a_relay_exists(relaying) -> None
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX pipes")
+def test_pipeline_writer_gives_a_joining_producer_the_consumers_pipe_after_relayed_output() -> None:
+    """A shell producer that joins the pipeline writes to the consumer's pipe itself, after what went through the relay."""
+    read_fd, write_fd = os.pipe()
+    writer = cu._PipelineWriter(write_fd, mock.Mock(_lend_terminal=contextlib.nullcontext))
+    try:
+        # Something already created the relay and wrote through it.
+        os.write(writer.fileno(), b"relayed ")
+        producer_fd = writer.producer_fileno()
+        assert producer_fd != writer.fileno()
+        os.write(producer_fd, b"direct")
+    finally:
+        writer.close()
+    received = b""
+    while chunk := os.read(read_fd, 65536):
+        received += chunk
+    os.close(read_fd)
+    assert received == b"relayed direct"
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX pipes")
 def test_pipeline_writer_relay_passes_consumer_exit_to_the_producer() -> None:
     import subprocess
 
@@ -946,12 +966,52 @@ def test_proc_reader_direct_suspend_while_another_thread_relays_one() -> None:
     ):
         handler = set_handler.call_args.args[1]
         handler(signal.SIGTSTP, None)
+        # The relaying thread counts its suspension and releases the lock.
+        assert reader._suspensions == 0
+        assert reader._suspension_lock.locked()
+        reader._suspension_lock.release()
     assert sent.call_args_list == [mock.call(reader._original_group, signal.SIGTSTP)]
     stop.assert_called_once_with(signal.SIGTSTP)
-    # The relaying thread counts its suspension and releases the lock.
-    assert reader._suspensions == 0
-    assert reader._suspension_lock.locked()
     assert reader._job_resumed.is_set()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+def test_proc_reader_watcher_relays_nothing_once_job_control_ends() -> None:
+    """If waiting for the pipeline failed, its watcher may outlive job control and see a stop later.
+
+    Relaying it would stop cmd2, whose SIGTSTP handler is back to the default, with nothing to
+    resume either. Job control ends only once a suspension in progress has finished.
+    """
+    import threading
+
+    reader = cu.ProcReader(mock.Mock(pid=123, stdout=None, stderr=None, returncode=None), sys.stdout, sys.stderr)
+    reader._terminal_fd = 10
+    reader._original_group = 456
+    previous = mock.Mock()
+    ended = threading.Event()
+    # Patched below, so that _manage_terminal() starts no real watcher
+    real_thread = threading.Thread
+    with (
+        mock.patch("signal.getsignal", return_value=previous),
+        mock.patch("signal.signal") as set_handler,
+        mock.patch("threading.Thread"),
+    ):
+        job_control = reader._manage_terminal()
+        job_control.__enter__()
+        # A suspension is in progress.
+        assert reader._suspension_lock.acquire(blocking=False)
+        ending = real_thread(target=lambda: (job_control.__exit__(None, None, None), ended.set()))
+        ending.start()
+        assert not ended.wait(0.3)
+        reader._suspension_lock.release()
+        assert ended.wait(5)
+        ending.join()
+    assert set_handler.call_args_list[-1] == mock.call(signal.SIGTSTP, previous)
+    assert reader._detached
+    with mock.patch("os.killpg") as killpg, mock.patch("signal.pthread_kill") as relay:
+        reader._suspend_with_cmd2(10, seen=reader._suspensions)
+    killpg.assert_not_called()
+    relay.assert_not_called()
 
 
 def test_proc_reader_captured_pipeline_needs_no_terminal() -> None:

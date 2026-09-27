@@ -1985,17 +1985,12 @@ class Cmd:
                 # Attempt to restore terminal settings and foreground process group.
                 if self._initial_termios_settings is not None and self.stdin.isatty():  # type: ignore[unreachable]
                     try:  # type: ignore[unreachable]
-                        import signal
                         import termios
 
-                        # Ensure we are in the foreground process group
+                        # Ensure we are in the foreground process group, without being stopped
+                        # with SIGTTOU for asking from the background
                         if hasattr(os, "tcsetpgrp") and hasattr(os, "getpgrp"):
-                            # Ignore SIGTTOU to avoid getting stopped when calling tcsetpgrp from background
-                            old_handler = signal.signal(signal.SIGTTOU, signal.SIG_IGN)
-                            try:
-                                os.tcsetpgrp(self.stdin.fileno(), os.getpgrp())
-                            finally:
-                                signal.signal(signal.SIGTTOU, old_handler)
+                            utils.ProcReader._set_foreground_group(self.stdin.fileno(), os.getpgrp())
 
                         # Restore terminal attributes
                         if self._initial_termios_settings is not None:
@@ -3421,7 +3416,6 @@ class Cmd:
                 if proc.returncode is not None:
                     if cmd_pipe_proc_reader is not None:
                         cmd_pipe_proc_reader.wait()
-                    subproc_stdin.close()
                     new_stdout.close()
                     raise RedirectionError(f"Pipe process exited with code {proc.returncode} before command could run")
                 redir_saved_state.redirecting = True
@@ -5009,37 +5003,45 @@ class Cmd:
         # command writes into that pipe itself rather than through self.stdout, which lends
         # the terminal per write. Run the command inside the pipeline's job instead, for as
         # long as it runs: the consumer keeps the terminal, and Ctrl-C and Ctrl-Z reach both
-        # processes, as they would in a shell pipeline.
-        # A worker thread's command stays out of it: job control relays stops to the main
-        # thread, and only the main thread may change signal handlers.
+        # processes, as they would in a shell pipeline. Only a command whose output goes to
+        # that pipeline joins it. A worker thread's command stays out of it too: job control
+        # relays stops to the main thread, and only the main thread may change signal handlers.
         pipeline = self._cur_pipe_proc_reader
-        pipeline_group = None
+        writer = utils._pipeline_writer_of(self.stdout)
+        joined_writer = None
         if (
             pipeline is not None
+            and writer is not None
+            and writer.feeds(pipeline)
             and threading.current_thread() is threading.main_thread()
-            and not isinstance(self.stdout, utils.StdSim)  # type: ignore[unreachable]
+            and pipeline._terminal_group is not None
         ):
-            pipeline_group = pipeline._terminal_group
+            joined_writer = writer
 
         # Prevent KeyboardInterrupts while in the shell process. The shell process still
         # receives the SIGINT: it is in our process group or in the foreground pipeline's.
         with self.sigint_protection, contextlib.ExitStack() as terminal_stack:
-            if pipeline is not None and pipeline_group is not None:
-                kwargs["process_group"] = pipeline_group
+            if pipeline is not None and joined_writer is not None:
+                kwargs["process_group"] = pipeline._terminal_group
                 terminal_stack.enter_context(pipeline._lend_terminal())
             while True:
                 try:
                     # For any stream that is a StdSim, we will use a pipe so we can capture its output.
-                    # A command joining the pipeline is spawned inside the lend, which blocks SIGTTOU,
-                    # and with the job's Ctrl-Z behavior.
-                    joining = "process_group" in kwargs
+                    # A command joining the pipeline writes to its consumer's pipe directly, after what
+                    # cmd2 wrote before it. It is spawned inside the lend, which blocks SIGTTOU, and
+                    # with the job's Ctrl-Z behavior.
+                    if joined_writer is not None:
+                        self.stdout.flush()
+                        stdout: Any = joined_writer.producer_fileno()
+                    else:
+                        stdout = subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout  # type: ignore[unreachable]
                     with (
-                        utils._unblocked_sigttou() if joining else contextlib.nullcontext(),
-                        utils._session_leader_job_stops() if joining else contextlib.nullcontext(),
+                        utils._sigttou_mask(block=False) if joined_writer is not None else contextlib.nullcontext(),
+                        utils._session_leader_job_stops() if joined_writer is not None else contextlib.nullcontext(),
                     ):
                         proc = subprocess.Popen(  # noqa: S602
                             expanded_command,
-                            stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]
+                            stdout=stdout,
                             stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
                             shell=True,
                             **kwargs,
@@ -5047,8 +5049,10 @@ class Cmd:
                     break
                 except PermissionError:
                     # The pipeline exited before the command could join its group.
-                    if kwargs.pop("process_group", None) is None:
+                    if joined_writer is None:
                         raise
+                    joined_writer = None
+                    del kwargs["process_group"]
                     # The retry runs in our own group, so take the terminal back from the dead
                     # pipeline first. Its watcher left it lent, and the command would otherwise
                     # stop with SIGTTIN on its first terminal read, with nothing to resume it.
@@ -5058,7 +5062,7 @@ class Cmd:
             # main thread runs Python signal handlers, and the job-control stop the pipeline's
             # watcher relays may wake another thread. Once the consumer and its watcher are
             # gone, the same wait relays the command's own stops, such as Ctrl-Z.
-            joined_pipeline = pipeline if "process_group" in kwargs else None
+            joined_pipeline = pipeline if joined_writer is not None else None
             proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr, pipeline=joined_pipeline)
             if joined_pipeline is not None:
                 proc_reader._wait_for_exit()

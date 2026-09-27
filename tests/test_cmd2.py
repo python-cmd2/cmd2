@@ -430,6 +430,21 @@ def test_shell_manual_call(base_app) -> None:
     base_app.do_shell(cmd)
 
 
+def pipeline_stdout(pipeline) -> tuple[io.TextIOWrapper, int]:
+    """Return a stdout that writes to pipeline's consumer, as cmd2 builds one, and the pipe's read end."""
+    read_fd, write_fd = os.pipe()
+    writer = cmd2.utils._PipelineWriter(write_fd, pipeline)
+    return io.TextIOWrapper(io.BufferedWriter(writer), encoding="utf-8"), read_fd
+
+
+def read_all(fd: int) -> bytes:
+    data = b""
+    while chunk := os.read(fd, 65536):
+        data += chunk
+    os.close(fd)
+    return data
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
 def test_shell_falls_back_to_own_group_when_pipeline_exited(base_app, tmp_path) -> None:
     import contextlib
@@ -459,12 +474,13 @@ def test_shell_falls_back_to_own_group_when_pipeline_exited(base_app, tmp_path) 
         spawned_while_lent.append(bool(lent))
         return real_popen(*args, **kwargs)
 
-    base_app._cur_pipe_proc_reader = mock.Mock(_terminal_group=leader.pid, _lend_terminal=_lend_terminal)
-    with (tmp_path / "output").open("w+") as output, mock.patch("subprocess.Popen", popen):
-        base_app.stdout = output
+    pipeline = mock.Mock(_terminal_group=leader.pid, _lend_terminal=_lend_terminal)
+    base_app._cur_pipe_proc_reader = pipeline
+    base_app.stdout, read_fd = pipeline_stdout(pipeline)
+    with mock.patch("subprocess.Popen", popen):
         base_app.do_shell("echo joined")
-        output.seek(0)
-        assert output.read() == "joined\n"
+    base_app.stdout.close()
+    assert read_all(read_fd) == b"joined\n"
     assert base_app.last_result == 0
     assert spawned_while_lent == [True, False]
 
@@ -997,6 +1013,49 @@ def test_terminal_pipe_start_gate_uses_the_platform_shell(redirection_app, mocke
     assert f"exec {shell} -c less" in popen.call_args.args[0]
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
+@pytest.mark.parametrize("stdout", ["pipeline", "file"])
+def test_shell_joins_only_the_pipeline_it_writes_to(base_app, tmp_path, stdout) -> None:
+    """A shell command joins the pipeline's job only when its output goes to that pipeline.
+
+    Then it writes to the consumer's pipe itself: it holds the terminal lent for as long as it
+    runs, so it needs no relay. A command whose output goes elsewhere, such as a file a
+    command redirected self.stdout to, has no reason to share the consumer's terminal.
+    """
+    leader = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"], process_group=0)
+    spawned = []
+    real_popen = subprocess.Popen
+
+    def popen(*args, **kwargs):
+        spawned.append(kwargs)
+        return real_popen(*args, **kwargs)
+
+    pipeline = mock.Mock(_terminal_group=leader.pid, _lend_terminal=contextlib.nullcontext)
+    base_app._cur_pipe_proc_reader = pipeline
+    try:
+        if stdout == "pipeline":
+            base_app.stdout, read_fd = pipeline_stdout(pipeline)
+            writer = base_app.stdout.buffer.raw
+            with mock.patch("subprocess.Popen", popen):
+                base_app.do_shell("echo joined")
+            assert spawned[0]["process_group"] == leader.pid
+            assert isinstance(spawned[0]["stdout"], int)
+            assert writer._relay is None
+            base_app.stdout.close()
+            assert read_all(read_fd) == b"joined\n"
+        else:
+            with (tmp_path / "output").open("w+") as output, mock.patch("subprocess.Popen", popen):
+                base_app.stdout = output
+                base_app.do_shell("echo elsewhere")
+                output.seek(0)
+                assert output.read() == "elsewhere\n"
+            assert "process_group" not in spawned[0]
+        assert base_app.last_result == 0
+    finally:
+        leader.kill()
+        leader.wait()
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
 def test_shell_from_a_worker_thread_stays_out_of_the_pipeline(base_app, tmp_path) -> None:
     """Joining a pipeline's job means relaying stops to the main thread, and may change signal handlers.
@@ -1017,14 +1076,15 @@ def test_shell_from_a_worker_thread_stays_out_of_the_pipeline(base_app, tmp_path
         spawned.append(kwargs)
         return real_popen(*args, **kwargs)
 
-    base_app._cur_pipe_proc_reader = mock.Mock(_terminal_group=os.getpgrp(), _lend_terminal=_lend_terminal)
-    with (tmp_path / "output").open("w+") as output, mock.patch("subprocess.Popen", popen):
-        base_app.stdout = output
+    pipeline = mock.Mock(_terminal_group=os.getpgrp(), _lend_terminal=_lend_terminal)
+    base_app._cur_pipe_proc_reader = pipeline
+    base_app.stdout, read_fd = pipeline_stdout(pipeline)
+    with mock.patch("subprocess.Popen", popen):
         worker = threading.Thread(target=base_app.do_shell, args=("echo worker",))
         worker.start()
         worker.join(10)
-        output.seek(0)
-        assert output.read() == "worker\n"
+    base_app.stdout.close()
+    assert read_all(read_fd) == b"worker\n"
     assert "process_group" not in spawned[0]
     assert not lent
 
@@ -3696,7 +3756,9 @@ def test_ppaged_terminal_restoration(outsim_app, monkeypatch, has_tcsetpgrp) -> 
     # Verify restoration logic
     if has_tcsetpgrp:
         os.tcsetpgrp.assert_called_once_with(0, 123)
-        signal_mock.signal.assert_any_call(signal_mock.SIGTTOU, signal_mock.SIG_IGN)
+        # SIGTTOU is blocked for this thread alone, not ignored for the whole process.
+        signal_mock.pthread_sigmask.assert_any_call(signal_mock.SIG_BLOCK, {signal_mock.SIGTTOU})
+        signal_mock.signal.assert_not_called()
 
     termios_mock.tcsetattr.assert_called_once_with(0, termios_mock.TCSANOW, dummy_settings)
 
