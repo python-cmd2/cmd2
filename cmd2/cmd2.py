@@ -3402,7 +3402,7 @@ class Cmd:
                 subproc_stdin.close()
                 if terminal_fd is not None:
                     cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr, terminal_fd=terminal_fd)
-                    terminal_stack.enter_context(cmd_pipe_proc_reader.manage_terminal())
+                    terminal_stack.enter_context(cmd_pipe_proc_reader._manage_terminal())
 
                 # Popen was called with shell=True so the user can chain pipe commands and redirect their output
                 # like: !ls -l | grep user | wc -l > out.txt. But this makes it difficult to know if the pipe process
@@ -3413,11 +3413,11 @@ class Cmd:
                         proc.wait(0.2)
                     else:
                         # Open the start gate only once the pipeline owns the terminal.
-                        with cmd_pipe_proc_reader.lend_terminal():
+                        with cmd_pipe_proc_reader._lend_terminal():
                             with contextlib.suppress(OSError):
                                 os.write(new_stdout.fileno(), b"\n")
                             gate_stack.pop_all()
-                            cmd_pipe_proc_reader.wait_for_exit(0.2)
+                            cmd_pipe_proc_reader._wait_for_exit(0.2)
 
                 # Check if the pipe process already exited
                 if proc.returncode is not None:
@@ -3436,7 +3436,12 @@ class Cmd:
                     pipe_fd = os.dup(new_stdout.fileno())
                     new_stdout.close()
                     new_stdout = io.TextIOWrapper(
-                        io.BufferedWriter(utils.PipelineWriter(pipe_fd, cmd_pipe_proc_reader)), encoding="utf-8"
+                        io.BufferedWriter(
+                            utils._PipelineWriter(
+                                pipe_fd, cmd_pipe_proc_reader, interruptible=lambda: not self.sigint_protection
+                            )
+                        ),
+                        encoding="utf-8",
                     )
 
                 self.stdout = new_stdout
@@ -3519,8 +3524,6 @@ class Cmd:
 
                     with contextlib.suppress(BrokenPipeError):
                         # Close the file or pipe that stdout was redirected to
-                        if self._cur_pipe_proc_reader is not None:
-                            self._cur_pipe_proc_reader.finish_producer()
                         self.stdout.close()
 
                     # Restore self.stdout
@@ -5011,19 +5014,19 @@ class Cmd:
         pipeline = self._cur_pipe_proc_reader
         pipeline_group = None
         if pipeline is not None and not isinstance(self.stdout, utils.StdSim):  # type: ignore[unreachable]
-            pipeline_group = pipeline.terminal_group
+            pipeline_group = pipeline._terminal_group
 
         # Prevent KeyboardInterrupts while in the shell process. The shell process still
         # receives the SIGINT: it is in our process group or in the foreground pipeline's.
         with self.sigint_protection, contextlib.ExitStack() as terminal_stack:
             if pipeline is not None and pipeline_group is not None:
                 kwargs["process_group"] = pipeline_group
-                terminal_stack.enter_context(pipeline.lend_terminal())
+                terminal_stack.enter_context(pipeline._lend_terminal())
             while True:
                 try:
                     # For any stream that is a StdSim, we will use a pipe so we can capture its output.
                     # A command joining the pipeline is spawned inside the lend, which blocks SIGTTOU.
-                    with utils.unblocked_sigttou() if "process_group" in kwargs else contextlib.nullcontext():
+                    with utils._unblocked_sigttou() if "process_group" in kwargs else contextlib.nullcontext():
                         proc = subprocess.Popen(  # noqa: S602
                             expanded_command,
                             stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]
@@ -5048,7 +5051,7 @@ class Cmd:
             joined_pipeline = pipeline if "process_group" in kwargs else None
             proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr, pipeline=joined_pipeline)
             if joined_pipeline is not None:
-                proc_reader.wait_for_exit()
+                proc_reader._wait_for_exit()
             proc_reader.wait()
 
             # Save the return code of the application for use in a pyscript

@@ -537,8 +537,8 @@ class ByteBuf:
 
 
 @contextlib.contextmanager
-def unblocked_sigttou() -> Iterator[None]:
-    """Let a child started inside :meth:`ProcReader.lend_terminal` keep normal job control.
+def _unblocked_sigttou() -> Iterator[None]:
+    """Let a child started inside :meth:`ProcReader._lend_terminal` keep normal job control.
 
     The lend blocks SIGTTOU for its thread, and a child inherits that mask for life. Spawning
     touches no terminal, so unblocking it for the spawn alone cannot stop this thread.
@@ -580,13 +580,21 @@ class ProcReader:
         self._stderr = stderr
         self._terminal_fd = terminal_fd
         self._pipeline = pipeline
+        # Shell producers that joined this pipeline's process group
+        self._joined: list[PopenTextIO] = []
+        if pipeline is not None:
+            pipeline._joined.append(proc)
         self._process_done = threading.Event()
-        self._producer_finished = False
         self._terminal_available = threading.Event()
         # Lends in progress, guarded by _terminal_lock. The terminal is available while any is.
         self._lends = 0
         self._terminal_lock = threading.RLock()
         self._job_resumed = threading.Event()
+        # Set by a thread that relays a pipeline's stop to cmd2's own job. Otherwise Ctrl-Z
+        # reached cmd2 directly, and cmd2 stops the pipeline itself. The watcher skips the
+        # SIGSTOPs cmd2 sends that way, counted under _terminal_lock.
+        self._relaying_stop = False
+        self._own_stops = 0
         if terminal_fd is not None:
             self._original_group = os.tcgetpgrp(terminal_fd)
 
@@ -614,13 +622,21 @@ class ProcReader:
             try:
                 group_id = os.getpgid(self._proc.pid)
             except ProcessLookupError:
-                # Pipelines lead their own group. A shell command that joined it, such
-                # as `shell sleep 100 | head -1`, can outlive the reaped consumer.
-                group_id = self._proc.pid
+                # Pipelines lead their own group. A shell command that joined it, such as
+                # `shell sleep 100 | head -1`, can outlive the reaped consumer. Find the group
+                # through that command, which cmd2 has not reaped yet. Never signal the
+                # consumer's own ID: once its group is gone, the system may reuse it.
+                for producer in self._joined:
+                    if producer.returncode is None:
+                        with contextlib.suppress(ProcessLookupError):
+                            group_id = os.getpgid(producer.pid)
+                            break
+                else:
+                    return
             # Never re-signal our own group: other ProcReader callers may share it
             # and already received Ctrl-C.
             if group_id != os.getpgrp():
-                with contextlib.suppress(ProcessLookupError):
+                with contextlib.suppress(ProcessLookupError, PermissionError):
                     os.killpg(group_id, signal.SIGINT)
 
     def terminate(self) -> None:
@@ -635,11 +651,23 @@ class ProcReader:
                 os.kill(self._proc.pid, signal.SIGTERM)
 
     @property
-    def terminal_group(self) -> int | None:
+    def _terminal_group(self) -> int | None:
         """Process group of a running terminal pipeline, which a producer may join, or None."""
         if self._terminal_fd is None or self._proc.returncode is not None:
             return None
         return self._proc.pid
+
+    def _signal_pipeline(self, signum: int) -> bool:
+        """Signal the pipeline's process group. Return whether any process could be signaled.
+
+        The group may be gone, or hold only processes cmd2 may not signal: a zombie on
+        macOS, or a program running as another user, such as sudo.
+        """
+        try:
+            os.killpg(self._proc.pid, signum)
+        except (ProcessLookupError, PermissionError):
+            return False
+        return True
 
     @staticmethod
     def _set_foreground_group(terminal_fd: int, group_id: int) -> None:
@@ -653,7 +681,7 @@ class ProcReader:
             signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
 
     @contextlib.contextmanager
-    def manage_terminal(self) -> Iterator[None]:
+    def _manage_terminal(self) -> Iterator[None]:
         """Watch the pipeline and suspend the shell's whole job on the main thread."""
         import signal
 
@@ -664,6 +692,9 @@ class ProcReader:
         previous_handler = signal.getsignal(signal.SIGTSTP)
 
         def suspend_job(signum: int, frame: Any) -> None:
+            relayed = self._relaying_stop
+            self._relaying_stop = False
+            stopped_pipeline = False
             try:
                 if previous_handler != signal.SIG_DFL:
                     if callable(previous_handler):
@@ -671,6 +702,15 @@ class ProcReader:
                     return
                 if os.tcgetpgrp(terminal_fd) == self._proc.pid:
                     self._set_foreground_group(terminal_fd, self._original_group)
+                if not relayed and self._proc.returncode is None:
+                    # Ctrl-Z reached only cmd2's group, which owns the terminal between pipe
+                    # writes. Stop the pipeline too, as a shell stops its whole job.
+                    with self._terminal_lock:
+                        self._own_stops += 1
+                    stopped_pipeline = self._signal_pipeline(signal.SIGSTOP)
+                    if not stopped_pipeline:
+                        with self._terminal_lock:
+                            self._own_stops -= 1
                 # Ignore our group-directed copy, then stop this thread synchronously.
                 # Wrappers in our job must stop too. Unlike SIGSTOP, SIGTSTP is
                 # discarded for orphaned groups, which have no shell to resume them.
@@ -686,6 +726,8 @@ class ProcReader:
                     if self._terminal_available.is_set() and os.tcgetpgrp(terminal_fd) == self._original_group:
                         self._set_foreground_group(terminal_fd, self._proc.pid)
                 finally:
+                    if stopped_pipeline:
+                        self._signal_pipeline(signal.SIGCONT)
                     self._job_resumed.set()
 
         signal.signal(signal.SIGTSTP, suspend_job)
@@ -696,7 +738,7 @@ class ProcReader:
             signal.signal(signal.SIGTSTP, previous_handler)
 
     @contextlib.contextmanager
-    def lend_terminal(self) -> Iterator[None]:
+    def _lend_terminal(self) -> Iterator[None]:
         """Lend the terminal only while writing to or waiting for the consumer.
 
         Command code retains foreground access between writes, including arbitrary
@@ -712,15 +754,16 @@ class ProcReader:
         # While the consumer owns the terminal, a signal handler run on this thread may still
         # write diagnostics to it. Block SIGTTOU for the lend only: a signal mask survives fork
         # and exec, so blocking it for the whole pipeline would leak into every child the
-        # command starts. A child started during a lend must unblock it; see unblocked_sigttou().
+        # command starts. A child started during a lend must unblock it; see _unblocked_sigttou().
         previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTTOU})
         try:
             with self._terminal_lock:
                 try:
                     self._set_foreground_group(terminal_fd, self._proc.pid)
                 except OSError as error:
-                    # The group can disappear before the watcher has reaped its leader.
-                    if error.errno not in (errno.ESRCH, errno.EINVAL):
+                    # The group can disappear before the watcher has recorded its exit.
+                    # Linux reports a group that no longer exists as EPERM.
+                    if error.errno not in (errno.ESRCH, errno.EINVAL, errno.EPERM):
                         raise
                 self._lends += 1
                 self._terminal_available.set()
@@ -748,48 +791,23 @@ class ProcReader:
         import signal
 
         try:
-            while True:
-                _, status = os.waitpid(self._proc.pid, os.WUNTRACED)
-                if not os.WIFSTOPPED(status):
-                    self._proc.returncode = os.waitstatus_to_exitcode(status)
-                    return
-                if os.WSTOPSIG(status) in (signal.SIGTTIN, signal.SIGTTOU):
-                    # Command code owns the terminal between pipe writes. Defer
-                    # consumer terminal access until the next write or final wait.
-                    while True:
-                        self._terminal_available.wait(0.1)
-                        with self._terminal_lock:
-                            # A stopped consumer can be killed before another write.
-                            # Keep reaping even while command code owns the terminal.
-                            pid, pending_status = os.waitpid(self._proc.pid, os.WNOHANG | os.WUNTRACED)
-                            if pid and not os.WIFSTOPPED(pending_status):
-                                self._proc.returncode = os.waitstatus_to_exitcode(pending_status)
-                                return
-                            # A short write may already have returned the terminal.
-                            # Do not turn that ordinary handoff into a job suspension.
-                            if not self._terminal_available.is_set():
-                                continue
-                            foreground = os.tcgetpgrp(terminal_fd)
-                            if foreground == self._proc.pid:
-                                os.killpg(self._proc.pid, signal.SIGCONT)
-                            break
-                    if foreground == self._proc.pid:
-                        continue
-
-                if os.tcgetpgrp(terminal_fd) == self._proc.pid:
-                    self._set_foreground_group(terminal_fd, self._original_group)
-                # Stop every terminal reader before returning control to the outer shell.
-                os.killpg(self._proc.pid, signal.SIGSTOP)
-                self._job_resumed.clear()
-                # Signal the main thread itself. Only it runs Python signal handlers, and a
-                # process-directed signal may be taken by another thread while the main
-                # thread sleeps in a system call, which then never returns to run the handler.
-                signal.pthread_kill(threading.main_thread().ident or 0, signal.SIGTSTP)
-                self._job_resumed.wait()
-                os.killpg(self._proc.pid, signal.SIGCONT)
+            self._watch_job(terminal_fd)
+        except ChildProcessError:
+            # The application ignores SIGCHLD, so the system reaped the pipeline and its exit
+            # status is lost. Popen.wait() reports success in this case, too.
+            self._proc.returncode = 0
+        except OSError:
+            # Job control failed, for instance because the terminal hung up. Still reap the
+            # pipeline: until it has a return code, cmd2 treats it as running.
+            self._signal_pipeline(signal.SIGCONT)
+            try:
+                _, status = os.waitpid(self._proc.pid, 0)
+                self._proc.returncode = os.waitstatus_to_exitcode(status)
+            except ChildProcessError:
+                self._proc.returncode = 0
         finally:
             try:
-                with self._terminal_lock:
+                with self._terminal_lock, contextlib.suppress(OSError):
                     # A shell producer in this group may outlive the consumer and still read
                     # the terminal. While a lend is active, its holder returns the terminal.
                     if not self._terminal_available.is_set() and os.tcgetpgrp(terminal_fd) == self._proc.pid:
@@ -797,28 +815,76 @@ class ProcReader:
             finally:
                 self._process_done.set()
 
+    def _watch_job(self, terminal_fd: int) -> None:
+        """Wait for a foreground pipeline to exit, relaying its stops. See _wait_for_job()."""
+        import signal
+
+        while True:
+            _, status = os.waitpid(self._proc.pid, os.WUNTRACED)
+            if not os.WIFSTOPPED(status):
+                self._proc.returncode = os.waitstatus_to_exitcode(status)
+                return
+            if os.WSTOPSIG(status) == signal.SIGSTOP:
+                with self._terminal_lock:
+                    if self._own_stops:
+                        # cmd2 stopped the pipeline along with itself, and continues it too.
+                        self._own_stops -= 1
+                        continue
+            if os.WSTOPSIG(status) in (signal.SIGTTIN, signal.SIGTTOU):
+                # Command code owns the terminal between pipe writes. Defer
+                # consumer terminal access until the next write or final wait.
+                while True:
+                    self._terminal_available.wait(0.1)
+                    with self._terminal_lock:
+                        # A stopped consumer can be killed before another write.
+                        # Keep reaping even while command code owns the terminal.
+                        pid, pending_status = os.waitpid(self._proc.pid, os.WNOHANG | os.WUNTRACED)
+                        if pid and not os.WIFSTOPPED(pending_status):
+                            self._proc.returncode = os.waitstatus_to_exitcode(pending_status)
+                            return
+                        # A short write may already have returned the terminal.
+                        # Do not turn that ordinary handoff into a job suspension.
+                        if not self._terminal_available.is_set():
+                            continue
+                        foreground = os.tcgetpgrp(terminal_fd)
+                        if foreground == self._proc.pid:
+                            # A group that died since is reaped by the next waitpid.
+                            self._signal_pipeline(signal.SIGCONT)
+                        break
+                if foreground == self._proc.pid:
+                    continue
+
+            self._suspend_with_cmd2(terminal_fd)
+
+    def _suspend_with_cmd2(self, terminal_fd: int) -> None:
+        """Relay a pipeline's stop to cmd2's own job, and continue the pipeline once cmd2 resumes."""
+        import signal
+
+        with self._terminal_lock:
+            if os.tcgetpgrp(terminal_fd) == self._proc.pid:
+                self._set_foreground_group(terminal_fd, self._original_group)
+        # Stop every terminal reader before returning control to the outer shell.
+        self._signal_pipeline(signal.SIGSTOP)
+        self._job_resumed.clear()
+        self._relaying_stop = True
+        # Signal the main thread itself. Only it runs Python signal handlers, and a
+        # process-directed signal may be taken by another thread while the main
+        # thread sleeps in a system call, which then never returns to run the handler.
+        signal.pthread_kill(threading.main_thread().ident or 0, signal.SIGTSTP)
+        self._job_resumed.wait()
+        self._signal_pipeline(signal.SIGCONT)
+
     def _relay_producer_stop(self) -> None:
         """Suspend the shell's whole job for a stopped producer that outlived the consumer.
 
         Ctrl-Z reaches only the foreground group, and the producer may be all that is
         left of it. The watcher ended with the consumer, so nothing else relays the stop.
         """
-        import signal
-
         terminal_fd = self._terminal_fd
         if terminal_fd is None or not self._process_done.is_set():
             # A live watcher relays the consumer's stop and continues the whole group.
             return
-        with self._terminal_lock:
-            if os.tcgetpgrp(terminal_fd) == self._proc.pid:
-                self._set_foreground_group(terminal_fd, self._original_group)
-        with contextlib.suppress(ProcessLookupError):
-            os.killpg(self._proc.pid, signal.SIGSTOP)
-        self._job_resumed.clear()
-        signal.pthread_kill(threading.main_thread().ident or 0, signal.SIGTSTP)
-        self._job_resumed.wait()
-        with contextlib.suppress(ProcessLookupError):
-            os.killpg(self._proc.pid, signal.SIGCONT)
+        self._suspend_with_cmd2(terminal_fd)
 
     def _wait_for_producer(self, pipeline: "ProcReader", timeout: float | None) -> None:
         """Wait for a producer in a terminal pipeline's job, relaying its job-control stops.
@@ -830,7 +896,12 @@ class ProcReader:
 
         deadline = None if timeout is None else time.monotonic() + timeout
         while self._proc.returncode is None:
-            pid, status = os.waitpid(self._proc.pid, os.WNOHANG | os.WUNTRACED)
+            try:
+                pid, status = os.waitpid(self._proc.pid, os.WNOHANG | os.WUNTRACED)
+            except ChildProcessError:
+                # The application ignores SIGCHLD. As Popen.wait() does, report success.
+                self._proc.returncode = 0
+                return
             if not pid:
                 if deadline is not None and time.monotonic() >= deadline:
                     raise subprocess.TimeoutExpired(self._proc.args, timeout or 0)
@@ -840,11 +911,7 @@ class ProcReader:
             else:
                 self._proc.returncode = os.waitstatus_to_exitcode(status)
 
-    def finish_producer(self) -> None:
-        """Disable producer cancellation before flushing and closing its pipe."""
-        self._producer_finished = True
-
-    def wait_for_exit(self, timeout: float | None = None) -> None:
+    def _wait_for_exit(self, timeout: float | None = None) -> None:
         """Wait for process exit without competing with the terminal job's waitpid thread.
 
         :param timeout: maximum seconds to wait, or None to wait indefinitely
@@ -866,8 +933,8 @@ class ProcReader:
     def wait(self) -> None:
         """Wait for the process to finish."""
         if self._terminal_fd is not None:
-            with self.lend_terminal():
-                self.wait_for_exit()
+            with self._lend_terminal():
+                self._wait_for_exit()
         if self._out_thread.is_alive():
             self._out_thread.join()
         if self._err_thread.is_alive():
@@ -924,7 +991,7 @@ class ProcReader:
 class _DescriptorRelay:
     """Carry output that subprocesses write to a terminal pipeline's descriptor.
 
-    A subprocess given :meth:`PipelineWriter.fileno` writes on its own, so cmd2 cannot lend
+    A subprocess given :meth:`_PipelineWriter.fileno` writes on its own, so cmd2 cannot lend
     the terminal write by write. It writes into this relay's pipe instead, and a thread passes
     that output on to the consumer. The consumer is lent the terminal while a producer is
     blocked on the relay's full pipe, since only then does it need the terminal to make
@@ -939,7 +1006,7 @@ class _DescriptorRelay:
         """
         self._out_fd = out_fd
         self._reader = reader
-        # write_fd is the descriptor handed to producers. PipelineWriter closes it; once every
+        # write_fd is the descriptor handed to producers. _PipelineWriter closes it; once every
         # producer has closed its copy too, the relay reads EOF and closes the consumer's pipe.
         self._in_fd, self.write_fd = os.pipe()
         self._write_fd_open = True
@@ -978,6 +1045,11 @@ class _DescriptorRelay:
             poller = select.poll()
             poller.register(self.write_fd, select.POLLOUT)
             return not poller.poll(0)
+
+    def idle(self) -> bool:
+        """Whether all output written to the relay has reached the consumer's pipe."""
+        with self._lock:
+            return self._done or self._sent >= self._received + self._unread()
 
     def flush(self) -> None:
         """Wait until output already written to the relay has reached the consumer's pipe.
@@ -1024,7 +1096,7 @@ class _DescriptorRelay:
                             self._lock.notify_all()
                     elif self._producer_blocked():
                         if not lending:
-                            lend.enter_context(self._reader.lend_terminal())
+                            lend.enter_context(self._reader._lend_terminal())
                             lending = True
                     elif lending:
                         # A producer that stopped writing does not need the consumer to go on.
@@ -1044,14 +1116,25 @@ class _DescriptorRelay:
                 self._lock.notify_all()
 
 
-class PipelineWriter(io.FileIO):
+class _PipelineWriter(io.FileIO):
     """A pipe whose blocking writes temporarily give the consumer terminal access."""
 
-    def __init__(self, fd: int, reader: ProcReader) -> None:
-        """Take ownership of a pipe descriptor managed by reader."""
+    def __init__(self, fd: int, reader: ProcReader, interruptible: Callable[[], bool] = lambda: True) -> None:
+        """Take ownership of a pipe descriptor managed by reader.
+
+        :param fd: the write end of the consumer's pipe
+        :param reader: the terminal pipeline that reads fd
+        :param interruptible: whether a write may raise KeyboardInterrupt now, rather than
+                              BrokenPipeError, when Ctrl-C has ended the consumer
+        """
+        import select
+
         super().__init__(fd, "w")
         self._reader = reader
+        self._interruptible = interruptible
         self._relay: _DescriptorRelay | None = None
+        self._poller = select.poll()
+        self._poller.register(fd, select.POLLOUT)
 
     def fileno(self) -> int:
         """Return a descriptor for subprocesses, such as a shell command's stdout.
@@ -1075,11 +1158,13 @@ class PipelineWriter(io.FileIO):
                 self._relay.close_write_fd()
 
     def write(self, b: Any) -> int:
-        """Write all of b while the consumer can interact with the terminal.
+        """Write all of b, lending the consumer the terminal whenever the pipe is full.
 
-        The whole buffer goes out under one lend. Returning the terminal between two
-        writes, even for an instant, would stop a consumer that had just resumed a
-        terminal read with SIGTTIN.
+        A consumer such as less stops reading its pipe to read the keyboard, so a write
+        that would block finishes under a lend. What the pipe takes at once needs none,
+        which spares each flush a terminal handoff. Once lent, the terminal stays lent for
+        the rest of the buffer: returning it between two writes, even for an instant,
+        would stop a consumer that had just resumed a terminal read with SIGTTIN.
 
         A full pipe is awaited in short polls rather than in one blocking write. Only
         the main thread runs Python signal handlers, and the job-control stop ProcReader
@@ -1093,27 +1178,33 @@ class PipelineWriter(io.FileIO):
 
         view = memoryview(b).cast("B")
         fd = super().fileno()
-        poller = select.poll()
-        poller.register(fd, select.POLLOUT)
+        written = 0
         try:
-            with self._reader.lend_terminal():
-                if self._relay is not None:
-                    self._relay.flush()
-                written = 0
-                while written < len(view):
-                    # Once there is room, a write of at most PIPE_BUF bytes does not block.
-                    if poller.poll(100):
-                        written += os.write(fd, view[written : written + select.PIPE_BUF])
-                return written
+            # Output a producer wrote to the relay comes first, which may need a lend.
+            if self._relay is None or self._relay.idle():
+                # Once there is room, a write of at most PIPE_BUF bytes does not block.
+                while written < len(view) and self._poller.poll(0):
+                    written += os.write(fd, view[written : written + select.PIPE_BUF])
+            if written < len(view):
+                with self._reader._lend_terminal():
+                    if self._relay is not None:
+                        self._relay.flush()
+                    while written < len(view):
+                        if self._poller.poll(100):
+                            written += os.write(fd, view[written : written + select.PIPE_BUF])
         except BrokenPipeError:
             # Ctrl-C during a blocking write must cancel the command, even if it
             # normally catches BrokenPipeError. Raise here rather than signaling
             # asynchronously: a late signal could interrupt redirection cleanup.
-            with contextlib.suppress(subprocess.TimeoutExpired):
-                self._reader.wait_for_exit(0.2)
-            if not self._reader._producer_finished and self._reader._proc.returncode in (-signal.SIGINT, 128 + signal.SIGINT):
-                raise KeyboardInterrupt from None
+            # Code that cmd2's SIGINT handler would not interrupt, such as that
+            # cleanup, gets the BrokenPipeError instead.
+            if self._interruptible():
+                with contextlib.suppress(subprocess.TimeoutExpired):
+                    self._reader._wait_for_exit(0.2)
+                if self._reader._proc.returncode in (-signal.SIGINT, 128 + signal.SIGINT):
+                    raise KeyboardInterrupt from None
             raise
+        return written
 
 
 class ContextFlag:

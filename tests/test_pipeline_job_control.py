@@ -506,22 +506,22 @@ def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path, parent_delay
         # The pipeline's first wait is cmd2's 0.2s startup check. Hold it open until the pager
         # has reported, so the test does not race that timer on a busy CI runner: what it checks
         # is that the pager owns the terminal throughout the check, however slowly it starts.
-        "startup_wait = utils.ProcReader.wait_for_exit\n"
+        "startup_wait = utils.ProcReader._wait_for_exit\n"
         "def held_startup_wait(reader, timeout=None):\n"
-        "    utils.ProcReader.wait_for_exit = startup_wait\n"
+        "    utils.ProcReader._wait_for_exit = startup_wait\n"
         f"    outcome = pathlib.Path({str(outcome)!r})\n"
         "    deadline = time.monotonic() + 5\n"
         "    while time.monotonic() < deadline and not (outcome.exists() and outcome.read_text()):\n"
         "        time.sleep(0.01)\n"
         "    return startup_wait(reader, timeout)\n"
-        "utils.ProcReader.wait_for_exit = held_startup_wait\n"
+        "utils.ProcReader._wait_for_exit = held_startup_wait\n"
         f"if {parent_delay!r}:\n"
         # Stall between starting the pipeline and handing it the terminal.
-        "    start_job_control = utils.ProcReader.manage_terminal\n"
+        "    start_job_control = utils.ProcReader._manage_terminal\n"
         "    def late_job_control(reader):\n"
         "        time.sleep(0.5)\n"
         "        return start_job_control(reader)\n"
-        "    utils.ProcReader.manage_terminal = late_job_control\n"
+        "    utils.ProcReader._manage_terminal = late_job_control\n"
         "app = Cmd()\n"
         "app.prompt = 'TEST> '\n"
         "app.cmdloop()\n",
@@ -830,6 +830,253 @@ def test_pager_gets_the_terminal_for_output_written_to_the_descriptor(tmp_path, 
         # The terminal is still canonical: this pager, unlike less, sets no modes.
         os.write(master, b"q\n")
         wait_until(lambda: "PAGER_GOT q" in transcript[start:])
+        wait_until(lambda: "TEST>" in transcript[start:])
+        os.write(master, b"quit\n")
+        wait_until(lambda: os.tcgetpgrp(master) == process.pid)
+    finally:
+        os.close(master)
+        process.kill()
+        process.wait(timeout=5)
+
+
+def test_ctrl_z_between_pipe_writes_stops_the_whole_pipeline(tmp_path) -> None:
+    """Ctrl-Z while cmd2 owns the terminal, between writes to its pipe, reaches only cmd2's group.
+
+    A shell would stop the whole job. cmd2 must stop the pipeline along with itself, or a
+    consumer that keeps working goes on writing into the shell session, and continue it on fg.
+    """
+    import pty
+
+    shell = shutil.which("bash")
+    if shell is None:
+        pytest.skip("requires an interactive bash shell")
+    ticks = tmp_path / "ticks"
+    ticker = tmp_path / "ticker.py"
+    ticker.write_text(
+        "import os, select, sys\n"
+        # Tick until cmd2 closes the pipe.
+        "while not select.select([sys.stdin], [], [], 0.05)[0] or sys.stdin.read(1):\n"
+        f"    with open({str(ticks)!r}, 'a') as out: out.write('t')\n",
+        encoding="utf-8",
+    )
+    application = tmp_path / "application.py"
+    application.write_text(
+        "import time\n"
+        "from cmd2 import Cmd\n"
+        "class App(Cmd):\n"
+        "    def do_slow(self, _):\n"
+        "        time.sleep(3)\n"
+        "app = App()\n"
+        "app.prompt = 'TEST> '\n"
+        "app.cmdloop()\n",
+        encoding="utf-8",
+    )
+    master, slave = pty.openpty()
+    bootstrap = (
+        "import os, fcntl, termios; os.setsid(); "
+        "fcntl.ioctl(0, termios.TIOCSCTTY, 0); "
+        "os.execv(os.environ['TEST_SHELL'], ['bash', '--noprofile', '--norc', '-i'])"
+    )
+    env = dict(os.environ, TERM="xterm-256color", PS1="OUTER> ", TEST_SHELL=shell, SHELL=shell)
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
+    process = subprocess.Popen([sys.executable, "-c", bootstrap], stdin=slave, stdout=slave, stderr=slave, env=env)
+    os.close(slave)
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    transcript = ""
+
+    def wait_until(predicate):
+        nonlocal transcript
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if select.select([master], [], [], 0.05)[0]:
+                data = decoder.decode(os.read(master, 65536))
+                transcript += data
+                if "\x1b[6n" in data:
+                    # Answer prompt-toolkit's cursor-position request as a terminal would.
+                    os.write(master, b"\x1b[1;1R")
+            if predicate():
+                return
+        pytest.fail(f"terminal condition timed out:\n{transcript}\n{describe_processes(process.pid, master)}")
+
+    def tick_count() -> int:
+        return len(ticks.read_text()) if ticks.exists() else 0
+
+    python = shlex.quote(sys.executable)
+    try:
+        wait_until(lambda: "OUTER> " in transcript)
+        os.write(master, f"{python} {shlex.quote(str(application))}\n".encode())
+        wait_until(lambda: "TEST>" in transcript)
+        os.write(master, f"slow | {python} {shlex.quote(str(ticker))}\n".encode())
+        wait_until(lambda: tick_count() >= 3)
+        start = len(transcript)
+        os.write(master, b"\x1a")
+        wait_until(lambda: os.tcgetpgrp(master) == process.pid and "OUTER> " in transcript[start:])
+        # A tick in flight as the job stops may still land.
+        deadline = time.monotonic() + 0.2
+        wait_until(lambda: time.monotonic() >= deadline)
+        stopped_at = tick_count()
+        deadline = time.monotonic() + 0.5
+        wait_until(lambda: time.monotonic() >= deadline)
+        assert tick_count() == stopped_at
+        start = len(transcript)
+        os.write(master, b"fg\n")
+        wait_until(lambda: tick_count() > stopped_at)
+        # Only once: cmd2 must not relay the stop it sent the pipeline as a second suspension.
+        wait_until(lambda: "TEST>" in transcript[start:])
+        assert "Stopped" not in transcript[start:]
+        os.write(master, b"quit\n")
+        wait_until(lambda: os.tcgetpgrp(master) == process.pid)
+    finally:
+        os.close(master)
+        process.kill()
+        process.wait(timeout=5)
+
+
+def test_pipeline_when_the_application_ignores_sigchld(tmp_path) -> None:
+    """With SIGCHLD ignored, the system reaps the pipeline and waitpid() fails with ECHILD.
+
+    The pipeline's watcher must record an exit rather than die with a traceback.
+    """
+    import pty
+
+    shell = shutil.which("bash")
+    if shell is None:
+        pytest.skip("requires an interactive bash shell")
+    application = tmp_path / "application.py"
+    application.write_text(
+        "import signal\n"
+        "from cmd2 import Cmd\n"
+        "class App(Cmd):\n"
+        "    def do_ignoring(self, statement):\n"
+        "        signal.signal(signal.SIGCHLD, signal.SIG_IGN)\n"
+        "        self.onecmd_plus_hooks(statement.args)\n"
+        "        self.poutput('IGNORING_DONE')\n"
+        "app = App()\n"
+        "app.prompt = 'TEST> '\n"
+        "app.cmdloop()\n",
+        encoding="utf-8",
+    )
+    master, slave = pty.openpty()
+    bootstrap = (
+        "import os, fcntl, termios; os.setsid(); "
+        "fcntl.ioctl(0, termios.TIOCSCTTY, 0); "
+        "os.execv(os.environ['TEST_SHELL'], ['bash', '--noprofile', '--norc', '-i'])"
+    )
+    env = dict(os.environ, TERM="xterm-256color", PS1="OUTER> ", TEST_SHELL=shell, SHELL=shell)
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
+    process = subprocess.Popen([sys.executable, "-c", bootstrap], stdin=slave, stdout=slave, stderr=slave, env=env)
+    os.close(slave)
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    transcript = ""
+
+    def wait_until(predicate):
+        nonlocal transcript
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if select.select([master], [], [], 0.05)[0]:
+                data = decoder.decode(os.read(master, 65536))
+                transcript += data
+                if "\x1b[6n" in data:
+                    # Answer prompt-toolkit's cursor-position request as a terminal would.
+                    os.write(master, b"\x1b[1;1R")
+            if predicate():
+                return
+        pytest.fail(f"terminal condition timed out:\n{transcript}\n{describe_processes(process.pid, master)}")
+
+    try:
+        wait_until(lambda: "OUTER> " in transcript)
+        os.write(master, f"{shlex.quote(sys.executable)} {shlex.quote(str(application))}\n".encode())
+        wait_until(lambda: "TEST>" in transcript)
+        start = len(transcript)
+        os.write(master, b"ignoring help quit | cat\n")
+        wait_until(lambda: "IGNORING_DONE" in transcript[start:] and "TEST>" in transcript[start:])
+        assert "Exit this application" in transcript[start:]
+        # A dying watcher thread reports its traceback on its own time, which nothing here
+        # can wait for. Allow another command and a moment more.
+        os.write(master, b"help quit\n")
+        wait_until(lambda: transcript[start:].count("Exit this application") == 2)
+        deadline = time.monotonic() + 0.5
+        wait_until(lambda: time.monotonic() >= deadline)
+        assert "Exception in thread" not in transcript[start:]
+        assert "Traceback" not in transcript[start:]
+        os.write(master, b"quit\n")
+        wait_until(lambda: os.tcgetpgrp(master) == process.pid)
+    finally:
+        os.close(master)
+        process.kill()
+        process.wait(timeout=5)
+
+
+def test_ctrl_c_ending_the_pager_does_not_interrupt_protected_code(tmp_path) -> None:
+    """Code under sigint_protection must not get a KeyboardInterrupt, even from a pipe write.
+
+    A pipe write that finds the consumer ended by Ctrl-C raises KeyboardInterrupt, so a command
+    that catches BrokenPipeError is still cancelled. Protected code gets the BrokenPipeError.
+    """
+    import pty
+
+    shell = shutil.which("bash")
+    if shell is None:
+        pytest.skip("requires an interactive bash shell")
+    application = tmp_path / "application.py"
+    application.write_text(
+        "import os\n"
+        "from cmd2 import Cmd\n"
+        "class App(Cmd):\n"
+        "    def do_protected(self, _):\n"
+        "        try:\n"
+        "            with self.sigint_protection:\n"
+        "                os.write(2, b'WRITING\\n')\n"
+        "                self.stdout.write('x' * 1048576)\n"
+        "                self.stdout.flush()\n"
+        "        except BrokenPipeError:\n"
+        "            os.write(2, b'GOT_BROKEN_PIPE\\n')\n"
+        "        except KeyboardInterrupt:\n"
+        "            os.write(2, b'GOT_KEYBOARD_INTERRUPT\\n')\n"
+        "app = App()\n"
+        "app.prompt = 'TEST> '\n"
+        "app.cmdloop()\n",
+        encoding="utf-8",
+    )
+    master, slave = pty.openpty()
+    bootstrap = (
+        "import os, fcntl, termios; os.setsid(); "
+        "fcntl.ioctl(0, termios.TIOCSCTTY, 0); "
+        "os.execv(os.environ['TEST_SHELL'], ['bash', '--noprofile', '--norc', '-i'])"
+    )
+    env = dict(os.environ, TERM="xterm-256color", PS1="OUTER> ", TEST_SHELL=shell, SHELL=shell)
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
+    process = subprocess.Popen([sys.executable, "-c", bootstrap], stdin=slave, stdout=slave, stderr=slave, env=env)
+    os.close(slave)
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    transcript = ""
+
+    def wait_until(predicate):
+        nonlocal transcript
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if select.select([master], [], [], 0.05)[0]:
+                data = decoder.decode(os.read(master, 65536))
+                transcript += data
+                if "\x1b[6n" in data:
+                    # Answer prompt-toolkit's cursor-position request as a terminal would.
+                    os.write(master, b"\x1b[1;1R")
+            if predicate():
+                return
+        pytest.fail(f"terminal condition timed out:\n{transcript}\n{describe_processes(process.pid, master)}")
+
+    try:
+        wait_until(lambda: "OUTER> " in transcript)
+        os.write(master, f"{shlex.quote(sys.executable)} {shlex.quote(str(application))}\n".encode())
+        wait_until(lambda: "TEST>" in transcript)
+        # sleep reads nothing, so the write blocks with the terminal lent to it.
+        os.write(master, b"protected | sleep 30\n")
+        wait_until(lambda: "WRITING\r\n" in transcript)
+        wait_until(lambda: os.tcgetpgrp(master) not in (process.pid, os.getpgid(process.pid)))
+        start = len(transcript)
+        os.write(master, b"\x03")
+        wait_until(lambda: "GOT_" in transcript[start:])
+        assert "GOT_BROKEN_PIPE" in transcript[start:]
         wait_until(lambda: "TEST>" in transcript[start:])
         os.write(master, b"quit\n")
         wait_until(lambda: os.tcgetpgrp(master) == process.pid)

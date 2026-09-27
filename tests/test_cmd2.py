@@ -441,7 +441,7 @@ def test_shell_falls_back_to_own_group_when_pipeline_exited(base_app, tmp_path) 
     lent = []
 
     @contextlib.contextmanager
-    def lend_terminal():
+    def _lend_terminal():
         lent.append(True)
         try:
             yield
@@ -457,7 +457,7 @@ def test_shell_falls_back_to_own_group_when_pipeline_exited(base_app, tmp_path) 
         spawned_while_lent.append(bool(lent))
         return real_popen(*args, **kwargs)
 
-    base_app._cur_pipe_proc_reader = mock.Mock(terminal_group=leader.pid, lend_terminal=lend_terminal)
+    base_app._cur_pipe_proc_reader = mock.Mock(_terminal_group=leader.pid, _lend_terminal=_lend_terminal)
     with (tmp_path / "output").open("w+") as output, mock.patch("subprocess.Popen", popen):
         base_app.stdout = output
         base_app.do_shell("echo joined")
@@ -960,7 +960,7 @@ def test_pipe_to_shell_error(redirection_app, mocker, capsys, terminal) -> None:
     assert capsys.readouterr().out == ""
     if terminal:
         assert signal.getsignal(signal.SIGTSTP) == previous_tstp
-        reader.wait_for_exit.assert_called_once_with(0.2)
+        reader._wait_for_exit.assert_called_once_with(0.2)
         reader.wait.assert_called_once_with()
         process.wait.assert_not_called()
         # SIGTTOU is blocked only inside ProcReader's lends. Blocking it for the whole
