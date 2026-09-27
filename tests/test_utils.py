@@ -499,6 +499,12 @@ def test_descriptor_relay_counts_output_it_is_reading() -> None:
         return data
 
     answers = []
+    asking = threading.Event()
+
+    def ask() -> None:
+        asking.set()
+        answers.append(relay.idle())
+
     # The relay thread must start inside the patch, or it is already in the real read.
     with mock.patch("os.read", side_effect=slow_read):
         relay = cu._DescriptorRelay(write_fd, mock.Mock(_lend_terminal=contextlib.nullcontext))
@@ -506,12 +512,17 @@ def test_descriptor_relay_counts_output_it_is_reading() -> None:
         with mock.patch("os.read", side_effect=slow_read):
             os.write(relay.write_fd, b"tail of a subprocess's output")
             assert taken.wait(5)
-            asker = threading.Thread(target=lambda: answers.append(relay.idle()))
+            asker = threading.Thread(target=ask)
             asker.start()
+            assert asking.wait(5)
             asker.join(0.3)
+            # While the output is in the relay's hands, idle() waits for the relay or says the
+            # output is still pending. Once released, the relay passes it on, so a later answer
+            # may rightly be that nothing is left.
+            answered_during_read = list(answers)
             release.set()
             asker.join(5)
-        assert answers == [False]
+        assert answered_during_read in ([], [False])
     finally:
         release.set()
         relay.close_write_fd()
