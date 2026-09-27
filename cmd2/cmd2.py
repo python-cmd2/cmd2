@@ -3345,7 +3345,7 @@ class Cmd:
             pipe_stdout = None if isinstance(self.stdout, utils.StdSim) else self.stdout  # type: ignore[unreachable]
             pipe_stderr = None if isinstance(sys.stderr, utils.StdSim) else sys.stderr
 
-            terminal_fd = None
+            terminal_fd: int | None = None
             popen_command = statement.redirect_to
             if sys.platform != "win32":
                 # Only a pipeline whose output goes to the terminal is the terminal's job. One

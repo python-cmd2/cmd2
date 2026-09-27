@@ -93,6 +93,9 @@ exclude = [
     "^tests/",        # tests directory
 ]
 files = ['.']
+# Check as CI does, on Linux, so results don't depend on the developer's OS. Windows-only
+# branches are skipped, and POSIX-only job control would otherwise fail to check on Windows.
+platform = "linux"
 show_column_numbers = true
 show_error_codes = true
 show_error_context = true
