@@ -183,10 +183,6 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
     )
     master, slave = pty.openpty()
     fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 24, 80, 0, 0))
-    if finish == "exit_sigint":
-        settings = termios.tcgetattr(slave)
-        settings[3] |= termios.TOSTOP
-        termios.tcsetattr(slave, termios.TCSANOW, settings)
     # Establish a controlling terminal in a fresh interpreter, avoiding preexec_fn
     # (unsafe when pytest or its plugins have started threads).
     bootstrap = (
@@ -215,6 +211,18 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
 
     def send(data):
         os.write(master, data.encode())
+
+    def stop_background_output():
+        """Set TOSTOP, so that a write from the background stops the writer.
+
+        Ctrl-C's handler may write while cmd2 has lent the terminal to the pager. Set it only
+        while cmd2's command runs: bash intermittently stops a job it has just started on a
+        TOSTOP terminal, before the job runs a line of its own. When the job stops, bash
+        restores its own terminal modes, so its commands during the stop run without it.
+        """
+        settings = termios.tcgetattr(master)
+        settings[3] |= termios.TOSTOP
+        termios.tcsetattr(master, termios.TCSANOW, settings)
 
     def wait_until(predicate):
         nonlocal transcript
@@ -317,6 +325,8 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
         # Readiness output can precede the foreground handoff. Send terminal
         # signals and keystrokes only once the pipeline can receive them.
         wait_until(lambda: os.tcgetpgrp(master) == pipeline_group)
+        if finish == "exit_sigint":
+            stop_background_output()
         if launcher == "exec":
             # There is no outer shell to run fg: Ctrl-Z must leave the pager
             # usable. Require a fresh read acknowledgement, not a SIGCONT.
@@ -332,18 +342,32 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
             # A child left running can steal these keystrokes from the shell.
             send("printf 'SHELL_%s\\n' OWNS_INPUT\n")
             wait_until(lambda start=start: "SHELL_OWNS_INPUT" in transcript[start:])
-            fcntl.ioctl(master, termios.TIOCSWINSZ, struct.pack("HHHH", rows, 80, 0, 0))
-            resizes.append(f"requested {rows}x80, read back {terminal_size()}")
             screen.resize(lines=rows, columns=80)
-            start = len(transcript)
-            send("stty size\n")
-            # Bash 5.1+ turns bracketed paste off with "\x1b[?2004l\r" before running the
-            # command, so the reply may follow a bare "\r" rather than "\r\n".
-            wait_until(lambda start=start, rows=rows: re.search(rf"[\r\n]{rows} 80\r\n", transcript[start:]) is not None)
+            # The shell sees the resize while the job is stopped. Under a loaded parallel run the
+            # pseudo-terminal occasionally reports its old size again, though every process of
+            # the job is stopped and nothing here sets a size. So confirm the size through the
+            # shell, and resize again if it saw the old one. Every attempt is reported on failure.
+            for _ in range(5):
+                fcntl.ioctl(master, termios.TIOCSWINSZ, struct.pack("HHHH", rows, 80, 0, 0))
+                resizes.append(f"requested {rows}x80, read back {terminal_size()}")
+                start = len(transcript)
+                send("stty size\n")
+                # Bash 5.1+ turns bracketed paste off with "\x1b[?2004l\r" before running the
+                # command, so the reply may follow a bare "\r" rather than "\r\n".
+                wait_until(lambda start=start: re.search(r"[\r\n]\d+ \d+\r\n", transcript[start:]) is not None)
+                reply = re.search(r"[\r\n](\d+) (\d+)\r\n", transcript[start:])
+                assert reply is not None
+                resizes.append(f"the shell saw {reply.group(1)}x{reply.group(2)}")
+                if reply.groups() == (str(rows), "80"):
+                    break
+            else:
+                pytest.fail(f"the shell never saw a {rows}x80 terminal: {resizes}")
             start = len(transcript)
             send("fg\n")
             wait_until(lambda start=start: "PAGER_RESUMED\r\n" in transcript[start:])
             assert os.tcgetpgrp(master) == pipeline_group
+            if finish == "exit_sigint":
+                stop_background_output()
         if finish == "exit_sigint":
             send("\x03")
         elif finish == "interrupts":
