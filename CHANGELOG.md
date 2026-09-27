@@ -12,9 +12,10 @@
       the pipeline's job, so both processes receive Ctrl-C and Ctrl-Z
     - On Windows, fixed piped output appearing garbled in console programs such as `more`
       (`help -v | more`), a regression in 4.2.4. Pipes were written as UTF-8, but console programs
-      decode their input with the console's code page. Pipes now use that code page, and characters
-      it cannot represent are replaced rather than failing the command. Without a console, and on
-      other platforms, pipes still use UTF-8
+      decode their input with the console's code page. Pipes now use that code page, including ones
+      Python names otherwise, such as 20866 (KOI8-R) or 28591 (ISO-8859-1), and characters it cannot
+      represent are replaced rather than failing the command. Without a console, with a code page
+      Python has no codec for, and on other platforms, pipes still use UTF-8
 
 ## 4.2.4 (September 8, 2026)
 

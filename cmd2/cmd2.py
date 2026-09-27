@@ -3375,9 +3375,11 @@ class Cmd:
                     # user's shell as before.
                     import shlex
 
-                    user_shell = shlex.quote(kwargs.get("executable", "/bin/sh"))
+                    # The POSIX shell Popen() itself runs with shell=True
+                    posix_shell = "/system/bin/sh" if hasattr(sys, "getandroidapilevel") else "/bin/sh"
+                    user_shell = shlex.quote(kwargs.get("executable", posix_shell))
                     popen_command = f"read -r _ || exit 1; exec {user_shell} -c {shlex.quote(statement.redirect_to)}"
-                    kwargs["executable"] = "/bin/sh"
+                    kwargs["executable"] = posix_shell
 
             with contextlib.ExitStack() as terminal_stack, contextlib.ExitStack() as gate_stack:
                 if terminal_fd is not None:
@@ -5007,9 +5009,15 @@ class Cmd:
         # the terminal per write. Run the command inside the pipeline's job instead, for as
         # long as it runs: the consumer keeps the terminal, and Ctrl-C and Ctrl-Z reach both
         # processes, as they would in a shell pipeline.
+        # A worker thread's command stays out of it: job control relays stops to the main
+        # thread, and only the main thread may change signal handlers.
         pipeline = self._cur_pipe_proc_reader
         pipeline_group = None
-        if pipeline is not None and not isinstance(self.stdout, utils.StdSim):  # type: ignore[unreachable]
+        if (
+            pipeline is not None
+            and threading.current_thread() is threading.main_thread()
+            and not isinstance(self.stdout, utils.StdSim)  # type: ignore[unreachable]
+        ):
             pipeline_group = pipeline._terminal_group
 
         # Prevent KeyboardInterrupts while in the shell process. The shell process still

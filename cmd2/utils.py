@@ -536,22 +536,57 @@ class ByteBuf:
                 self.std_sim_instance.flush()
 
 
+# Windows code pages Python names other than cpNNNNN. Before Python 3.14, which covers every
+# code page Windows supports, a console set to one of these would otherwise get UTF-8.
+_CODE_PAGE_CODECS = {
+    20127: "ascii",
+    20866: "koi8_r",
+    21866: "koi8_u",
+    28591: "latin_1",
+    28592: "iso8859_2",
+    28593: "iso8859_3",
+    28594: "iso8859_4",
+    28595: "iso8859_5",
+    28596: "iso8859_6",
+    28597: "iso8859_7",
+    28598: "iso8859_8",
+    28599: "iso8859_9",
+    28603: "iso8859_13",
+    28605: "iso8859_15",
+    51932: "euc_jp",
+    51949: "euc_kr",
+    54936: "gb18030",
+}
+
+
+def _code_page_encoding(code_page: int) -> str | None:
+    """Return the name of the Python codec for a Windows code page, or None if there is none.
+
+    :param code_page: a Windows code page identifier, such as 437
+    """
+    import codecs
+
+    for name in (f"cp{code_page}", _CODE_PAGE_CODECS.get(code_page)):
+        if name is not None:
+            with contextlib.suppress(LookupError):
+                # Normalized, so that code page 65001 is reported as utf-8
+                return codecs.lookup(name).name
+    return None
+
+
 def _pipe_encoding() -> str:
     """Return the encoding for output cmd2 pipes to a shell command.
 
     Windows console programs such as more, sort, and findstr decode piped input with the
     console's output code page, and would show UTF-8 as mojibake. Elsewhere, and on Windows
-    without a console, use UTF-8.
+    without a console or with a code page Python cannot encode, use UTF-8.
     """
     if sys.platform == "win32":
-        import codecs
         import ctypes
 
         code_page = ctypes.windll.kernel32.GetConsoleOutputCP()
         if code_page:
-            with contextlib.suppress(LookupError):
-                # Normalized, so that code page 65001 is reported as utf-8
-                return codecs.lookup(f"cp{code_page}").name
+            return _code_page_encoding(code_page) or "utf-8"
     return "utf-8"
 
 
@@ -1108,11 +1143,6 @@ class _DescriptorRelay:
             poller.register(self.write_fd, select.POLLOUT)
             return not poller.poll(0)
 
-    def idle(self) -> bool:
-        """Whether all output written to the relay has reached the consumer's pipe."""
-        with self._lock:
-            return self._done or self._sent >= self._received + self._unread()
-
     def flush(self) -> None:
         """Wait until output already written to the relay has reached the consumer's pipe.
 
@@ -1248,8 +1278,10 @@ class _PipelineWriter(io.FileIO):
         fd = super().fileno()
         written = 0
         try:
-            # Output a producer wrote to the relay comes first, which may need a lend.
-            if self._relay is None or self._relay.idle():
+            # Once a relay exists, its thread writes to the consumer's pipe too, and can fill it
+            # between a check for room and the write. So only without one is room checked
+            # without a lend. Output a producer wrote to the relay comes first in any case.
+            if self._relay is None:
                 # Once there is room, a write of at most PIPE_BUF bytes does not block.
                 while written < len(view) and self._poller.poll(0):
                     written += os.write(fd, view[written : written + select.PIPE_BUF])

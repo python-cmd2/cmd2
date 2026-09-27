@@ -1,8 +1,10 @@
 """Cmd2 unit/functional testing"""
 
+import contextlib
 import io
 import os
 import signal
+import subprocess
 import sys
 import tempfile
 import threading
@@ -969,6 +971,62 @@ def test_pipe_to_shell_error(redirection_app, mocker, capsys, terminal) -> None:
     else:
         process.wait.assert_called_once()
     assert popen.call_args.kwargs["stdin"].closed
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+@pytest.mark.parametrize("android", [False, True])
+def test_terminal_pipe_start_gate_uses_the_platform_shell(redirection_app, mocker, monkeypatch, android) -> None:
+    """The start gate runs in the POSIX shell Popen() itself would use: Android has no /bin/sh."""
+    if android:
+        monkeypatch.setattr(sys, "getandroidapilevel", lambda: 30, raising=False)
+    else:
+        monkeypatch.delattr(sys, "getandroidapilevel", raising=False)
+    monkeypatch.delenv("SHELL", raising=False)
+    popen = mocker.patch("subprocess.Popen", autospec=True)
+    popen.return_value.returncode = 127
+    terminal_stream = mocker.Mock()
+    terminal_stream.isatty.return_value = True
+    terminal_stream.fileno.return_value = 10
+    redirection_app.stdout = terminal_stream
+    mocker.patch("os.tcgetpgrp", return_value=os.getpgrp())
+    mocker.patch("cmd2.utils.ProcReader")
+    redirection_app.onecmd_plus_hooks("print_output | less")
+    shell = "/system/bin/sh" if android else "/bin/sh"
+    assert popen.call_args.kwargs["executable"] == shell
+    # With SHELL unset, the gate hands the command to that shell, too.
+    assert f"exec {shell} -c less" in popen.call_args.args[0]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+def test_shell_from_a_worker_thread_stays_out_of_the_pipeline(base_app, tmp_path) -> None:
+    """Joining a pipeline's job means relaying stops to the main thread, and may change signal handlers.
+
+    Only the main thread may do that, so a shell command run from another thread does not join.
+    """
+    lent = []
+
+    @contextlib.contextmanager
+    def _lend_terminal():
+        lent.append(True)
+        yield
+
+    spawned = []
+    real_popen = subprocess.Popen
+
+    def popen(*args, **kwargs):
+        spawned.append(kwargs)
+        return real_popen(*args, **kwargs)
+
+    base_app._cur_pipe_proc_reader = mock.Mock(_terminal_group=os.getpgrp(), _lend_terminal=_lend_terminal)
+    with (tmp_path / "output").open("w+") as output, mock.patch("subprocess.Popen", popen):
+        base_app.stdout = output
+        worker = threading.Thread(target=base_app.do_shell, args=("echo worker",))
+        worker.start()
+        worker.join(10)
+        output.seek(0)
+        assert output.read() == "worker\n"
+    assert "process_group" not in spawned[0]
+    assert not lent
 
 
 def test_restore_output_resets_pipe_state_when_the_wait_fails(base_app) -> None:

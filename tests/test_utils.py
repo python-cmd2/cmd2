@@ -212,6 +212,31 @@ def test_pipe_encoding_follows_the_console_code_page(monkeypatch, code_page, enc
     assert cu._pipe_encoding() == encoding
 
 
+@pytest.mark.parametrize(
+    ("code_page", "sample", "codec"),
+    [
+        (437, "─", "cp437"),
+        # chcp 65001
+        (65001, "─", "utf-8"),
+        # Code pages Python names otherwise. Python 3.14 on Windows has a cpNNNNN codec for them too.
+        (20866, "Ж", "koi8_r"),
+        (28591, "é", "latin_1"),
+        (20127, "a", "ascii"),
+    ],
+)
+def test_code_page_encoding(code_page, sample, codec) -> None:
+    encoding = cu._code_page_encoding(code_page)
+    assert encoding is not None
+    assert sample.encode(encoding) == sample.encode(codec)
+
+
+@pytest.mark.parametrize("code_page", [50220, 1])
+def test_code_page_encoding_without_a_codec(code_page) -> None:
+    if sys.platform == "win32" and sys.version_info >= (3, 14) and code_page == 50220:
+        pytest.skip("Python 3.14 on Windows may support every code page Windows does")
+    assert cu._code_page_encoding(code_page) is None
+
+
 @pytest.fixture
 def pr_none():
     import subprocess
@@ -498,12 +523,13 @@ def test_descriptor_relay_counts_output_it_is_reading() -> None:
             release.wait(5)
         return data
 
-    answers = []
+    flushed = threading.Event()
     asking = threading.Event()
 
     def ask() -> None:
         asking.set()
-        answers.append(relay.idle())
+        relay.flush()
+        flushed.set()
 
     # The relay thread must start inside the patch, or it is already in the real read.
     with mock.patch("os.read", side_effect=slow_read):
@@ -515,14 +541,12 @@ def test_descriptor_relay_counts_output_it_is_reading() -> None:
             asker = threading.Thread(target=ask)
             asker.start()
             assert asking.wait(5)
-            asker.join(0.3)
-            # While the output is in the relay's hands, idle() waits for the relay or says the
-            # output is still pending. Once released, the relay passes it on, so a later answer
-            # may rightly be that nothing is left.
-            answered_during_read = list(answers)
+            # While the output is in the relay's hands, flush() must wait for it.
+            assert not flushed.wait(0.3)
             release.set()
+            # Once released, the relay passes the output on, and flush() returns.
+            assert flushed.wait(5)
             asker.join(5)
-        assert answered_during_read in ([], [False])
     finally:
         release.set()
         relay.close_write_fd()
@@ -544,8 +568,35 @@ def test_descriptor_relay_that_finished_has_nothing_pending() -> None:
             time.sleep(0.01)
         assert relay._done
         relay.flush()
-        assert relay.idle()
     finally:
+        os.close(read_fd)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX pipes")
+@pytest.mark.parametrize("relaying", [False, True])
+def test_pipeline_writer_lends_every_write_once_a_relay_exists(relaying) -> None:
+    """The relay's thread writes to the consumer's pipe too. It could fill the pipe between a check for room and a write.
+
+    So once a relay exists, even a write the pipe has room for is made with the terminal lent,
+    in case it blocks. Without one, such a write needs no lend.
+    """
+    read_fd, write_fd = os.pipe()
+    lends = []
+
+    @contextlib.contextmanager
+    def lend_terminal():
+        lends.append(1)
+        yield
+
+    writer = cu._PipelineWriter(write_fd, mock.Mock(_lend_terminal=lend_terminal))
+    try:
+        if relaying:
+            writer.fileno()
+        assert writer.write(b"fits") == 4
+        assert lends == ([1] if relaying else [])
+    finally:
+        writer.close()
+        assert os.read(read_fd, 100) == b"fits"
         os.close(read_fd)
 
 
