@@ -3380,15 +3380,7 @@ class Cmd:
                 if terminal_fd is not None:
                     # Should cmd2 fail before opening the gate, the held pipeline reads EOF and exits.
                     gate_stack.callback(new_stdout.close)
-                with contextlib.ExitStack() as spawn_stack:
-                    if terminal_fd is not None and os.getpgrp() == os.getsid(0):
-                        import signal
-
-                        # A session leader's job has no outer shell to resume it.
-                        # Its pipeline must inherit the same Ctrl-Z behavior: the
-                        # new group would otherwise make SIGTSTP actionable again.
-                        previous_tstp = signal.signal(signal.SIGTSTP, signal.SIG_IGN)
-                        spawn_stack.callback(signal.signal, signal.SIGTSTP, previous_tstp)
+                with utils._session_leader_job_stops() if terminal_fd is not None else contextlib.nullcontext():
                     proc = subprocess.Popen(  # noqa: S602
                         popen_command,
                         stdin=subproc_stdin,
@@ -5025,8 +5017,13 @@ class Cmd:
             while True:
                 try:
                     # For any stream that is a StdSim, we will use a pipe so we can capture its output.
-                    # A command joining the pipeline is spawned inside the lend, which blocks SIGTTOU.
-                    with utils._unblocked_sigttou() if "process_group" in kwargs else contextlib.nullcontext():
+                    # A command joining the pipeline is spawned inside the lend, which blocks SIGTTOU,
+                    # and with the job's Ctrl-Z behavior.
+                    joining = "process_group" in kwargs
+                    with (
+                        utils._unblocked_sigttou() if joining else contextlib.nullcontext(),
+                        utils._session_leader_job_stops() if joining else contextlib.nullcontext(),
+                    ):
                         proc = subprocess.Popen(  # noqa: S602
                             expanded_command,
                             stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]

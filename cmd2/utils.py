@@ -552,6 +552,26 @@ def _unblocked_sigttou() -> Iterator[None]:
         signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
 
 
+@contextlib.contextmanager
+def _session_leader_job_stops() -> Iterator[None]:
+    """Spawn a process for a terminal pipeline's job with the same Ctrl-Z behavior as cmd2.
+
+    A session leader's job has no outer shell to resume it, so Ctrl-Z must not stop any part
+    of it. A new process group would otherwise make SIGTSTP actionable again. An ignored
+    signal stays ignored across exec, so ignore SIGTSTP while spawning.
+    """
+    import signal
+
+    if os.getpgrp() != os.getsid(0):
+        yield
+        return
+    previous = signal.signal(signal.SIGTSTP, signal.SIG_IGN)
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGTSTP, previous)
+
+
 class ProcReader:
     """Used to capture stdout and stderr from a Popen process if any of those were set to subprocess.PIPE.
 
@@ -591,10 +611,13 @@ class ProcReader:
         self._terminal_lock = threading.RLock()
         self._job_resumed = threading.Event()
         # Set by a thread that relays a pipeline's stop to cmd2's own job. Otherwise Ctrl-Z
-        # reached cmd2 directly, and cmd2 stops the pipeline itself. The watcher skips the
-        # SIGSTOPs cmd2 sends that way, counted under _terminal_lock.
+        # reached cmd2 directly, and cmd2 stops the pipeline itself.
         self._relaying_stop = False
-        self._own_stops = 0
+        # One suspension of the whole job at a time, and how many have finished. A suspension
+        # continues the whole pipeline as it ends, so a stop reported before it finished is
+        # already dealt with: see _suspend_with_cmd2().
+        self._suspension_lock = threading.Lock()
+        self._suspensions = 0
         if terminal_fd is not None:
             self._original_group = os.tcgetpgrp(terminal_fd)
 
@@ -618,21 +641,22 @@ class ProcReader:
             self._proc.send_signal(signal.CTRL_BREAK_EVENT)
         else:
             # Since cmd2 uses shell=True in its Popen calls, we need to send the SIGINT to
-            # the whole process group to make sure it propagates further than the shell
-            try:
-                group_id = os.getpgid(self._proc.pid)
-            except ProcessLookupError:
-                # Pipelines lead their own group. A shell command that joined it, such as
-                # `shell sleep 100 | head -1`, can outlive the reaped consumer. Find the group
-                # through that command, which cmd2 has not reaped yet. Never signal the
-                # consumer's own ID: once its group is gone, the system may reuse it.
-                for producer in self._joined:
-                    if producer.returncode is None:
-                        with contextlib.suppress(ProcessLookupError):
-                            group_id = os.getpgid(producer.pid)
-                            break
-                else:
-                    return
+            # the whole process group to make sure it propagates further than the shell.
+            # Once reaped, the process's ID may already belong to another process.
+            group_id = None
+            if self._proc.returncode is None:
+                with contextlib.suppress(ProcessLookupError):
+                    group_id = os.getpgid(self._proc.pid)
+            # Pipelines lead their own group. A shell command that joined it, such as
+            # `shell sleep 100 | head -1`, can outlive the reaped consumer. Find the group
+            # through that command, which cmd2 has not reaped yet. Never signal the
+            # consumer's own ID: once its group is gone, the system may reuse it.
+            for producer in self._joined:
+                if group_id is None and producer.returncode is None:
+                    with contextlib.suppress(ProcessLookupError):
+                        group_id = os.getpgid(producer.pid)
+            if group_id is None:
+                return
             # Never re-signal our own group: other ProcReader callers may share it
             # and already received Ctrl-C.
             if group_id != os.getpgrp():
@@ -647,8 +671,10 @@ class ProcReader:
             import signal
 
             # Popen.terminate() polls first, which would compete with our waitpid thread.
-            with contextlib.suppress(ProcessLookupError):
-                os.kill(self._proc.pid, signal.SIGTERM)
+            # Once the watcher has reaped the process, its ID may belong to another one.
+            if self._proc.returncode is None:
+                with contextlib.suppress(ProcessLookupError):
+                    os.kill(self._proc.pid, signal.SIGTERM)
 
     @property
     def _terminal_group(self) -> int | None:
@@ -694,7 +720,7 @@ class ProcReader:
         def suspend_job(signum: int, frame: Any) -> None:
             relayed = self._relaying_stop
             self._relaying_stop = False
-            stopped_pipeline = False
+            own_suspension = False
             try:
                 if previous_handler != signal.SIG_DFL:
                     if callable(previous_handler):
@@ -702,15 +728,12 @@ class ProcReader:
                     return
                 if os.tcgetpgrp(terminal_fd) == self._proc.pid:
                     self._set_foreground_group(terminal_fd, self._original_group)
-                if not relayed and self._proc.returncode is None:
-                    # Ctrl-Z reached only cmd2's group, which owns the terminal between pipe
-                    # writes. Stop the pipeline too, as a shell stops its whole job.
-                    with self._terminal_lock:
-                        self._own_stops += 1
-                    stopped_pipeline = self._signal_pipeline(signal.SIGSTOP)
-                    if not stopped_pipeline:
-                        with self._terminal_lock:
-                            self._own_stops -= 1
+                # Ctrl-Z reached only cmd2's group, which owns the terminal between pipe writes.
+                # Stop the pipeline too, as a shell stops its whole job. Should another thread
+                # be relaying a stop already, it has stopped the pipeline.
+                if not relayed and self._suspension_lock.acquire(blocking=False):
+                    own_suspension = True
+                    self._signal_pipeline(signal.SIGSTOP)
                 # Ignore our group-directed copy, then stop this thread synchronously.
                 # Wrappers in our job must stop too. Unlike SIGSTOP, SIGTSTP is
                 # discarded for orphaned groups, which have no shell to resume them.
@@ -726,8 +749,10 @@ class ProcReader:
                     if self._terminal_available.is_set() and os.tcgetpgrp(terminal_fd) == self._original_group:
                         self._set_foreground_group(terminal_fd, self._proc.pid)
                 finally:
-                    if stopped_pipeline:
+                    if own_suspension:
                         self._signal_pipeline(signal.SIGCONT)
+                        self._suspensions += 1
+                        self._suspension_lock.release()
                     self._job_resumed.set()
 
         signal.signal(signal.SIGTSTP, suspend_job)
@@ -820,16 +845,11 @@ class ProcReader:
         import signal
 
         while True:
+            seen = self._suspensions
             _, status = os.waitpid(self._proc.pid, os.WUNTRACED)
             if not os.WIFSTOPPED(status):
                 self._proc.returncode = os.waitstatus_to_exitcode(status)
                 return
-            if os.WSTOPSIG(status) == signal.SIGSTOP:
-                with self._terminal_lock:
-                    if self._own_stops:
-                        # cmd2 stopped the pipeline along with itself, and continues it too.
-                        self._own_stops -= 1
-                        continue
             if os.WSTOPSIG(status) in (signal.SIGTTIN, signal.SIGTTOU):
                 # Command code owns the terminal between pipe writes. Defer
                 # consumer terminal access until the next write or final wait.
@@ -838,10 +858,14 @@ class ProcReader:
                     with self._terminal_lock:
                         # A stopped consumer can be killed before another write.
                         # Keep reaping even while command code owns the terminal.
+                        recent = self._suspensions
                         pid, pending_status = os.waitpid(self._proc.pid, os.WNOHANG | os.WUNTRACED)
-                        if pid and not os.WIFSTOPPED(pending_status):
-                            self._proc.returncode = os.waitstatus_to_exitcode(pending_status)
-                            return
+                        if pid:
+                            if not os.WIFSTOPPED(pending_status):
+                                self._proc.returncode = os.waitstatus_to_exitcode(pending_status)
+                                return
+                            # A newer stop: the one a suspension would deal with.
+                            seen = recent
                         # A short write may already have returned the terminal.
                         # Do not turn that ordinary handoff into a job suspension.
                         if not self._terminal_available.is_set():
@@ -854,37 +878,55 @@ class ProcReader:
                 if foreground == self._proc.pid:
                     continue
 
-            self._suspend_with_cmd2(terminal_fd)
+            self._suspend_with_cmd2(terminal_fd, seen)
 
-    def _suspend_with_cmd2(self, terminal_fd: int) -> None:
-        """Relay a pipeline's stop to cmd2's own job, and continue the pipeline once cmd2 resumes."""
+    def _suspend_with_cmd2(self, terminal_fd: int, seen: int) -> None:
+        """Relay a stop in the pipeline's job to cmd2's own, and continue the pipeline once cmd2 resumes.
+
+        Ctrl-Z stops every process of the job that does not ignore it, and each stop may be
+        reported: the consumer's to its watcher, a producer's to the thread that waits for it.
+        Only the first to arrive suspends the job. A suspension ends by continuing the whole
+        pipeline, so a stop reported before it finished needs nothing more.
+
+        :param terminal_fd: the controlling terminal
+        :param seen: the number of finished suspensions when the stop was reported
+        """
         import signal
 
-        with self._terminal_lock:
-            if os.tcgetpgrp(terminal_fd) == self._proc.pid:
-                self._set_foreground_group(terminal_fd, self._original_group)
-        # Stop every terminal reader before returning control to the outer shell.
-        self._signal_pipeline(signal.SIGSTOP)
-        self._job_resumed.clear()
-        self._relaying_stop = True
-        # Signal the main thread itself. Only it runs Python signal handlers, and a
-        # process-directed signal may be taken by another thread while the main
-        # thread sleeps in a system call, which then never returns to run the handler.
-        signal.pthread_kill(threading.main_thread().ident or 0, signal.SIGTSTP)
-        self._job_resumed.wait()
-        self._signal_pipeline(signal.SIGCONT)
+        # Wait in short polls: on the main thread, the suspension being waited for may need
+        # this thread to run the SIGTSTP handler.
+        while not self._suspension_lock.acquire(timeout=0.1):
+            pass
+        try:
+            if self._suspensions != seen:
+                return
+            with self._terminal_lock:
+                if os.tcgetpgrp(terminal_fd) == self._proc.pid:
+                    self._set_foreground_group(terminal_fd, self._original_group)
+            # Stop every terminal reader before returning control to the outer shell.
+            self._signal_pipeline(signal.SIGSTOP)
+            self._job_resumed.clear()
+            self._relaying_stop = True
+            # Signal the main thread itself. Only it runs Python signal handlers, and a
+            # process-directed signal may be taken by another thread while the main
+            # thread sleeps in a system call, which then never returns to run the handler.
+            signal.pthread_kill(threading.main_thread().ident or 0, signal.SIGTSTP)
+            self._job_resumed.wait()
+            self._signal_pipeline(signal.SIGCONT)
+            self._suspensions += 1
+        finally:
+            self._suspension_lock.release()
 
-    def _relay_producer_stop(self) -> None:
-        """Suspend the shell's whole job for a stopped producer that outlived the consumer.
+    def _relay_producer_stop(self, seen: int) -> None:
+        """Suspend the shell's whole job for a stopped producer that joined this pipeline.
 
-        Ctrl-Z reaches only the foreground group, and the producer may be all that is
-        left of it. The watcher ended with the consumer, so nothing else relays the stop.
+        The consumer need not stop with it: it may ignore Ctrl-Z, or be gone already, and
+        then nothing else would relay the stop.
+
+        :param seen: the number of finished suspensions when the stop was reported
         """
-        terminal_fd = self._terminal_fd
-        if terminal_fd is None or not self._process_done.is_set():
-            # A live watcher relays the consumer's stop and continues the whole group.
-            return
-        self._suspend_with_cmd2(terminal_fd)
+        if self._terminal_fd is not None:
+            self._suspend_with_cmd2(self._terminal_fd, seen)
 
     def _wait_for_producer(self, pipeline: "ProcReader", timeout: float | None) -> None:
         """Wait for a producer in a terminal pipeline's job, relaying its job-control stops.
@@ -896,6 +938,7 @@ class ProcReader:
 
         deadline = None if timeout is None else time.monotonic() + timeout
         while self._proc.returncode is None:
+            seen = pipeline._suspensions
             try:
                 pid, status = os.waitpid(self._proc.pid, os.WNOHANG | os.WUNTRACED)
             except ChildProcessError:
@@ -907,7 +950,7 @@ class ProcReader:
                     raise subprocess.TimeoutExpired(self._proc.args, timeout or 0)
                 time.sleep(0.05)
             elif os.WIFSTOPPED(status):
-                pipeline._relay_producer_stop()
+                pipeline._relay_producer_stop(seen)
             else:
                 self._proc.returncode = os.waitstatus_to_exitcode(status)
 
@@ -1069,6 +1112,8 @@ class _DescriptorRelay:
 
         poller = select.poll()
         poller.register(self._out_fd, select.POLLOUT)
+        incoming = select.poll()
+        incoming.register(self._in_fd, select.POLLIN)
         lend = contextlib.ExitStack()
         lending = False
         try:
@@ -1079,11 +1124,15 @@ class _DescriptorRelay:
                     # No producer is waiting. Let command code have the terminal back.
                     lend.close()
                     lending = False
-                data = os.read(self._in_fd, 65536)
+                # Wait for output outside the lock, then take and count it under the lock. Output
+                # taken out of the pipe but not yet counted would look passed on to idle() and
+                # flush(), and cmd2's next write could overtake it.
+                incoming.poll()
+                with self._lock:
+                    data = os.read(self._in_fd, 65536)
+                    self._received += len(data)
                 if not data:
                     return
-                with self._lock:
-                    self._received += len(data)
                 view = memoryview(data)
                 written = 0
                 while written < len(view):

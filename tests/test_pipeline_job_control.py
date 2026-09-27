@@ -1108,3 +1108,90 @@ def test_ctrl_c_ending_the_pager_does_not_interrupt_protected_code(tmp_path) -> 
         os.close(master)
         process.kill()
         process.wait(timeout=5)
+
+
+@pytest.mark.parametrize("launcher", ["plain", "exec"])
+@pytest.mark.parametrize("consumer", ["stops", "ignores_ctrl_z"])
+def test_ctrl_z_with_a_shell_producer_in_the_pipeline(tmp_path, launcher, consumer) -> None:
+    """Ctrl-Z in `shell <producer> | <consumer>` suspends the whole job, or none of it.
+
+    The producer joins the pipeline's job. Run from a shell, whichever process stops first
+    suspends the job, including when the consumer ignores Ctrl-Z and never stops itself. As a
+    session leader, cmd2's job has no shell to resume it, so Ctrl-Z must stop none of it: the
+    producer ignores SIGTSTP just as the consumer does. Otherwise the producer stops for good
+    while cmd2 waits for it.
+    """
+    import pty
+
+    shell = shutil.which("bash")
+    if shell is None:
+        pytest.skip("requires an interactive bash shell")
+    python = shlex.quote(sys.executable)
+    producer = tmp_path / "producer.py"
+    producer.write_text(
+        "import os, time\nos.write(2, b'PRODUCER_READY\\n')\ntime.sleep(1.5)\nprint('PRODUCED')\n",
+        encoding="utf-8",
+    )
+    ignoring = tmp_path / "ignoring.py"
+    ignoring.write_text(
+        "import signal, sys\nsignal.signal(signal.SIGTSTP, signal.SIG_IGN)\nsys.stdout.write(sys.stdin.read())\n",
+        encoding="utf-8",
+    )
+    application = tmp_path / "application.py"
+    application.write_text(
+        "from cmd2 import Cmd\napp = Cmd()\napp.prompt = 'TEST> '\napp.cmdloop()\n",
+        encoding="utf-8",
+    )
+    master, slave = pty.openpty()
+    bootstrap = (
+        "import os, fcntl, termios; os.setsid(); "
+        "fcntl.ioctl(0, termios.TIOCSCTTY, 0); "
+        "os.execv(os.environ['TEST_SHELL'], ['bash', '--noprofile', '--norc', '-i'])"
+    )
+    env = dict(os.environ, TERM="xterm-256color", PS1="OUTER> ", TEST_SHELL=shell, SHELL=shell)
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
+    process = subprocess.Popen([sys.executable, "-c", bootstrap], stdin=slave, stdout=slave, stderr=slave, env=env)
+    os.close(slave)
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    transcript = ""
+
+    def wait_until(predicate):
+        nonlocal transcript
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if select.select([master], [], [], 0.05)[0]:
+                data = decoder.decode(os.read(master, 65536))
+                transcript += data
+                if "\x1b[6n" in data:
+                    # Answer prompt-toolkit's cursor-position request as a terminal would.
+                    os.write(master, b"\x1b[1;1R")
+            if predicate():
+                return
+        pytest.fail(f"terminal condition timed out:\n{transcript}\n{describe_processes(process.pid, master)}")
+
+    consumer_command = "cat" if consumer == "stops" else f"{python} {shlex.quote(str(ignoring))}"
+    try:
+        wait_until(lambda: "OUTER> " in transcript)
+        prefix = "exec " if launcher == "exec" else ""
+        os.write(master, f"{prefix}{python} {shlex.quote(str(application))}\n".encode())
+        wait_until(lambda: "TEST>" in transcript)
+        start = len(transcript)
+        os.write(master, f"shell {python} {shlex.quote(str(producer))} | {consumer_command}\n".encode())
+        wait_until(lambda: "PRODUCER_READY\r\n" in transcript[start:])
+        # The producer and consumer own the terminal, so Ctrl-Z reaches both.
+        wait_until(lambda: os.tcgetpgrp(master) not in (process.pid, os.getpgid(process.pid)))
+        os.write(master, b"\x1a")
+        if launcher == "plain":
+            wait_until(lambda: os.tcgetpgrp(master) == process.pid and "OUTER> " in transcript[start:])
+            os.write(master, b"fg\n")
+        wait_until(lambda: "PRODUCED\r\n" in transcript[start:])
+        # cmd2 gets its prompt back. The command, sent early, runs once it has.
+        os.write(master, b"help quit\n")
+        wait_until(lambda: "Exit this application" in transcript[start:])
+        if launcher == "exec":
+            assert "Stopped" not in transcript[start:]
+        os.write(master, b"quit\n")
+    finally:
+        os.close(master)
+        process.kill()
+        process.wait(timeout=5)

@@ -1,4 +1,4 @@
-## 4.2.5 (TBD)
+## 4.3.0 (TBD)
 
 - Bug Fixes
     - On POSIX, piping a command's output to an interactive program such as `less`
