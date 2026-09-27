@@ -556,9 +556,10 @@ def test_proc_reader_resumes_terminal_access_after_handoff(stop_signal, expired_
     [
         # The application ignores SIGCHLD, so the system reaps the pipeline itself.
         pytest.param([ChildProcessError(errno.ECHILD, "no child")], False, 0, id="sigchld-ignored"),
-        # The terminal hangs up as the watcher relays a stop.
-        pytest.param([(123, (signal.SIGTSTP << 8) | 0x7F), (123, 2 << 8)], True, 2, id="hangup"),
-        pytest.param([(123, (signal.SIGTSTP << 8) | 0x7F), ChildProcessError()], True, 0, id="hangup-sigchld-ignored"),
+        # The terminal hangs up as the watcher relays a stop. "stopped" stands for a Ctrl-Z
+        # stop status: parameters are built at collection, where Windows has no SIGTSTP.
+        pytest.param(["stopped", (123, 2 << 8)], True, 2, id="hangup"),
+        pytest.param(["stopped", ChildProcessError()], True, 0, id="hangup-sigchld-ignored"),
     ],
 )
 @pytest.mark.parametrize("signal_error", [ProcessLookupError, PermissionError])
@@ -571,6 +572,7 @@ def test_proc_reader_watcher_always_records_an_exit(waits, hung_up, returncode, 
     reader = cu.ProcReader(proc, sys.stdout, sys.stderr)
     reader._terminal_fd = 10
     reader._original_group = 456
+    waits = [(proc.pid, (signal.SIGTSTP << 8) | 0x7F) if wait == "stopped" else wait for wait in waits]
     with (
         mock.patch("os.waitpid", side_effect=waits),
         mock.patch("os.tcgetpgrp", side_effect=OSError(errno.EIO, "hung up") if hung_up else None, return_value=456),
