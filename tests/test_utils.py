@@ -452,6 +452,25 @@ def test_pipeline_writer_relay_leaves_the_terminal_after_a_producer_finishes() -
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX pipes")
+def test_descriptor_relay_that_finished_has_nothing_pending() -> None:
+    """Once every producer has closed the relay's pipe, the relay finishes and closes it, and nothing is left to wait for."""
+    read_fd, write_fd = os.pipe()
+    relay = cu._DescriptorRelay(write_fd, mock.Mock(_lend_terminal=contextlib.nullcontext))
+    try:
+        relay.close_write_fd()
+        # The relay closes the consumer's pipe as it finishes.
+        assert os.read(read_fd, 1) == b""
+        deadline = time.monotonic() + 5
+        while not relay._done and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert relay._done
+        relay.flush()
+        assert relay.idle()
+    finally:
+        os.close(read_fd)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX pipes")
 def test_pipeline_writer_relay_passes_consumer_exit_to_the_producer() -> None:
     import subprocess
 
@@ -701,6 +720,35 @@ def test_proc_reader_suspend_restores_signal_handler(handler_kind, relayed) -> N
         stop.assert_not_called()
         if handler_kind == "custom":
             previous.assert_called_once_with(signal.SIGTSTP, None)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+def test_proc_reader_direct_suspend_when_the_pipeline_is_gone() -> None:
+    """If the pipeline cannot be stopped along with cmd2, cmd2 does not count the stop or continue it."""
+    proc = mock.Mock(pid=123, stdout=None, stderr=None, returncode=None)
+    reader = cu.ProcReader(proc, sys.stdout, sys.stderr)
+    reader._terminal_fd = 10
+    reader._original_group = 456
+
+    def killpg(group, signum):
+        if group == proc.pid:
+            raise ProcessLookupError
+
+    with (
+        mock.patch("signal.getsignal", return_value=signal.SIG_DFL),
+        mock.patch("signal.signal") as set_handler,
+        mock.patch("signal.raise_signal") as stop,
+        mock.patch("os.killpg", side_effect=killpg) as sent,
+        mock.patch("os.tcgetpgrp", return_value=reader._original_group),
+        mock.patch("threading.Thread"),
+        reader._manage_terminal(),
+    ):
+        handler = set_handler.call_args.args[1]
+        handler(signal.SIGTSTP, None)
+    assert sent.call_args_list == [mock.call(proc.pid, signal.SIGSTOP), mock.call(reader._original_group, signal.SIGTSTP)]
+    assert reader._own_stops == 0
+    stop.assert_called_once_with(signal.SIGTSTP)
+    assert reader._job_resumed.is_set()
 
 
 def test_proc_reader_captured_pipeline_needs_no_terminal() -> None:
