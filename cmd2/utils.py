@@ -536,6 +536,25 @@ class ByteBuf:
                 self.std_sim_instance.flush()
 
 
+def _pipe_encoding() -> str:
+    """Return the encoding for output cmd2 pipes to a shell command.
+
+    Windows console programs such as more, sort, and findstr decode piped input with the
+    console's output code page, and would show UTF-8 as mojibake. Elsewhere, and on Windows
+    without a console, use UTF-8.
+    """
+    if sys.platform == "win32":
+        import codecs
+        import ctypes
+
+        code_page = ctypes.windll.kernel32.GetConsoleOutputCP()
+        if code_page:
+            with contextlib.suppress(LookupError):
+                # Normalized, so that code page 65001 is reported as utf-8
+                return codecs.lookup(f"cp{code_page}").name
+    return "utf-8"
+
+
 @contextlib.contextmanager
 def _unblocked_sigttou() -> Iterator[None]:
     """Let a child started inside :meth:`ProcReader._lend_terminal` keep normal job control.

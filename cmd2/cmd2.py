@@ -3324,11 +3324,14 @@ class Cmd:
             # Create a pipe with read and write sides
             read_fd, write_fd = os.pipe()
 
-            # Open each side of the pipe. Both ends are given an explicit encoding:
-            # command output is rendered by Rich and routinely contains non-ASCII, which
-            # the locale encoding cannot always represent.
-            subproc_stdin = open(read_fd, encoding="utf-8")  # noqa: SIM115
-            new_stdout: TextIO = cast(TextIO, open(write_fd, "w", encoding="utf-8"))  # noqa: SIM115
+            # Open each side of the pipe. Both ends are given an explicit encoding: command
+            # output is rendered by Rich and routinely contains non-ASCII, which the locale
+            # encoding cannot always represent. On Windows, that is the console's code page,
+            # which console programs such as more decode with. It cannot represent everything
+            # either, so replace what it lacks rather than fail the command.
+            pipe_encoding = utils._pipe_encoding()
+            subproc_stdin = open(read_fd, encoding=pipe_encoding)  # noqa: SIM115
+            new_stdout: TextIO = cast(TextIO, open(write_fd, "w", encoding=pipe_encoding, errors="replace"))  # noqa: SIM115
 
             # Isolate pipeline signals from cmd2. Terminal pipelines receive the
             # foreground terminal; ProcReader relays their job-control stops.
@@ -3433,7 +3436,8 @@ class Cmd:
                                 pipe_fd, cmd_pipe_proc_reader, interruptible=lambda: not self.sigint_protection
                             )
                         ),
-                        encoding="utf-8",
+                        encoding=pipe_encoding,
+                        errors="replace",
                     )
 
                 self.stdout = new_stdout

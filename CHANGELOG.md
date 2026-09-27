@@ -10,6 +10,11 @@
       nested in a command whose own output is piped, still run in their own session
     - A `shell` command piped to an interactive program, such as `shell git log | less`, now joins
       the pipeline's job, so both processes receive Ctrl-C and Ctrl-Z
+    - On Windows, fixed piped output appearing garbled in console programs such as `more`
+      (`help -v | more`), a regression in 4.2.4. Pipes were written as UTF-8, but console programs
+      decode their input with the console's code page. Pipes now use that code page, and characters
+      it cannot represent are replaced rather than failing the command. Without a console, and on
+      other platforms, pipes still use UTF-8
 
 ## 4.2.4 (September 8, 2026)
 

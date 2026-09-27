@@ -186,6 +186,32 @@ def test_stdsim_line_buffering(base_app) -> None:
         assert os.path.getsize(file.name) == saved_size + len(bytes_to_write)
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows pipes use the console code page")
+def test_pipe_encoding_is_utf8() -> None:
+    assert cu._pipe_encoding() == "utf-8"
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows console code pages")
+@pytest.mark.parametrize(
+    ("code_page", "encoding"),
+    [
+        (437, "cp437"),
+        (850, "cp850"),
+        # chcp 65001
+        (65001, "utf-8"),
+        # No console attached
+        (0, "utf-8"),
+        # A code page Python has no codec for
+        (50220, "utf-8"),
+    ],
+)
+def test_pipe_encoding_follows_the_console_code_page(monkeypatch, code_page, encoding) -> None:
+    import ctypes
+
+    monkeypatch.setattr(ctypes.windll.kernel32, "GetConsoleOutputCP", lambda: code_page)
+    assert cu._pipe_encoding() == encoding
+
+
 @pytest.fixture
 def pr_none():
     import subprocess
