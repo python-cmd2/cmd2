@@ -720,12 +720,13 @@ def test_pipeline_writer_lends_every_write_once_a_relay_exists(relaying) -> None
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX pipes")
-def test_pipeline_writer_reports_what_it_wrote_before_ctrl_c() -> None:
+@pytest.mark.parametrize("interrupted_chunk", [1, 2])
+def test_pipeline_writer_reports_what_it_wrote_before_ctrl_c(interrupted_chunk) -> None:
     """Ctrl-C can interrupt a write between two chunks, once some of them are in the pipe already.
 
     BufferedWriter takes an exception to mean that nothing was written, and would send its
     whole buffer again as it closes: the consumer would get that output twice. Ctrl-C must
-    still cancel the command.
+    still cancel the command. Before the first chunk, nothing was written, and it just does.
     """
     import io
     import select
@@ -737,8 +738,8 @@ def test_pipeline_writer_reports_what_it_wrote_before_ctrl_c() -> None:
 
     def write(fd, data):
         chunks.append(len(data))
-        if len(chunks) == 2:
-            # cmd2's SIGINT handler raises as the write goes on to its second chunk.
+        if len(chunks) == interrupted_chunk:
+            # cmd2's SIGINT handler raises as the write goes on to this chunk.
             raise KeyboardInterrupt
         return real_write(fd, data)
 
