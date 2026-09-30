@@ -622,7 +622,9 @@ def _session_leader_job_stops(pipeline: "ProcReader | None" = None) -> Iterator[
     """
     import signal
 
-    if os.getpgrp() != os.getsid(0):
+    # A handler installed outside Python is reported as None, and Python could not reinstall it after the spawn. So it stays,
+    # and the pipeline's watcher continues any stop in the job, having no handler to relay it to.
+    if os.getpgrp() != os.getsid(0) or signal.getsignal(signal.SIGTSTP) is None:
         yield
         return
     # A stop the pipeline's watcher relayed to cmd2 meanwhile would be discarded, and the watcher would wait for cmd2 to resume
@@ -700,6 +702,10 @@ class ProcReader:
         if self._proc.stderr is not None:
             self._err_thread.start()
 
+        # A terminal pipeline is reaped only by its watcher, which relays its stops once _manage_terminal() sets up job control
+        if terminal_fd is not None:
+            threading.Thread(name="pipe_job", target=self._wait_for_job, args=(terminal_fd,), daemon=True).start()
+
     def send_sigint(self) -> None:
         """Send a SIGINT to the process similar to if <Ctrl>+C were pressed."""
         import signal
@@ -710,19 +716,8 @@ class ProcReader:
             self._proc.send_signal(signal.CTRL_BREAK_EVENT)
         else:
             # Since cmd2 uses shell=True in its Popen calls, we need to send the SIGINT to the whole process group to make sure
-            # it propagates further than the shell. Once reaped, the process's ID may already belong to another process.
-            group_id = None
-            if self._proc.returncode is None:
-                with contextlib.suppress(ProcessLookupError):
-                    group_id = os.getpgid(self._proc.pid)
-            if group_id is None:
-                group_id = self._joined_group()
-            if group_id is None:
-                return
-            # Never re-signal our own group: other ProcReader callers may share it and already received Ctrl-C.
-            if group_id != os.getpgrp():
-                with contextlib.suppress(ProcessLookupError, PermissionError):
-                    os.killpg(group_id, signal.SIGINT)
+            # it propagates further than the shell.
+            self._signal_pipeline(signal.SIGINT)
 
     def terminate(self) -> None:
         """Terminate the process."""
@@ -764,8 +759,16 @@ class ProcReader:
         The group may be gone, or hold only processes cmd2 may not signal: a zombie on
         macOS, or a program running as another user, such as sudo.
         """
-        group_id = self._proc.pid if self._proc.returncode is None else self._joined_group()
+        group_id = None
+        # Once reaped, the process's ID may already belong to another process.
+        if self._proc.returncode is None:
+            with contextlib.suppress(ProcessLookupError):
+                group_id = os.getpgid(self._proc.pid)
         if group_id is None:
+            group_id = self._joined_group()
+        # Never signal our own group: that would stop or continue cmd2 itself, and other ProcReader callers may share it and
+        # already received Ctrl-C.
+        if group_id is None or group_id == os.getpgrp():
             return False
         try:
             os.killpg(group_id, signum)
@@ -781,7 +784,7 @@ class ProcReader:
 
     @contextlib.contextmanager
     def _manage_terminal(self) -> Iterator[None]:
-        """Watch the pipeline and suspend the shell's whole job on the main thread."""
+        """Suspend the shell's whole job on the main thread, and relay the pipeline's stops to it."""
         import signal
 
         terminal_fd = self._terminal_fd
@@ -830,10 +833,13 @@ class ProcReader:
                         self._suspension_lock.release()
                     self._job_resumed.set()
 
-        self._stop_handler = suspend_job
-        signal.signal(signal.SIGTSTP, suspend_job)
+        # A handler installed outside Python, such as by an application embedding it, is reported as None, and Python could not
+        # reinstall it. So it stays: Ctrl-Z does only what it does, and the watcher continues any stop in the pipeline's job,
+        # having no handler to relay it to.
+        if previous_handler is not None:
+            self._stop_handler = suspend_job
+            signal.signal(signal.SIGTSTP, suspend_job)
         try:
-            threading.Thread(name="pipe_job", target=self._wait_for_job, args=(terminal_fd,), daemon=True).start()
             yield
         finally:
             # The watcher may outlive job control, if waiting for the pipeline failed. Without suspend_job(), a stop it relayed
@@ -841,7 +847,8 @@ class ProcReader:
             # relays no more.
             with self._suspension():
                 self._detached = True
-                signal.signal(signal.SIGTSTP, previous_handler)
+                if previous_handler is not None:
+                    signal.signal(signal.SIGTSTP, previous_handler)
 
     @contextlib.contextmanager
     def _suspension(self) -> Iterator[None]:
@@ -875,7 +882,11 @@ class ProcReader:
         with _sigttou_mask(block=True):
             with self._terminal_lock:
                 try:
-                    self._set_foreground_group(terminal_fd, self._proc.pid)
+                    # Lend only a terminal cmd2's job owns. Once the shell's bg has continued cmd2 in the background, the shell
+                    # owns it, and taking it would leave the shell unable to read its terminal. A consumer that needs it then
+                    # stops, and the watcher relays that stop to cmd2's job, as a shell's own background pipeline would stop.
+                    if os.tcgetpgrp(terminal_fd) in (self._original_group, self._proc.pid):
+                        self._set_foreground_group(terminal_fd, self._proc.pid)
                 except OSError as error:
                     # The group can disappear before the watcher has recorded its exit. Linux reports a group that no longer
                     # exists as EPERM.
@@ -996,10 +1007,11 @@ class ProcReader:
         with self._suspension():
             if self._suspensions != seen or self._detached:
                 return
-            # Only suspend_job() resumes a pipeline stopped for a relay. Should command code have replaced it as SIGTSTP's
-            # handler, or ignored the signal, the pipeline would stay stopped for good. So it goes on, as when cmd2 ignores
-            # Ctrl-Z. Like a suspension, that deals with every stop reported before it.
-            if signal.getsignal(signal.SIGTSTP) is not self._stop_handler:
+            # Only suspend_job() resumes a pipeline stopped for a relay. Should it not be SIGTSTP's handler, because command
+            # code replaced it or ignored the signal, or job control left a handler installed outside Python, the pipeline
+            # would stay stopped for good. So it goes on, as when cmd2 ignores Ctrl-Z. Like a suspension, that deals with
+            # every stop reported before it.
+            if self._stop_handler is None or signal.getsignal(signal.SIGTSTP) is not self._stop_handler:
                 self._signal_pipeline(signal.SIGCONT)
                 self._suspensions += 1
                 return
@@ -1078,6 +1090,9 @@ class ProcReader:
         if self._terminal_fd is not None:
             with self._lend_terminal():
                 self._wait_for_exit()
+        elif self._pipeline is not None:
+            # Only this wait reaps a producer in a pipeline's job. Until it does, the reader threads wait for its return code.
+            self._wait_for_exit()
         if self._out_thread.is_alive():
             self._out_thread.join()
         if self._err_thread.is_alive():
@@ -1281,6 +1296,8 @@ class _PipelineWriter(io.FileIO):
         self._relay_lock = threading.Lock()
         self._poller = select.poll()
         self._poller.register(fd, select.POLLOUT)
+        # Set when Ctrl-C interrupted a write that had sent part of its data: see write()
+        self._interrupted = False
 
     def fileno(self) -> int:
         """Return a descriptor for subprocesses, such as a shell command's stdout.
@@ -1334,10 +1351,18 @@ class _PipelineWriter(io.FileIO):
         on its own for the handler to run. The descriptor itself stays blocking: a shell
         command inherits it, and a producer that found it non-blocking would fail with
         EAGAIN once the pipe filled.
+
+        Ctrl-C can raise KeyboardInterrupt between two chunks, once some are in the pipe.
+        BufferedWriter takes an exception to mean that nothing was written, and would send
+        those chunks again. So such a write reports what it sent, and the next one, which
+        BufferedWriter makes straight away for the rest, raises the interrupt instead.
         """
         import select
         import signal
 
+        if self._interrupted:
+            self._interrupted = False
+            raise KeyboardInterrupt
         view = memoryview(b).cast("B")
         fd = super().fileno()
         written = 0
@@ -1367,6 +1392,10 @@ class _PipelineWriter(io.FileIO):
                 if self._reader._proc.returncode in (-signal.SIGINT, 128 + signal.SIGINT):
                     raise KeyboardInterrupt from None
             raise
+        except KeyboardInterrupt:
+            if not written:
+                raise
+            self._interrupted = True
         return written
 
 

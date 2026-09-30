@@ -262,6 +262,11 @@ def pr_none():
     return cu.ProcReader(proc, sys.stdout, sys.stderr)
 
 
+def leads_own_group():
+    """Patch os.getpgid so that every process, including a mock's made-up one, leads its own group, as cmd2's pipes do."""
+    return mock.patch("os.getpgid", side_effect=lambda pid: pid)
+
+
 def test_proc_reader_send_sigint(pr_none) -> None:
     assert pr_none._proc.poll() is None
     pr_none.send_sigint()
@@ -349,11 +354,50 @@ def test_proc_reader_terminal_group() -> None:
     proc = mock.Mock(pid=4242, returncode=None, stdout=None, stderr=None)
     assert cu.ProcReader(proc, sys.stdout, sys.stderr)._terminal_group is None
 
-    with mock.patch("os.tcgetpgrp", return_value=os.getpgrp()):
+    # No watcher, which would reap the made-up process
+    with mock.patch("os.tcgetpgrp", return_value=os.getpgrp()), mock.patch.object(cu.ProcReader, "_wait_for_job"):
         reader = cu.ProcReader(proc, sys.stdout, sys.stderr, terminal_fd=0)
     assert reader._terminal_group == proc.pid
     proc.returncode = 0
     assert reader._terminal_group is None
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
+def test_proc_reader_waits_for_a_terminal_pipeline_on_its_own() -> None:
+    """ProcReader is public. Its wait() must work with terminal_fd alone, without cmd2's job control set up too."""
+    import subprocess
+
+    child = subprocess.Popen([sys.executable, "-c", "import sys; sys.exit(3)"], process_group=0)
+    with (
+        mock.patch("os.tcgetpgrp", return_value=os.getpgrp()),
+        mock.patch.object(cu.ProcReader, "_set_foreground_group"),
+    ):
+        reader = cu.ProcReader(child, sys.stdout, sys.stderr, terminal_fd=10)
+        waiter = threading.Thread(target=reader.wait, daemon=True)
+        waiter.start()
+        waiter.join(5)
+    assert not waiter.is_alive()
+    assert child.returncode == 3
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
+def test_proc_reader_waits_for_a_producer_in_a_pipeline_on_its_own() -> None:
+    """ProcReader is public. Its wait() must work with pipeline alone, and still capture the producer's output."""
+    import io
+    import subprocess
+
+    pipeline = cu.ProcReader(mock.Mock(pid=123, stdout=None, stderr=None, returncode=None), sys.stdout, sys.stderr)
+    child = subprocess.Popen(
+        [sys.executable, "-c", "import sys; sys.stderr.write('captured'); sys.exit(4)"], stderr=subprocess.PIPE
+    )
+    stderr = cu.StdSim(io.StringIO())
+    reader = cu.ProcReader(child, sys.stdout, stderr, pipeline=pipeline)
+    waiter = threading.Thread(target=reader.wait, daemon=True)
+    waiter.start()
+    waiter.join(5)
+    assert not waiter.is_alive()
+    assert child.returncode == 4
+    assert stderr.getvalue() == "captured"
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX pipes")
@@ -650,6 +694,43 @@ def test_pipeline_writer_lends_every_write_once_a_relay_exists(relaying) -> None
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX pipes")
+def test_pipeline_writer_reports_what_it_wrote_before_ctrl_c() -> None:
+    """Ctrl-C can interrupt a write between two chunks, once some of them are in the pipe already.
+
+    BufferedWriter takes an exception to mean that nothing was written, and would send its
+    whole buffer again as it closes: the consumer would get that output twice. Ctrl-C must
+    still cancel the command.
+    """
+    import io
+    import select
+
+    read_fd, write_fd = os.pipe()
+    payload = bytes(range(256)) * (3 * select.PIPE_BUF // 256)
+    real_write = os.write
+    chunks = []
+
+    def write(fd, data):
+        chunks.append(len(data))
+        if len(chunks) == 2:
+            # cmd2's SIGINT handler raises as the write goes on to its second chunk.
+            raise KeyboardInterrupt
+        return real_write(fd, data)
+
+    stream = io.BufferedWriter(
+        cu._PipelineWriter(write_fd, mock.Mock(_lend_terminal=contextlib.nullcontext)), buffer_size=len(payload) + 1
+    )
+    stream.write(payload)
+    with mock.patch("os.write", side_effect=write), pytest.raises(KeyboardInterrupt):
+        stream.flush()
+    stream.close()
+    received = b""
+    while chunk := os.read(read_fd, 65536):
+        received += chunk
+    os.close(read_fd)
+    assert received == payload
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX pipes")
 def test_pipeline_writer_starts_one_relay_for_producers_started_at_once() -> None:
     """Threads can start producers at the same time. They must share one relay.
 
@@ -804,6 +885,7 @@ def test_proc_reader_resumes_terminal_access_after_handoff(stop_signal, expired_
         return True
 
     with (
+        leads_own_group(),
         mock.patch(
             "os.waitpid",
             side_effect=[(proc.pid, stopped_status), *([(0, 0)] * (2 if expired_handoff else 1)), (proc.pid, 0)],
@@ -852,6 +934,7 @@ def test_proc_reader_watcher_always_records_an_exit(waits, hung_up, returncode, 
     reader._stop_handler = signal.getsignal(signal.SIGTSTP)
     waits = [(proc.pid, (signal.SIGTSTP << 8) | 0x7F) if wait == "stopped" else wait for wait in waits]
     with (
+        leads_own_group(),
         mock.patch("os.waitpid", side_effect=waits),
         mock.patch("os.tcgetpgrp", side_effect=OSError(errno.EIO, "hung up") if hung_up else None, return_value=456),
         mock.patch("os.killpg", side_effect=signal_error) as killpg,
@@ -949,12 +1032,12 @@ def test_proc_reader_suspend_restores_signal_handler(handler_kind, relayed) -> N
     previous = {"default": signal.SIG_DFL, "ignored": signal.SIG_IGN, "custom": mock.Mock()}[handler_kind]
     groups = [proc.pid, reader._original_group] if handler_kind == "default" else [reader._original_group]
     with (
+        leads_own_group(),
         mock.patch("signal.getsignal", return_value=previous),
         mock.patch("signal.signal") as set_handler,
         mock.patch("signal.raise_signal") as stop,
         mock.patch("os.killpg") as killpg,
         mock.patch("os.tcgetpgrp", side_effect=groups),
-        mock.patch("threading.Thread"),
         mock.patch.object(reader, "_set_foreground_group") as foreground,
         reader._manage_terminal(),
     ):
@@ -1086,6 +1169,7 @@ def test_proc_reader_continues_a_stop_it_cannot_relay(replacement) -> None:
     reader._stop_handler = mock.Mock()
     installed = {"ignored": signal.SIG_IGN, "custom": mock.Mock()}[replacement]
     with (
+        leads_own_group(),
         mock.patch("signal.getsignal", return_value=installed),
         mock.patch("os.tcgetpgrp", return_value=proc.pid),
         mock.patch.object(reader, "_set_foreground_group") as foreground,
@@ -1099,6 +1183,45 @@ def test_proc_reader_continues_a_stop_it_cannot_relay(replacement) -> None:
     # As a suspension does, this continued the whole pipeline, so any stop reported before it is dealt with.
     assert reader._suspensions == 1
     assert not reader._suspension_lock.locked()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+def test_proc_reader_leaves_a_sigtstp_handler_python_cannot_restore() -> None:
+    """signal.getsignal() returns None for a handler installed outside Python, such as by an application embedding it.
+
+    Python cannot reinstall such a handler, so job control leaves it in place. It then has no
+    handler of its own to take a relay, so a stop in the pipeline's job just continues.
+    """
+    proc = mock.Mock(pid=123, stdout=None, stderr=None, returncode=None)
+    reader = cu.ProcReader(proc, sys.stdout, sys.stderr)
+    reader._terminal_fd = 10
+    reader._original_group = 456
+    with (
+        leads_own_group(),
+        mock.patch("signal.getsignal", return_value=None),
+        mock.patch("signal.signal") as set_handler,
+        mock.patch("os.tcgetpgrp", return_value=proc.pid),
+        mock.patch("os.killpg") as killpg,
+        mock.patch("signal.pthread_kill") as relay,
+        reader._manage_terminal(),
+    ):
+        reader._suspend_with_cmd2(10, seen=0)
+    set_handler.assert_not_called()
+    relay.assert_not_called()
+    killpg.assert_called_once_with(proc.pid, signal.SIGCONT)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+def test_session_leader_spawn_leaves_a_sigtstp_handler_python_cannot_restore() -> None:
+    """A handler installed outside Python stays in place: Python could not reinstall it after the spawn."""
+    with (
+        mock.patch("os.getsid", return_value=os.getpgrp()),
+        mock.patch("signal.getsignal", return_value=None),
+        mock.patch("signal.signal") as set_handler,
+        cu._session_leader_job_stops(),
+    ):
+        pass
+    set_handler.assert_not_called()
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
@@ -1178,6 +1301,7 @@ def test_proc_reader_watcher_follows_newer_stops_while_waiting_for_the_terminal(
     reader._terminal_available.set()
     ttin = (signal.SIGTTIN << 8) | 0x7F
     with (
+        leads_own_group(),
         mock.patch("os.waitpid", side_effect=[(proc.pid, ttin), (proc.pid, ttin), (proc.pid, 0)]),
         mock.patch("os.tcgetpgrp", return_value=proc.pid),
         mock.patch("os.killpg") as killpg,
@@ -1204,7 +1328,6 @@ def test_proc_reader_direct_suspend_while_another_thread_relays_one() -> None:
         mock.patch("signal.raise_signal") as stop,
         mock.patch("os.killpg") as sent,
         mock.patch("os.tcgetpgrp", return_value=reader._original_group),
-        mock.patch("threading.Thread"),
         reader._manage_terminal(),
     ):
         handler = set_handler.call_args.args[1]
@@ -1232,18 +1355,15 @@ def test_proc_reader_watcher_relays_nothing_once_job_control_ends() -> None:
     reader._original_group = 456
     previous = mock.Mock()
     ended = threading.Event()
-    # Patched below, so that _manage_terminal() starts no real watcher
-    real_thread = threading.Thread
     with (
         mock.patch("signal.getsignal", return_value=previous),
         mock.patch("signal.signal") as set_handler,
-        mock.patch("threading.Thread"),
     ):
         job_control = reader._manage_terminal()
         job_control.__enter__()
         # A suspension is in progress.
         assert reader._suspension_lock.acquire(blocking=False)
-        ending = real_thread(target=lambda: (job_control.__exit__(None, None, None), ended.set()))
+        ending = threading.Thread(target=lambda: (job_control.__exit__(None, None, None), ended.set()))
         ending.start()
         assert not ended.wait(0.3)
         reader._suspension_lock.release()
@@ -1318,6 +1438,42 @@ def test_proc_reader_keeps_the_terminal_lent_until_the_last_lend_ends(inner) -> 
             assert mock.call(10, 456) not in foreground.call_args_list
         assert not reader._terminal_available.is_set()
         assert foreground.call_args_list[-1] == mock.call(10, 456)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+def test_proc_reader_lends_no_terminal_once_cmd2_runs_in_the_background() -> None:
+    """After Ctrl-Z, the shell's bg continues cmd2 in the background, and the shell keeps the terminal.
+
+    With SIGTTOU blocked, a lend could still take it, and the shell could no longer read its
+    own terminal. So a lend leaves it. A consumer that needs the terminal then stops, and the
+    watcher relays that stop to cmd2's job, which the shell then reports as stopped.
+    """
+    proc = mock.Mock(pid=123, stdout=None, stderr=None, returncode=None)
+    reader = cu.ProcReader(proc, sys.stdout, sys.stderr)
+    reader._terminal_fd = 10
+    reader._original_group = 456
+    reader._stop_handler = signal.getsignal(signal.SIGTSTP)
+    shell_group = 999
+    ttin = (signal.SIGTTIN << 8) | 0x7F
+
+    def relay(thread_id, signum):
+        reader._job_resumed.set()
+
+    with (
+        leads_own_group(),
+        mock.patch("os.tcgetpgrp", return_value=shell_group),
+        mock.patch.object(reader, "_set_foreground_group") as foreground,
+        mock.patch("os.waitpid", side_effect=[(proc.pid, ttin), (0, 0), (proc.pid, 0)]),
+        mock.patch("os.killpg") as killpg,
+        mock.patch("signal.pthread_kill", side_effect=relay) as relayed,
+        reader._lend_terminal(),
+    ):
+        assert reader._terminal_available.is_set()
+        reader._wait_for_job(10)
+    foreground.assert_not_called()
+    relayed.assert_called_once()
+    assert killpg.call_args_list == [mock.call(proc.pid, signal.SIGSTOP), mock.call(proc.pid, signal.SIGCONT)]
+    assert not reader._terminal_available.is_set()
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
@@ -1426,6 +1582,24 @@ def test_proc_reader_signals_a_reaped_pipeline_only_through_its_producer(produce
         killpg.assert_not_called()
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
+@pytest.mark.parametrize("reaped", [False, True])
+def test_proc_reader_never_signals_its_own_group(reaped) -> None:
+    """Stopping or continuing the pipeline must never stop or continue cmd2 itself.
+
+    Other ProcReader callers may share cmd2's group too, and Ctrl-C from the terminal reached
+    it already. It is found either through the process or through a producer in its job.
+    """
+    reader = cu.ProcReader(
+        mock.Mock(pid=123, stdout=None, stderr=None, returncode=0 if reaped else None), sys.stdout, sys.stderr
+    )
+    cu.ProcReader(mock.Mock(pid=789, stdout=None, stderr=None, returncode=None), sys.stdout, sys.stderr, pipeline=reader)
+    with mock.patch("os.getpgid", return_value=os.getpgrp()), mock.patch("os.killpg") as killpg:
+        assert not reader._signal_pipeline(signal.SIGSTOP)
+        reader.send_sigint()
+    killpg.assert_not_called()
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
 def test_proc_reader_lend_keeps_the_exception_in_flight_after_a_hangup() -> None:
     """After a hangup, taking the terminal back fails. That must not replace SIGHUP's SystemExit."""
@@ -1434,7 +1608,8 @@ def test_proc_reader_lend_keeps_the_exception_in_flight_after_a_hangup() -> None
     reader._original_group = 456
     with (
         mock.patch.object(reader, "_set_foreground_group"),
-        mock.patch("os.tcgetpgrp", side_effect=OSError(errno.EIO, "hung up")),
+        # The terminal hangs up during the lend.
+        mock.patch("os.tcgetpgrp", side_effect=[reader._original_group, OSError(errno.EIO, "hung up")]),
         pytest.raises(SystemExit),
         reader._lend_terminal(),
     ):
@@ -1455,7 +1630,6 @@ def test_proc_reader_suspend_survives_failed_terminal_handoffs() -> None:
         mock.patch("signal.raise_signal") as stop,
         mock.patch("os.killpg"),
         mock.patch("os.tcgetpgrp", side_effect=[reader._proc.pid, reader._original_group]),
-        mock.patch("threading.Thread"),
         mock.patch.object(reader, "_set_foreground_group", side_effect=OSError(errno.EPERM, "gone")),
         reader._manage_terminal(),
     ):
@@ -1713,6 +1887,7 @@ def test_proc_reader_relays_producer_stop(resolved, foreground_group) -> None:
         pipeline._job_resumed.set()
 
     with (
+        leads_own_group(),
         mock.patch("os.waitpid", side_effect=waitpid),
         mock.patch("os.tcgetpgrp", return_value=foreground_group),
         mock.patch.object(pipeline, "_set_foreground_group") as foreground,

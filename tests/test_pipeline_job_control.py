@@ -951,6 +951,111 @@ def test_ctrl_z_between_pipe_writes_stops_the_whole_pipeline(tmp_path) -> None:
         process.wait(timeout=5)
 
 
+def test_pipeline_continued_in_the_background_leaves_the_terminal_to_the_shell(tmp_path) -> None:
+    """After Ctrl-Z, bg continues cmd2 in the background, and the shell keeps the terminal.
+
+    A write that fills the pipe must not lend it to the consumer, nor take it for cmd2 as the
+    lend ends: either would leave the shell unable to read its own terminal.
+    """
+    import pty
+
+    shell = shutil.which("bash")
+    if shell is None:
+        pytest.skip("requires an interactive bash shell")
+    ready = tmp_path / "ready"
+    drain = tmp_path / "drain"
+    received = tmp_path / "received"
+    consumer = tmp_path / "consumer.py"
+    consumer.write_text(
+        "import os, sys, time\n"
+        f"open({str(ready)!r}, 'w').close()\n"
+        # Like a pager waiting for a key, read nothing until told to.
+        f"while not os.path.exists({str(drain)!r}): time.sleep(0.05)\n"
+        f"open({str(received)!r}, 'w').write(str(len(sys.stdin.buffer.read())))\n",
+        encoding="utf-8",
+    )
+    application = tmp_path / "application.py"
+    application.write_text(
+        "import sys, time\n"
+        "from cmd2 import Cmd\n"
+        "class App(Cmd):\n"
+        "    def do_flood(self, _):\n"
+        "        time.sleep(2)\n"
+        "        sys.stderr.write('FLOOD_START\\n')\n"
+        "        sys.stderr.flush()\n"
+        "        self.stdout.write('x' * 1000000)\n"
+        "        self.stdout.flush()\n"
+        "app = App()\n"
+        "app.prompt = 'TEST> '\n"
+        "app.cmdloop()\n",
+        encoding="utf-8",
+    )
+    master, slave = pty.openpty()
+    bootstrap = (
+        "import os, fcntl, termios; os.setsid(); "
+        "fcntl.ioctl(0, termios.TIOCSCTTY, 0); "
+        "os.execv(os.environ['TEST_SHELL'], ['bash', '--noprofile', '--norc', '-i'])"
+    )
+    env = dict(os.environ, TERM="xterm-256color", PS1="OUTER> ", TEST_SHELL=shell, SHELL=shell)
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
+    process = subprocess.Popen([sys.executable, "-c", bootstrap], stdin=slave, stdout=slave, stderr=slave, env=env)
+    os.close(slave)
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    transcript = ""
+
+    def wait_until(predicate):
+        nonlocal transcript
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if select.select([master], [], [], 0.05)[0]:
+                data = decoder.decode(os.read(master, 65536))
+                transcript += data
+                if "\x1b[6n" in data:
+                    # Answer prompt-toolkit's cursor-position request as a terminal would.
+                    os.write(master, b"\x1b[1;1R")
+            if predicate():
+                return
+        pytest.fail(f"terminal condition timed out:\n{transcript}\n{describe_processes(process.pid, master)}")
+
+    def pause(seconds: float) -> None:
+        deadline = time.monotonic() + seconds
+        wait_until(lambda: time.monotonic() >= deadline)
+
+    python = shlex.quote(sys.executable)
+    try:
+        wait_until(lambda: "OUTER> " in transcript)
+        os.write(master, f"{python} {shlex.quote(str(application))}\n".encode())
+        wait_until(lambda: "TEST>" in transcript)
+        os.write(master, f"flood | {python} {shlex.quote(str(consumer))}\n".encode())
+        wait_until(ready.exists)
+        pause(0.5)
+        start = len(transcript)
+        os.write(master, b"\x1a")
+        wait_until(lambda: os.tcgetpgrp(master) == process.pid and "OUTER> " in transcript[start:])
+        start = len(transcript)
+        os.write(master, b"bg\n")
+        # The command fills the pipe from the background, and waits for the consumer.
+        wait_until(lambda: "FLOOD_START" in transcript[start:])
+        pause(0.5)
+        assert os.tcgetpgrp(master) == process.pid, describe_processes(process.pid, master)
+        start = len(transcript)
+        os.write(master, b"echo AL''IVE\n")
+        wait_until(lambda: "ALIVE" in transcript[start:])
+        drain.touch()
+        wait_until(received.exists)
+        wait_until(lambda: received.read_text() == "1000000")
+        # Back at its prompt in the background, cmd2 stops to read the terminal until fg.
+        start = len(transcript)
+        os.write(master, b"fg\n")
+        wait_until(lambda: "TEST>" in transcript[start:])
+        os.write(master, b"quit\n")
+        wait_until(lambda: os.tcgetpgrp(master) == process.pid and "OUTER> " in transcript[start:])
+    finally:
+        os.close(master)
+        process.kill()
+        process.wait(timeout=5)
+
+
 def test_pipeline_when_the_application_ignores_sigchld(tmp_path) -> None:
     """With SIGCHLD ignored, the system reaps the pipeline and waitpid() fails with ECHILD.
 

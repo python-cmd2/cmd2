@@ -3506,24 +3506,27 @@ class Cmd:
                     # Restore self.stdout first, so that a failure to end the redirection cannot leave it in place
                     redirected_stdout = self.stdout
                     self.stdout = cast(TextIO, saved_redir_state.saved_self_stdout)
+                    pipe_proc_reader = self._cur_pipe_proc_reader
 
-                    try:
-                        # If we redirected output to the clipboard
-                        if (
-                            statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND)
-                            and not statement.redirect_to
-                        ):
-                            redirected_stdout.seek(0)
-                            write_to_paste_buffer(redirected_stdout.read())
-                    finally:
-                        with contextlib.suppress(BrokenPipeError):
-                            # Close the file or pipe that stdout was redirected to
-                            redirected_stdout.close()
+                    # A terminal pipeline has the terminal before its consumer reads EOF, which may set its terminal modes as
+                    # it does, and keeps it until it exits. Handing the terminal back then can fail, as after a hangup.
+                    with pipe_proc_reader._lend_terminal() if pipe_proc_reader is not None else contextlib.nullcontext():
+                        try:
+                            # If we redirected output to the clipboard
+                            if (
+                                statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND)
+                                and not statement.redirect_to
+                            ):
+                                redirected_stdout.seek(0)
+                                write_to_paste_buffer(redirected_stdout.read())
+                        finally:
+                            with contextlib.suppress(BrokenPipeError):
+                                # Close the file or pipe that stdout was redirected to
+                                redirected_stdout.close()
 
-                    # Check if we need to wait for the process being piped to. Handing the terminal back as it finishes can
-                    # fail, for example after a hangup.
-                    if self._cur_pipe_proc_reader is not None:
-                        self._cur_pipe_proc_reader.wait()
+                        # Check if we need to wait for the process being piped to
+                        if pipe_proc_reader is not None:
+                            pipe_proc_reader.wait()
             finally:
                 # These are restored regardless of whether the command redirected, or whether restoring it failed: a pipeline
                 # left current would keep ppaged() from paging and send Ctrl-C to a process group that is gone.
@@ -5004,32 +5007,34 @@ class Cmd:
         # handlers.
         pipeline = self._cur_pipe_proc_reader
         writer = utils._pipeline_writer_of(self.stdout)
-        joined_writer = None
+        job_group = None
         if (
             pipeline is not None
             and writer is not None
             and writer.feeds(pipeline)
             and threading.current_thread() is threading.main_thread()
-            and pipeline._terminal_group is not None
         ):
-            joined_writer = writer
+            # Read the group once: the pipeline's watcher may reap the consumer at any moment, which leaves none to join.
+            job_group = pipeline._terminal_group
+        joined_writer = writer if job_group is not None else None
 
         # Prevent KeyboardInterrupts while in the shell process. The shell process still receives the SIGINT: it is in our
         # process group or in the foreground pipeline's.
         with self.sigint_protection, contextlib.ExitStack() as terminal_stack:
             if pipeline is not None and joined_writer is not None:
-                kwargs["process_group"] = pipeline._terminal_group
+                kwargs["process_group"] = job_group
                 terminal_stack.enter_context(pipeline._lend_terminal())
             while True:
                 try:
                     # For any stream that is a StdSim, we will use a pipe so we can capture its output. A command joining the
                     # pipeline writes to its consumer's pipe directly, after what cmd2 wrote before it. It is spawned inside
                     # the lend, which blocks SIGTTOU, and with the job's Ctrl-Z behavior.
+                    stdout: Any = self.stdout
                     if joined_writer is not None:
                         self.stdout.flush()
-                        stdout: Any = joined_writer.producer_fileno()
-                    else:
-                        stdout = subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout  # type: ignore[unreachable]
+                        stdout = joined_writer.producer_fileno()
+                    elif isinstance(stdout, utils.StdSim):
+                        stdout = subprocess.PIPE
                     with (
                         utils._sigttou_mask(block=False) if joined_writer is not None else contextlib.nullcontext(),
                         utils._session_leader_job_stops(pipeline) if joined_writer is not None else contextlib.nullcontext(),
@@ -5058,8 +5063,6 @@ class Cmd:
             # its watcher are gone, the same wait relays the command's own stops, such as Ctrl-Z.
             joined_pipeline = pipeline if joined_writer is not None else None
             proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr, pipeline=joined_pipeline)
-            if joined_pipeline is not None:
-                proc_reader._wait_for_exit()
             proc_reader.wait()
 
             # Save the return code of the application for use in a pyscript

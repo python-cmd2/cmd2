@@ -485,6 +485,41 @@ def test_shell_falls_back_to_own_group_when_pipeline_exited(base_app, tmp_path) 
     assert spawned_while_lent == [True, False]
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
+def test_shell_reads_the_pipelines_group_once(base_app) -> None:
+    """The pipeline's watcher can reap the consumer at any moment, after which it has no group to join.
+
+    Deciding to join from one reading and joining with another could spawn the command in
+    cmd2's own group while treating it as the pipeline's: Ctrl-Z would then stop cmd2 itself.
+    """
+    import contextlib
+    import subprocess
+    from unittest import mock
+
+    leader = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"], process_group=0)
+    spawned = []
+    real_popen = subprocess.Popen
+
+    def popen(*args, **kwargs):
+        spawned.append(kwargs)
+        return real_popen(*args, **kwargs)
+
+    pipeline = mock.Mock(_lend_terminal=contextlib.nullcontext, _suspension=contextlib.nullcontext)
+    # The consumer is reaped right after the first reading.
+    type(pipeline)._terminal_group = mock.PropertyMock(side_effect=[leader.pid, None, None])
+    base_app._cur_pipe_proc_reader = pipeline
+    base_app.stdout, read_fd = pipeline_stdout(pipeline)
+    try:
+        with mock.patch("subprocess.Popen", popen):
+            base_app.do_shell("echo joined")
+        assert spawned[0]["process_group"] == leader.pid
+        base_app.stdout.close()
+        assert read_all(read_fd) == b"joined\n"
+    finally:
+        leader.kill()
+        leader.wait()
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX shell executable")
 def test_shell_permission_error_unrelated_to_pipeline(base_app, tmp_path, monkeypatch) -> None:
     unusable_shell = tmp_path / "shell"
@@ -1114,7 +1149,7 @@ def test_restore_output_resets_pipe_state_when_the_wait_fails(base_app) -> None:
     saved_stdout = base_app.stdout
     saved = cmd2.utils.RedirectionSavedState(saved_stdout, None, False)
     saved.redirecting = True
-    reader = mock.Mock()
+    reader = mock.Mock(_lend_terminal=contextlib.nullcontext)
     reader.wait.side_effect = OSError(errno.EIO, "terminal hung up")
     base_app._cur_pipe_proc_reader = reader
     base_app._redirecting = True
@@ -1126,6 +1161,42 @@ def test_restore_output_resets_pipe_state_when_the_wait_fails(base_app) -> None:
     assert base_app.stdout is saved_stdout
     assert base_app._cur_pipe_proc_reader is None
     assert base_app._redirecting is False
+
+
+def test_restore_output_lends_the_terminal_before_the_consumer_reads_eof(base_app) -> None:
+    """A consumer may set its terminal modes once it reads EOF, as `vim -` does after reading its input.
+
+    From the background, that stops it with SIGTTOU, and on macOS the call then fails with
+    EINTR as it is continued. So the pipeline has the terminal before its pipe closes.
+    """
+    import contextlib
+
+    statement = base_app.statement_parser.parse("help | vim -")
+    saved = cmd2.utils.RedirectionSavedState(base_app.stdout, None, False)
+    saved.redirecting = True
+    lent = []
+    events = []
+
+    @contextlib.contextmanager
+    def lend_terminal():
+        lent.append(True)
+        try:
+            yield
+        finally:
+            lent.pop()
+
+    reader = mock.Mock(_lend_terminal=lend_terminal)
+    reader.wait.side_effect = lambda: events.append(("wait", bool(lent)))
+    redirected = mock.Mock()
+    redirected.close.side_effect = lambda: events.append(("close", bool(lent)))
+    base_app._cur_pipe_proc_reader = reader
+    base_app._redirecting = True
+    base_app.stdout = redirected
+
+    base_app._restore_output(statement, saved)
+
+    assert events == [("close", True), ("wait", True)]
+    assert not lent
 
 
 @pytest.mark.parametrize("failure", ["clipboard", "close"])
