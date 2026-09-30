@@ -914,9 +914,9 @@ def test_history_file_permission_error(mocker, capsys, tmp_path) -> None:
     mock_open = mocker.patch("builtins.open")
     mock_open.side_effect = PermissionError
 
-    # A path under tmp_path rather than a fixed one: mocking open() does not stop the
-    # history setup from creating the file's parent directory, and a fixed path would leave
-    # that directory behind as a side effect other tests could come to depend on.
+    # A path under tmp_path rather than a fixed one: mocking open() does not stop the history setup from creating the file's
+    # parent directory, and a fixed path would leave that directory behind as a side effect other tests could come to depend
+    # on.
     cmd2.Cmd(persistent_history_file=str(tmp_path / "doesntmatter"))
     out, err = capsys.readouterr()
     assert not out

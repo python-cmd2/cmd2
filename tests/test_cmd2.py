@@ -451,8 +451,8 @@ def test_shell_falls_back_to_own_group_when_pipeline_exited(base_app, tmp_path) 
     import subprocess
     from unittest import mock
 
-    # A group whose only member has exited cannot be joined. The consumer of a terminal
-    # pipeline can exit between the check and the spawn, like `shell sleep 1 | true`.
+    # A group whose only member has exited cannot be joined. The consumer of a terminal pipeline can exit between the check and
+    # the spawn, like `shell sleep 1 | true`.
     leader = subprocess.Popen([sys.executable, "-c", "pass"], process_group=0)
     leader.wait()
     lent = []
@@ -465,8 +465,8 @@ def test_shell_falls_back_to_own_group_when_pipeline_exited(base_app, tmp_path) 
         finally:
             lent.pop()
 
-    # The retry runs in our own group, so the terminal has to come back from the dead
-    # pipeline first. Otherwise the command stops with SIGTTIN on its first terminal read.
+    # The retry runs in our own group, so the terminal has to come back from the dead pipeline first. Otherwise the command
+    # stops with SIGTTIN on its first terminal read.
     spawned_while_lent = []
     real_popen = subprocess.Popen
 
@@ -959,8 +959,8 @@ def test_pipe_to_shell_error(redirection_app, mocker, capsys, terminal) -> None:
         previous_tstp = signal.getsignal(signal.SIGTSTP)
 
         def start_pipe(*args, **kwargs):
-            # Session-led pipelines inherit ignored Ctrl-Z, but the caller's
-            # handler must be restored even when startup reports an early exit.
+            # Session-led pipelines inherit ignored Ctrl-Z, but the caller's handler must be restored even when startup reports
+            # an early exit.
             assert signal.getsignal(signal.SIGTSTP) == signal.SIG_IGN
             return process
 
@@ -981,8 +981,8 @@ def test_pipe_to_shell_error(redirection_app, mocker, capsys, terminal) -> None:
         reader._wait_for_exit.assert_called_once_with(0.2)
         reader.wait.assert_called_once_with()
         process.wait.assert_not_called()
-        # SIGTTOU is blocked only inside ProcReader's lends. Blocking it for the whole
-        # pipeline would leak the mask into every child the command starts.
+        # SIGTTOU is blocked only inside ProcReader's lends. Blocking it for the whole pipeline would leak the mask into every
+        # child the command starts.
         sigmask.assert_not_called()
     else:
         process.wait.assert_called_once()

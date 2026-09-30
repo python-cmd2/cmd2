@@ -1987,8 +1987,8 @@ class Cmd:
                     try:  # type: ignore[unreachable]
                         import termios
 
-                        # Ensure we are in the foreground process group, without being stopped
-                        # with SIGTTOU for asking from the background
+                        # Ensure we are in the foreground process group, without being stopped with SIGTTOU for asking from the
+                        # background
                         if hasattr(os, "tcsetpgrp") and hasattr(os, "getpgrp"):
                             utils.ProcReader._set_foreground_group(self.stdin.fileno(), os.getpgrp())
 
@@ -3320,17 +3320,16 @@ class Cmd:
             # Create a pipe with read and write sides
             read_fd, write_fd = os.pipe()
 
-            # Open each side of the pipe. Both ends are given an explicit encoding: command
-            # output is rendered by Rich and routinely contains non-ASCII, which the locale
-            # encoding cannot always represent. On Windows, that is the console's code page,
-            # which console programs such as more decode with. It cannot represent everything
-            # either, so replace what it lacks rather than fail the command.
+            # Open each side of the pipe. Both ends are given an explicit encoding: command output is rendered by Rich and
+            # routinely contains non-ASCII, which the locale encoding cannot always represent. On Windows, that is the
+            # console's code page, which console programs such as more decode with. It cannot represent everything either, so
+            # replace what it lacks rather than fail the command.
             pipe_encoding = utils._pipe_encoding()
             subproc_stdin = open(read_fd, encoding=pipe_encoding)  # noqa: SIM115
             new_stdout: TextIO = cast(TextIO, open(write_fd, "w", encoding=pipe_encoding, errors="replace"))  # noqa: SIM115
 
-            # Isolate pipeline signals from cmd2. Terminal pipelines receive the
-            # foreground terminal; ProcReader relays their job-control stops.
+            # Isolate pipeline signals from cmd2. Terminal pipelines receive the foreground terminal; ProcReader relays their
+            # job-control stops.
             kwargs: dict[str, Any] = {}
             if sys.platform == "win32":
                 kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
@@ -3347,11 +3346,10 @@ class Cmd:
             terminal_fd: int | None = None
             popen_command = statement.redirect_to
             if sys.platform != "win32":
-                # Only a pipeline whose output goes to the terminal is the terminal's job. One
-                # nested in a command whose output is piped, for instance, feeds that outer
-                # pipeline, whose consumer needs the terminal instead. Job control installs
-                # signal handlers, which only the main thread may do. Otherwise, keep the
-                # pipeline in its own session as before.
+                # Only a pipeline whose output goes to the terminal is the terminal's job. One nested in a command whose output
+                # is piped, for instance, feeds that outer pipeline, whose consumer needs the terminal instead. Job control
+                # installs signal handlers, which only the main thread may do. Otherwise, keep the pipeline in its own session
+                # as before.
                 if threading.current_thread() is threading.main_thread() and pipe_stdout is not None and pipe_stdout.isatty():
                     with contextlib.suppress(OSError, ValueError):
                         if os.tcgetpgrp(pipe_stdout.fileno()) == os.getpgrp():
@@ -3361,14 +3359,12 @@ class Cmd:
                 else:
                     kwargs["process_group"] = 0
 
-                    # A pager such as less sets its terminal modes as it starts, before it reads
-                    # the pipe. It must own the terminal by then: a background tcsetattr() stops
-                    # it with SIGTTOU, and on macOS that call fails with EINTR when the process
-                    # is continued instead of being restarted. less ignores the failure and runs
-                    # on a cooked terminal. So hold the pipeline in a POSIX sh until cmd2 has
-                    # made its group the foreground one and sent a newline down the pipe. The
-                    # read builtin takes no more than that line from a pipe. Then exec the
-                    # user's shell as before.
+                    # A pager such as less sets its terminal modes as it starts, before it reads the pipe. It must own the
+                    # terminal by then: a background tcsetattr() stops it with SIGTTOU, and on macOS that call fails with EINTR
+                    # when the process is continued instead of being restarted. less ignores the failure and runs on a cooked
+                    # terminal. So hold the pipeline in a POSIX sh until cmd2 has made its group the foreground one and sent a
+                    # newline down the pipe. The read builtin takes no more than that line from a pipe. Then exec the user's
+                    # shell as before.
                     import shlex
 
                     # The POSIX shell Popen() itself runs with shell=True
@@ -3390,17 +3386,17 @@ class Cmd:
                         shell=True,
                         **kwargs,
                     )
-                # Only the child should own a read end. In particular, a consumer
-                # exit must unblock a producer writing to a full pipe immediately.
+                # Only the child should own a read end. In particular, a consumer exit must unblock a producer writing to a
+                # full pipe immediately.
                 subproc_stdin.close()
                 if terminal_fd is not None:
                     cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr, terminal_fd=terminal_fd)
                     terminal_stack.enter_context(cmd_pipe_proc_reader._manage_terminal())
 
                 # Popen was called with shell=True so the user can chain pipe commands and redirect their output
-                # like: !ls -l | grep user | wc -l > out.txt. But this makes it difficult to know if the pipe process
-                # started OK, since the shell itself always starts. Therefore, we will wait a short time and check
-                # if the pipe process is still running.
+                # like: !ls -l | grep user | wc -l > out.txt. But this makes it difficult to know if the pipe process started
+                # OK, since the shell itself always starts. Therefore, we will wait a short time and check if the pipe process
+                # is still running.
                 with contextlib.suppress(subprocess.TimeoutExpired):
                     if cmd_pipe_proc_reader is None:
                         proc.wait(0.2)
@@ -3522,14 +3518,13 @@ class Cmd:
                     # Restore self.stdout
                     self.stdout = cast(TextIO, saved_redir_state.saved_self_stdout)
 
-                    # Check if we need to wait for the process being piped to. Handing the
-                    # terminal back as it finishes can fail, for example after a hangup.
+                    # Check if we need to wait for the process being piped to. Handing the terminal back as it finishes can
+                    # fail, for example after a hangup.
                     if self._cur_pipe_proc_reader is not None:
                         self._cur_pipe_proc_reader.wait()
             finally:
-                # These are restored regardless of whether the command redirected, or whether
-                # restoring it failed: a pipeline left current would keep ppaged() from paging
-                # and send Ctrl-C to a process group that is gone.
+                # These are restored regardless of whether the command redirected, or whether restoring it failed: a pipeline
+                # left current would keep ppaged() from paging and send Ctrl-C to a process group that is gone.
                 self._cur_pipe_proc_reader = saved_redir_state.saved_pipe_proc_reader
                 self._redirecting = saved_redir_state.saved_redirecting
 
@@ -4999,13 +4994,12 @@ class Cmd:
         utils.expand_user_in_tokens(tokens)
         expanded_command = " ".join(tokens)
 
-        # A terminal pipeline's consumer needs the terminal to drain the pipe, but a shell
-        # command writes into that pipe itself rather than through self.stdout, which lends
-        # the terminal per write. Run the command inside the pipeline's job instead, for as
-        # long as it runs: the consumer keeps the terminal, and Ctrl-C and Ctrl-Z reach both
-        # processes, as they would in a shell pipeline. Only a command whose output goes to
-        # that pipeline joins it. A worker thread's command stays out of it too: job control
-        # relays stops to the main thread, and only the main thread may change signal handlers.
+        # A terminal pipeline's consumer needs the terminal to drain the pipe, but a shell command writes into that pipe itself
+        # rather than through self.stdout, which lends the terminal per write. Run the command inside the pipeline's job
+        # instead, for as long as it runs: the consumer keeps the terminal, and Ctrl-C and Ctrl-Z reach both processes, as they
+        # would in a shell pipeline. Only a command whose output goes to that pipeline joins it. A worker thread's command
+        # stays out of it too: job control relays stops to the main thread, and only the main thread may change signal
+        # handlers.
         pipeline = self._cur_pipe_proc_reader
         writer = utils._pipeline_writer_of(self.stdout)
         joined_writer = None
@@ -5018,18 +5012,17 @@ class Cmd:
         ):
             joined_writer = writer
 
-        # Prevent KeyboardInterrupts while in the shell process. The shell process still
-        # receives the SIGINT: it is in our process group or in the foreground pipeline's.
+        # Prevent KeyboardInterrupts while in the shell process. The shell process still receives the SIGINT: it is in our
+        # process group or in the foreground pipeline's.
         with self.sigint_protection, contextlib.ExitStack() as terminal_stack:
             if pipeline is not None and joined_writer is not None:
                 kwargs["process_group"] = pipeline._terminal_group
                 terminal_stack.enter_context(pipeline._lend_terminal())
             while True:
                 try:
-                    # For any stream that is a StdSim, we will use a pipe so we can capture its output.
-                    # A command joining the pipeline writes to its consumer's pipe directly, after what
-                    # cmd2 wrote before it. It is spawned inside the lend, which blocks SIGTTOU, and
-                    # with the job's Ctrl-Z behavior.
+                    # For any stream that is a StdSim, we will use a pipe so we can capture its output. A command joining the
+                    # pipeline writes to its consumer's pipe directly, after what cmd2 wrote before it. It is spawned inside
+                    # the lend, which blocks SIGTTOU, and with the job's Ctrl-Z behavior.
                     if joined_writer is not None:
                         self.stdout.flush()
                         stdout: Any = joined_writer.producer_fileno()
@@ -5053,15 +5046,14 @@ class Cmd:
                         raise
                     joined_writer = None
                     del kwargs["process_group"]
-                    # The retry runs in our own group, so take the terminal back from the dead
-                    # pipeline first. Its watcher left it lent, and the command would otherwise
-                    # stop with SIGTTIN on its first terminal read, with nothing to resume it.
+                    # The retry runs in our own group, so take the terminal back from the dead pipeline first. Its watcher left
+                    # it lent, and the command would otherwise stop with SIGTTIN on its first terminal read, with nothing to
+                    # resume it.
                     terminal_stack.close()
 
-            # A command that joined the pipeline's job is waited for in short polls. Only the
-            # main thread runs Python signal handlers, and the job-control stop the pipeline's
-            # watcher relays may wake another thread. Once the consumer and its watcher are
-            # gone, the same wait relays the command's own stops, such as Ctrl-Z.
+            # A command that joined the pipeline's job is waited for in short polls. Only the main thread runs Python signal
+            # handlers, and the job-control stop the pipeline's watcher relays may wake another thread. Once the consumer and
+            # its watcher are gone, the same wait relays the command's own stops, such as Ctrl-Z.
             joined_pipeline = pipeline if joined_writer is not None else None
             proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr, pipeline=joined_pipeline)
             if joined_pipeline is not None:

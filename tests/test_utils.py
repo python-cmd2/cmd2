@@ -411,8 +411,8 @@ def test_pipeline_writer_relay_lends_only_while_a_producer_waits(pauses) -> None
     import subprocess
     import threading
 
-    # More than the relay and both pipes hold, so the child blocks until the consumer reads.
-    # What remains after the consumer's first read fits, so the child can then finish.
+    # More than the relay and both pipes hold, so the child blocks until the consumer reads. What remains after the consumer's
+    # first read fits, so the child can then finish.
     payload = b"x" * 280000
     first_read = 200000 if pauses else len(payload)
     read_fd, write_fd = os.pipe()
@@ -431,8 +431,8 @@ def test_pipeline_writer_relay_lends_only_while_a_producer_waits(pauses) -> None
             lends.pop()
 
     def drain() -> None:
-        # Like a pager waiting for a key, drain nothing until lent the terminal. Then read
-        # a page, or all of it, and wait for the next key.
+        # Like a pager waiting for a key, drain nothing until lent the terminal. Then read a page, or all of it, and wait for
+        # the next key.
         lent.wait(10)
         while len(received) < first_read:
             received.extend(os.read(read_fd, min(65536, first_read - len(received))))
@@ -527,8 +527,8 @@ def test_pipeline_writer_relay_leaves_the_terminal_after_a_producer_finishes() -
     reader = mock.Mock(_lend_terminal=mock.Mock(side_effect=contextlib.nullcontext))
     writer = cu._PipelineWriter(write_fd, reader)
     try:
-        # More than the consumer's pipe holds, but it fits in the relay: the child exits
-        # without waiting on the consumer, so the consumer is not lent the terminal.
+        # More than the consumer's pipe holds, but it fits in the relay: the child exits without waiting on the consumer, so
+        # the consumer is not lent the terminal.
         subprocess.run(
             [sys.executable, "-c", f"import sys; sys.stdout.buffer.write(b'x' * {len(payload)})"],
             stdout=writer.fileno(),
@@ -792,8 +792,8 @@ def test_proc_reader_resumes_terminal_access_after_handoff(stop_signal, expired_
     [
         # The application ignores SIGCHLD, so the system reaps the pipeline itself.
         pytest.param([ChildProcessError(errno.ECHILD, "no child")], False, 0, id="sigchld-ignored"),
-        # The terminal hangs up as the watcher relays a stop. "stopped" stands for a Ctrl-Z
-        # stop status: parameters are built at collection, where Windows has no SIGTSTP.
+        # The terminal hangs up as the watcher relays a stop. "stopped" stands for a Ctrl-Z stop status: parameters are built
+        # at collection, where Windows has no SIGTSTP.
         pytest.param(["stopped", (123, 2 << 8)], True, 2, id="hangup"),
         pytest.param(["stopped", ChildProcessError()], True, 0, id="hangup-sigchld-ignored"),
     ],
@@ -973,8 +973,8 @@ def test_proc_reader_watcher_relays_a_stop_after_a_suspension_it_never_saw() -> 
     def waitpid(pid, options):
         if not first:
             first.append(True)
-            # A whole suspension happens before the watcher's first wait, as a direct Ctrl-Z
-            # to cmd2 and fg would: the consumer is stopped, then continued.
+            # A whole suspension happens before the watcher's first wait, as a direct Ctrl-Z to cmd2 and fg would: the consumer
+            # is stopped, then continued.
             os.killpg(child.pid, signal.SIGSTOP)
             time.sleep(0.2)
             os.killpg(child.pid, signal.SIGCONT)
