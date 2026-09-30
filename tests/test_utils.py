@@ -186,57 +186,84 @@ def test_stdsim_line_buffering(base_app) -> None:
         assert os.path.getsize(file.name) == saved_size + len(bytes_to_write)
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows pipes use the console code page")
-def test_pipe_encoding_is_utf8() -> None:
-    assert cu._pipe_encoding() == "utf-8"
+def fake_kernel32(input_code_page: int, output_code_page: int) -> mock.Mock:
+    """The console code page calls of the Windows API, for a console whose code pages start as given.
+
+    Its code_pages are the current input and output code pages, and changes records them after each change.
+    """
+    kernel32 = mock.Mock(code_pages=(input_code_page, output_code_page), changes=[])
+
+    def setter(index: int):
+        def set_code_page(code_page: int) -> int:
+            code_pages = list(kernel32.code_pages)
+            code_pages[index] = code_page
+            kernel32.code_pages = tuple(code_pages)
+            kernel32.changes.append(kernel32.code_pages)
+            return 1
+
+        return set_code_page
+
+    kernel32.GetConsoleCP.side_effect = lambda: kernel32.code_pages[0]
+    kernel32.GetConsoleOutputCP.side_effect = lambda: kernel32.code_pages[1]
+    kernel32.SetConsoleCP.side_effect = setter(0)
+    kernel32.SetConsoleOutputCP.side_effect = setter(1)
+    return kernel32
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="Windows console code pages")
+def test_utf8_console_while_a_pipe_runs() -> None:
+    """Console programs such as more decode with the console's code page, and UTF-8 tools with UTF-8.
+
+    With the console set to UTF-8, the code page 65001, both read cmd2's UTF-8 correctly. The
+    console's own code pages come back afterward, even when the pipe fails.
+    """
+    kernel32 = fake_kernel32(850, 437)
+    console = cu._Utf8Console(kernel32)
+
+    def failing_pipe() -> None:
+        with console():
+            assert kernel32.code_pages == (65001, 65001)
+            raise RuntimeError("pipe failed")
+
+    with pytest.raises(RuntimeError, match="pipe failed"):
+        failing_pipe()
+    assert kernel32.code_pages == (850, 437)
+
+
+def test_utf8_console_restores_once_the_last_pipe_ends() -> None:
+    """Pipes overlap, such as one nested in a command whose own output is piped. The first to end must not restore."""
+    kernel32 = fake_kernel32(437, 437)
+    console = cu._Utf8Console(kernel32)
+    with console():
+        with console():
+            pass
+        assert kernel32.code_pages == (65001, 65001)
+    assert kernel32.changes == [(65001, 437), (65001, 65001), (437, 65001), (437, 437)]
+    # And again for the next pipe
+    with console():
+        assert kernel32.code_pages == (65001, 65001)
+    assert kernel32.code_pages == (437, 437)
+
+
 @pytest.mark.parametrize(
-    ("code_page", "encoding"),
+    ("input_code_page", "output_code_page"),
     [
-        (437, "cp437"),
-        (850, "cp850"),
-        # chcp 65001
-        (65001, "utf-8"),
         # No console attached
-        (0, "utf-8"),
-        # A code page Python has no codec for
-        (50220, "utf-8"),
-    ],
-)
-def test_pipe_encoding_follows_the_console_code_page(monkeypatch, code_page, encoding) -> None:
-    import ctypes
-
-    monkeypatch.setattr(ctypes.windll.kernel32, "GetConsoleOutputCP", lambda: code_page)
-    assert cu._pipe_encoding() == encoding
-
-
-@pytest.mark.parametrize(
-    ("code_page", "sample", "codec"),
-    [
-        (437, "─", "cp437"),
+        (0, 0),
         # chcp 65001
-        (65001, "─", "utf-8"),
-        # Code pages Python names otherwise. Python 3.14 on Windows has a cpNNNNN codec for them too.
-        (20866, "Ж", "koi8_r"),
-        (28591, "é", "latin_1"),
-        (20127, "a", "ascii"),
+        (65001, 65001),
     ],
 )
-def test_code_page_encoding(code_page, sample, codec) -> None:
-    encoding = cu._code_page_encoding(code_page)
-    assert encoding is not None
-    assert sample.encode(encoding) == sample.encode(codec)
+def test_utf8_console_leaves_a_console_it_need_not_change(input_code_page, output_code_page) -> None:
+    kernel32 = fake_kernel32(input_code_page, output_code_page)
+    with cu._Utf8Console(kernel32)():
+        pass
+    assert kernel32.changes == []
 
 
-@pytest.mark.skipif(
-    sys.platform == "win32" and sys.version_info >= (3, 14),
-    reason="Python 3.14 on Windows has a codec for every code page Windows accepts, including pseudo code pages such as 1",
-)
-@pytest.mark.parametrize("code_page", [50220, 1])
-def test_code_page_encoding_without_a_codec(code_page) -> None:
-    assert cu._code_page_encoding(code_page) is None
+@pytest.mark.skipif(sys.platform == "win32", reason="Only Windows has console code pages")
+def test_utf8_console_does_nothing_elsewhere() -> None:
+    with cu._utf8_console():
+        pass
 
 
 @pytest.fixture

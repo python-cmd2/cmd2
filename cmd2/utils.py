@@ -536,58 +536,62 @@ class ByteBuf:
                 self.std_sim_instance.flush()
 
 
-# Windows code pages Python names other than cpNNNNN. Before Python 3.14, which covers every code page Windows supports, a
-# console set to one of these would otherwise get UTF-8.
-_CODE_PAGE_CODECS = {
-    20127: "ascii",
-    20866: "koi8_r",
-    21866: "koi8_u",
-    28591: "latin_1",
-    28592: "iso8859_2",
-    28593: "iso8859_3",
-    28594: "iso8859_4",
-    28595: "iso8859_5",
-    28596: "iso8859_6",
-    28597: "iso8859_7",
-    28598: "iso8859_8",
-    28599: "iso8859_9",
-    28603: "iso8859_13",
-    28605: "iso8859_15",
-    51932: "euc_jp",
-    51949: "euc_kr",
-    54936: "gb18030",
-}
+class _Utf8Console:
+    """Set the Windows console to UTF-8 while cmd2 pipes output to a shell command or pager.
 
-
-def _code_page_encoding(code_page: int) -> str | None:
-    """Return the name of the Python codec for a Windows code page, or None if there is none.
-
-    :param code_page: a Windows code page identifier, such as 437
+    cmd2 writes pipes as UTF-8. Windows console programs such as more, sort, and findstr decode
+    piped input with the console's output code page, PowerShell with its input code page, and
+    tools such as rg with UTF-8. The UTF-8 code page, 65001, suits them all, as `chcp 65001`
+    would. It belongs to the whole console, so the code pages it replaced are restored once the
+    last pipe that uses it has ended. Without a console, and on other platforms, it does nothing.
     """
-    import codecs
 
-    for name in (f"cp{code_page}", _CODE_PAGE_CODECS.get(code_page)):
-        if name is not None:
-            with contextlib.suppress(LookupError):
-                # Normalized, so that code page 65001 is reported as utf-8
-                return codecs.lookup(name).name
-    return None
+    UTF8 = 65001
+
+    def __init__(self, kernel32: Any = None) -> None:
+        """Initialize for the console of a Windows API.
+
+        :param kernel32: the Windows API to use, or None for ctypes.windll.kernel32 on Windows
+        """
+        self._kernel32 = kernel32
+        self._lock = threading.Lock()
+        # How many pipes use the console, and its input and output code pages to restore after the last
+        self._users = 0
+        self._saved: tuple[int, int] | None = None
+
+    @contextlib.contextmanager
+    def __call__(self) -> Iterator[None]:
+        """Keep the console at UTF-8 for as long as the context lasts."""
+        kernel32 = self._kernel32
+        if kernel32 is None and sys.platform == "win32":
+            import ctypes
+
+            kernel32 = ctypes.windll.kernel32
+        if kernel32 is None:
+            yield
+            return
+        with self._lock:
+            if not self._users:
+                # Without a console, the code pages are 0.
+                code_pages = (kernel32.GetConsoleCP(), kernel32.GetConsoleOutputCP())
+                if code_pages[1] and code_pages != (self.UTF8, self.UTF8):
+                    self._saved = code_pages
+                    kernel32.SetConsoleCP(self.UTF8)
+                    kernel32.SetConsoleOutputCP(self.UTF8)
+            self._users += 1
+        try:
+            yield
+        finally:
+            with self._lock:
+                self._users -= 1
+                if not self._users and self._saved is not None:
+                    input_code_page, output_code_page = self._saved
+                    self._saved = None
+                    kernel32.SetConsoleCP(input_code_page)
+                    kernel32.SetConsoleOutputCP(output_code_page)
 
 
-def _pipe_encoding() -> str:
-    """Return the encoding for output cmd2 pipes to a shell command.
-
-    Windows console programs such as more, sort, and findstr decode piped input with the
-    console's output code page, and would show UTF-8 as mojibake. Elsewhere, and on Windows
-    without a console or with a code page Python cannot encode, use UTF-8.
-    """
-    if sys.platform == "win32":
-        import ctypes
-
-        code_page = ctypes.windll.kernel32.GetConsoleOutputCP()
-        if code_page:
-            return _code_page_encoding(code_page) or "utf-8"
-    return "utf-8"
+_utf8_console = _Utf8Console()
 
 
 @contextlib.contextmanager
@@ -1460,8 +1464,9 @@ class RedirectionSavedState:
         self.saved_pipe_proc_reader = pipe_proc_reader
         self.saved_redirecting = saved_redirecting
 
-        # Holds a terminal pipeline's job control until its pipe process has been reaped
-        self.pipeline_job: contextlib.ExitStack | None = None
+        # Holds what a pipe needs until its pipe process has been reaped: on Windows a UTF-8 console, and for a terminal
+        # pipeline its job control
+        self.pipe_context: contextlib.ExitStack | None = None
 
 
 def categorize(func: Callable[..., Any] | Iterable[Callable[..., Any]], category: str) -> None:

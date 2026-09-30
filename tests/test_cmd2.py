@@ -3795,8 +3795,11 @@ def test_ppaged_with_pager(outsim_app, monkeypatch, chop) -> None:
     assert expected_cmd == popen_mock.call_args_list[0].args[0]
 
 
-def test_ppaged_encodes_for_the_console(outsim_app, monkeypatch) -> None:
-    """As for a pipe: on Windows, the pager decodes with the console's code page, and what it lacks is replaced."""
+def test_ppaged_pages_utf8_in_a_utf8_console(outsim_app, monkeypatch) -> None:
+    """As for a pipe: the pager gets UTF-8, and on Windows the console is UTF-8 until the pager has exited.
+
+    The pager there is more, which decodes with the console's code page.
+    """
     stdin_mock = mock.MagicMock()
     stdin_mock.isatty.return_value = True
     monkeypatch.setattr(outsim_app, "stdin", stdin_mock)
@@ -3805,12 +3808,25 @@ def test_ppaged_encodes_for_the_console(outsim_app, monkeypatch) -> None:
     monkeypatch.setattr(outsim_app, "stdout", stdout_mock)
     if not sys.platform.startswith("win") and os.environ.get("TERM") is None:
         monkeypatch.setenv("TERM", "simulated")
-    monkeypatch.setattr("cmd2.utils._pipe_encoding", lambda: "cp437")
+    events = []
+
+    @contextlib.contextmanager
+    def utf8_console():
+        events.append("utf-8 console")
+        try:
+            yield
+        finally:
+            events.append("restored")
+
+    monkeypatch.setattr("cmd2.utils._utf8_console", utf8_console)
     popen_mock = mock.MagicMock(name="Popen")
+    popen_mock.side_effect = lambda *args, **kwargs: events.append("pager started") or popen_mock.return_value
+    popen_mock.return_value.communicate.side_effect = lambda *args: events.append("pager exited")
     monkeypatch.setattr("subprocess.Popen", popen_mock)
     outsim_app.ppaged("box ─ smile \U0001f642")
     paged = popen_mock.return_value.communicate.call_args.args[0]
-    assert "box ─ smile ?".encode("cp437") in paged
+    assert "box ─ smile \U0001f642".encode() in paged
+    assert events == ["utf-8 console", "pager started", "pager exited", "restored"]
 
 
 def test_ppaged_no_pager(outsim_app) -> None:

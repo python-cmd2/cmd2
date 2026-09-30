@@ -11,11 +11,10 @@
     - A `shell` command piped to an interactive program, such as `shell git log | less`, now joins
       the pipeline's job, so both processes receive Ctrl-C and Ctrl-Z
     - On Windows, fixed piped output appearing garbled in console programs such as `more`
-      (`help -v | more`), a regression in 4.2.4. Pipes were written as UTF-8, but console programs
-      decode their input with the console's code page. Pipes now use that code page, including ones
-      Python names otherwise, such as 20866 (KOI8-R) or 28591 (ISO-8859-1), and characters it cannot
-      represent are replaced rather than failing the command. Without a console, with a code page
-      Python has no codec for, and on other platforms, pipes still use UTF-8
+      (`help -v | more`), a regression in 4.2.4. Pipes are written as UTF-8, but console programs
+      decode their input with the console's code page. While a pipe or the pager runs, cmd2 now sets
+      the console to UTF-8 (code page 65001, as `chcp 65001` does) and restores its code pages
+      afterward, so console programs and UTF-8 tools such as `rg` both read the output correctly
     - When copying a command's output to the clipboard (`help >`) fails, later commands' output is
       no longer written to the temporary file that held it
 

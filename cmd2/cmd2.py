@@ -1965,12 +1965,12 @@ class Cmd:
                     soft_wrap=soft_wrap,
                     **(rich_print_kwargs if rich_print_kwargs is not None else {}),
                 )
-            # As for a pipe: on Windows, the pager decodes with the console's code page.
-            output_bytes = capture.get().encode(utils._pipe_encoding(), "replace")
+            # As for a pipe: the pager gets UTF-8, and on Windows the console is UTF-8 while it runs.
+            output_bytes = capture.get().encode("utf-8", "replace")
 
             # Prevent KeyboardInterrupts while in the pager. The pager application will
             # still receive the SIGINT since it is in the same process group as us.
-            with self.sigint_protection:
+            with self.sigint_protection, utils._utf8_console():
                 import subprocess
 
                 pipe_proc = subprocess.Popen(  # noqa: S602
@@ -3320,13 +3320,11 @@ class Cmd:
             # Create a pipe with read and write sides
             read_fd, write_fd = os.pipe()
 
-            # Open each side of the pipe. Both ends are given an explicit encoding: command output is rendered by Rich and
-            # routinely contains non-ASCII, which the locale encoding cannot always represent. On Windows, that is the
-            # console's code page, which console programs such as more decode with. It cannot represent everything either, so
-            # replace what it lacks rather than fail the command.
-            pipe_encoding = utils._pipe_encoding()
-            subproc_stdin = open(read_fd, encoding=pipe_encoding)  # noqa: SIM115
-            new_stdout: TextIO = cast(TextIO, open(write_fd, "w", encoding=pipe_encoding, errors="replace"))  # noqa: SIM115
+            # Open each side of the pipe. Both ends use UTF-8 rather than the locale's encoding, which cannot always represent
+            # the non-ASCII that Rich routinely renders. On Windows, the console is UTF-8 too while the pipe runs, for console
+            # programs such as more, which decode with its code page.
+            subproc_stdin = open(read_fd, encoding="utf-8")  # noqa: SIM115
+            new_stdout: TextIO = cast(TextIO, open(write_fd, "w", encoding="utf-8"))  # noqa: SIM115
 
             # Isolate pipeline signals from cmd2. Terminal pipelines receive the foreground terminal; ProcReader relays their
             # job-control stops.
@@ -3373,7 +3371,10 @@ class Cmd:
                     popen_command = f"read -r _ || exit 1; exec {user_shell} -c {shlex.quote(statement.redirect_to)}"
                     kwargs["executable"] = posix_shell
 
-            with contextlib.ExitStack() as terminal_stack, contextlib.ExitStack() as gate_stack:
+            with contextlib.ExitStack() as pipe_stack, contextlib.ExitStack() as gate_stack:
+                # The console stays UTF-8 from before the pipe process starts, since a program may read the code page once as
+                # it starts, until _restore_output() has reaped it.
+                pipe_stack.enter_context(utils._utf8_console())
                 if terminal_fd is not None:
                     # Should cmd2 fail before opening the gate, the held pipeline reads EOF and exits.
                     gate_stack.callback(new_stdout.close)
@@ -3391,7 +3392,7 @@ class Cmd:
                 subproc_stdin.close()
                 if terminal_fd is not None:
                     cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr, terminal_fd=terminal_fd)
-                    terminal_stack.enter_context(cmd_pipe_proc_reader._manage_terminal())
+                    pipe_stack.enter_context(cmd_pipe_proc_reader._manage_terminal())
 
                 # Popen was called with shell=True so the user can chain pipe commands and redirect their output
                 # like: !ls -l | grep user | wc -l > out.txt. But this makes it difficult to know if the pipe process started
@@ -3429,14 +3430,13 @@ class Cmd:
                                 pipe_fd, cmd_pipe_proc_reader, interruptible=lambda: not self.sigint_protection
                             )
                         ),
-                        encoding=pipe_encoding,
-                        errors="replace",
+                        encoding="utf-8",
                     )
 
                 self.stdout = new_stdout
 
-                # Keep the pipeline's job control until _restore_output() reaps the pipe process.
-                redir_saved_state.pipeline_job = terminal_stack.pop_all()
+                # Keep the UTF-8 console and the pipeline's job control until _restore_output() reaps the pipe process.
+                redir_saved_state.pipe_context = pipe_stack.pop_all()
 
         elif statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND):
             if statement.redirect_to:
@@ -3495,11 +3495,11 @@ class Cmd:
         :param statement: Statement object which contains the parsed input from the user
         :param saved_redir_state: contains information needed to restore state data
         """
-        # The pipeline's job control ends once its pipe process has been reaped.
-        with contextlib.ExitStack() as terminal_stack:
-            if saved_redir_state.pipeline_job is not None:
-                terminal_stack.callback(saved_redir_state.pipeline_job.close)
-                saved_redir_state.pipeline_job = None
+        # The UTF-8 console and the pipeline's job control end once its pipe process has been reaped.
+        with contextlib.ExitStack() as pipe_stack:
+            if saved_redir_state.pipe_context is not None:
+                pipe_stack.callback(saved_redir_state.pipe_context.close)
+                saved_redir_state.pipe_context = None
 
             try:
                 if saved_redir_state.redirecting:
