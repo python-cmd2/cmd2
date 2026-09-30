@@ -115,6 +115,8 @@ embedded Python/IPython shells and `run_pyscript` while keeping isolation.
   the target version. Releases are tagged and published from `main`.
 - Do not commit spec, plan, or markdown documents without asking first. Save plans to
   `~/.superpowers/plans/` rather than the project directory.
+- This project uses a 127 character maximum line length for all Python code, including for comments.
+- This project uses a 100 character maximum line length for Markdown files.
 
 ## Commit conventions
 
