@@ -387,9 +387,8 @@ def test_proc_reader_waits_for_a_producer_in_a_pipeline_on_its_own() -> None:
     import subprocess
 
     pipeline = cu.ProcReader(mock.Mock(pid=123, stdout=None, stderr=None, returncode=None), sys.stdout, sys.stderr)
-    child = subprocess.Popen(
-        [sys.executable, "-c", "import sys; sys.stderr.write('captured'); sys.exit(4)"], stderr=subprocess.PIPE
-    )
+    # Not a Python child: under coverage, one may write a CoverageWarning to stderr as it starts.
+    child = subprocess.Popen(["/bin/sh", "-c", "printf captured >&2; exit 4"], stderr=subprocess.PIPE)
     stderr = cu.StdSim(io.StringIO())
     reader = cu.ProcReader(child, sys.stdout, stderr, pipeline=pipeline)
     waiter = threading.Thread(target=reader.wait, daemon=True)
