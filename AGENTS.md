@@ -15,6 +15,8 @@ project, which utilizes `uv` for environment and package management.
 - **New Dependencies:** If a new dependency is required, please state the reason for its inclusion.
 - Do not commit spec, plan, or markdown documents to git without asking first.
 - Save plans to `~/.superpowers/plans/` instead of the project directory.
+- This project uses a 127 character maximum line length for all Python code, including for comments.
+- This project uses a 100 character maximum line length for Markdown files.
 
 ## Python Code Standards
 
