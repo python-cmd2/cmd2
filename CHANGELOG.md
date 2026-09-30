@@ -16,6 +16,8 @@
       Python names otherwise, such as 20866 (KOI8-R) or 28591 (ISO-8859-1), and characters it cannot
       represent are replaced rather than failing the command. Without a console, with a code page
       Python has no codec for, and on other platforms, pipes still use UTF-8
+    - When copying a command's output to the clipboard (`help >`) fails, later commands' output is
+      no longer written to the temporary file that held it
 
 ## 4.2.4 (September 8, 2026)
 

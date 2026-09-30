@@ -3503,20 +3503,22 @@ class Cmd:
 
             try:
                 if saved_redir_state.redirecting:
-                    # If we redirected output to the clipboard
-                    if (
-                        statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND)
-                        and not statement.redirect_to
-                    ):
-                        self.stdout.seek(0)
-                        write_to_paste_buffer(self.stdout.read())
-
-                    with contextlib.suppress(BrokenPipeError):
-                        # Close the file or pipe that stdout was redirected to
-                        self.stdout.close()
-
-                    # Restore self.stdout
+                    # Restore self.stdout first, so that a failure to end the redirection cannot leave it in place
+                    redirected_stdout = self.stdout
                     self.stdout = cast(TextIO, saved_redir_state.saved_self_stdout)
+
+                    try:
+                        # If we redirected output to the clipboard
+                        if (
+                            statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND)
+                            and not statement.redirect_to
+                        ):
+                            redirected_stdout.seek(0)
+                            write_to_paste_buffer(redirected_stdout.read())
+                    finally:
+                        with contextlib.suppress(BrokenPipeError):
+                            # Close the file or pipe that stdout was redirected to
+                            redirected_stdout.close()
 
                     # Check if we need to wait for the process being piped to. Handing the terminal back as it finishes can
                     # fail, for example after a hangup.
@@ -5030,7 +5032,7 @@ class Cmd:
                         stdout = subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout  # type: ignore[unreachable]
                     with (
                         utils._sigttou_mask(block=False) if joined_writer is not None else contextlib.nullcontext(),
-                        utils._session_leader_job_stops() if joined_writer is not None else contextlib.nullcontext(),
+                        utils._session_leader_job_stops(pipeline) if joined_writer is not None else contextlib.nullcontext(),
                     ):
                         proc = subprocess.Popen(  # noqa: S602
                             expanded_command,

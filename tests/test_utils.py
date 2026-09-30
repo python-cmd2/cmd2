@@ -650,6 +650,46 @@ def test_pipeline_writer_lends_every_write_once_a_relay_exists(relaying) -> None
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX pipes")
+def test_pipeline_writer_starts_one_relay_for_producers_started_at_once() -> None:
+    """Threads can start producers at the same time. They must share one relay.
+
+    A second relay would replace the first, whose descriptor close() then never closes. The
+    consumer would never see EOF, and waiting for it would hang cmd2.
+    """
+    import threading
+
+    read_fd, write_fd = os.pipe()
+    writer = cu._PipelineWriter(write_fd, mock.Mock(_lend_terminal=contextlib.nullcontext))
+    real_relay = cu._DescriptorRelay
+    relays = []
+    starting = threading.Event()
+
+    def slow_relay(*args):
+        relays.append(1)
+        starting.set()
+        # Leave the other thread time to ask for the descriptor too.
+        time.sleep(0.2)
+        return real_relay(*args)
+
+    descriptors = []
+    with mock.patch.object(cu, "_DescriptorRelay", side_effect=slow_relay):
+        first = threading.Thread(target=lambda: descriptors.append(writer.fileno()))
+        first.start()
+        assert starting.wait(5)
+        second = threading.Thread(target=lambda: descriptors.append(writer.fileno()))
+        second.start()
+        first.join(5)
+        second.join(5)
+    try:
+        assert len(relays) == 1
+        assert len(descriptors) == 2
+        assert descriptors[0] == descriptors[1]
+    finally:
+        writer.close()
+        os.close(read_fd)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX pipes")
 def test_pipeline_writer_gives_a_joining_producer_the_consumers_pipe_after_relayed_output() -> None:
     """A shell producer that joins the pipeline writes to the consumer's pipe itself, after what went through the relay."""
     read_fd, write_fd = os.pipe()
@@ -808,6 +848,8 @@ def test_proc_reader_watcher_always_records_an_exit(waits, hung_up, returncode, 
     reader = cu.ProcReader(proc, sys.stdout, sys.stderr)
     reader._terminal_fd = 10
     reader._original_group = 456
+    # As while job control runs, cmd2's own handler takes the relay.
+    reader._stop_handler = signal.getsignal(signal.SIGTSTP)
     waits = [(proc.pid, (signal.SIGTSTP << 8) | 0x7F) if wait == "stopped" else wait for wait in waits]
     with (
         mock.patch("os.waitpid", side_effect=waits),
@@ -966,6 +1008,8 @@ def test_proc_reader_watcher_relays_a_stop_after_a_suspension_it_never_saw() -> 
     reader = cu.ProcReader(child, sys.stdout, sys.stderr)
     reader._terminal_fd = 10
     reader._original_group = 456
+    # As while job control runs, cmd2's own handler takes the relay.
+    reader._stop_handler = signal.getsignal(signal.SIGTSTP)
     real_waitpid = os.waitpid
     first = []
     relayed = threading.Event()
@@ -1024,6 +1068,79 @@ def test_proc_reader_producer_wait_reads_a_continue_as_neither_stop_nor_exit() -
     assert waitpid.call_args.args[1] & os.WCONTINUED
     relay.assert_not_called()
     assert proc.returncode == 3
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+@pytest.mark.parametrize("replacement", ["ignored", "custom"])
+def test_proc_reader_continues_a_stop_it_cannot_relay(replacement) -> None:
+    """Only cmd2's own SIGTSTP handler resumes a pipeline stopped for a relay.
+
+    Command code may replace that handler, or ignore the signal, while the pipeline runs. A
+    relay would then leave the pipeline stopped for good, so the pipeline goes on instead, as
+    it does when cmd2 ignores Ctrl-Z.
+    """
+    proc = mock.Mock(pid=123, stdout=None, stderr=None, returncode=None)
+    reader = cu.ProcReader(proc, sys.stdout, sys.stderr)
+    reader._terminal_fd = 10
+    reader._original_group = 456
+    reader._stop_handler = mock.Mock()
+    installed = {"ignored": signal.SIG_IGN, "custom": mock.Mock()}[replacement]
+    with (
+        mock.patch("signal.getsignal", return_value=installed),
+        mock.patch("os.tcgetpgrp", return_value=proc.pid),
+        mock.patch.object(reader, "_set_foreground_group") as foreground,
+        mock.patch("os.killpg") as killpg,
+        mock.patch("signal.pthread_kill") as relay,
+    ):
+        reader._suspend_with_cmd2(10, seen=0)
+    relay.assert_not_called()
+    foreground.assert_not_called()
+    killpg.assert_called_once_with(proc.pid, signal.SIGCONT)
+    # As a suspension does, this continued the whole pipeline, so any stop reported before it is dealt with.
+    assert reader._suspensions == 1
+    assert not reader._suspension_lock.locked()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+def test_session_leader_spawn_holds_off_a_relayed_stop() -> None:
+    """A session leader ignores SIGTSTP while it spawns a producer for a pipeline's job.
+
+    A stop the pipeline's watcher relayed to cmd2 meanwhile would be discarded, and the watcher
+    would wait for cmd2 to resume for good, with the pipeline stopped. So the relay waits for
+    the spawn to finish.
+    """
+    import threading
+
+    reader = cu.ProcReader(mock.Mock(pid=123, stdout=None, stderr=None, returncode=None), sys.stdout, sys.stderr)
+    reader._terminal_fd = 10
+    reader._original_group = 456
+    handler = mock.Mock()
+    reader._stop_handler = handler
+    relayed_under = []
+
+    def relay(thread_id, signum):
+        relayed_under.append(signal.getsignal(signal.SIGTSTP))
+        reader._job_resumed.set()
+
+    previous = signal.signal(signal.SIGTSTP, handler)
+    try:
+        with (
+            mock.patch("os.getsid", return_value=os.getpgrp()),
+            mock.patch("os.tcgetpgrp", return_value=reader._original_group),
+            mock.patch("os.killpg"),
+            mock.patch("signal.pthread_kill", side_effect=relay),
+        ):
+            with cu._session_leader_job_stops(reader):
+                assert signal.getsignal(signal.SIGTSTP) == signal.SIG_IGN
+                watcher = threading.Thread(target=reader._suspend_with_cmd2, args=(10, 0))
+                watcher.start()
+                # Leave the watcher time to relay the stop while SIGTSTP is ignored.
+                time.sleep(0.3)
+                assert not relayed_under
+            watcher.join(5)
+    finally:
+        signal.signal(signal.SIGTSTP, previous)
+    assert relayed_under == [handler]
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
@@ -1577,6 +1694,8 @@ def test_proc_reader_relays_producer_stop(resolved, foreground_group) -> None:
     pipeline = cu.ProcReader(consumer, sys.stdout, sys.stderr)
     pipeline._terminal_fd = 10
     pipeline._original_group = 456
+    # As while job control runs, cmd2's own handler takes the relay.
+    pipeline._stop_handler = signal.getsignal(signal.SIGTSTP)
     proc = mock.Mock(pid=321, stdout=None, stderr=None, returncode=None)
     reader = cu.ProcReader(proc, sys.stdout, sys.stderr, pipeline=pipeline)
     stopped_status = (signal.SIGTSTP << 8) | 0x7F

@@ -611,23 +611,28 @@ def _sigttou_mask(*, block: bool) -> Iterator[None]:
 
 
 @contextlib.contextmanager
-def _session_leader_job_stops() -> Iterator[None]:
+def _session_leader_job_stops(pipeline: "ProcReader | None" = None) -> Iterator[None]:
     """Spawn a process for a terminal pipeline's job with the same Ctrl-Z behavior as cmd2.
 
     A session leader's job has no outer shell to resume it, so Ctrl-Z must not stop any part
     of it. A new process group would otherwise make SIGTSTP actionable again. An ignored
     signal stays ignored across exec, so ignore SIGTSTP while spawning.
+
+    :param pipeline: the terminal pipeline whose job the process joins, if one is running already
     """
     import signal
 
     if os.getpgrp() != os.getsid(0):
         yield
         return
-    previous = signal.signal(signal.SIGTSTP, signal.SIG_IGN)
-    try:
-        yield
-    finally:
-        signal.signal(signal.SIGTSTP, previous)
+    # A stop the pipeline's watcher relayed to cmd2 meanwhile would be discarded, and the watcher would wait for cmd2 to resume
+    # for good. Relays happen under the suspension lock, so hold it while SIGTSTP is ignored.
+    with pipeline._suspension() if pipeline is not None else contextlib.nullcontext():
+        previous = signal.signal(signal.SIGTSTP, signal.SIG_IGN)
+        try:
+            yield
+        finally:
+            signal.signal(signal.SIGTSTP, previous)
 
 
 class ProcReader:
@@ -680,6 +685,8 @@ class ProcReader:
         self._suspensions = 0
         # Set once job control has ended, which the watcher may outlive: see _manage_terminal()
         self._detached = False
+        # The SIGTSTP handler job control installs, the only one that resumes a pipeline stopped for a relay
+        self._stop_handler: Callable[[int, Any], None] | None = None
         if terminal_fd is not None:
             self._original_group = os.tcgetpgrp(terminal_fd)
 
@@ -823,6 +830,7 @@ class ProcReader:
                         self._suspension_lock.release()
                     self._job_resumed.set()
 
+        self._stop_handler = suspend_job
         signal.signal(signal.SIGTSTP, suspend_job)
         try:
             threading.Thread(name="pipe_job", target=self._wait_for_job, args=(terminal_fd,), daemon=True).start()
@@ -830,14 +838,24 @@ class ProcReader:
         finally:
             # The watcher may outlive job control, if waiting for the pipeline failed. Without suspend_job(), a stop it relayed
             # would stop cmd2 with nothing to resume either. So detach it first, under the lock a suspension holds, and it
-            # relays no more. Wait in short polls: a suspension in progress needs this thread to run suspend_job().
-            while not self._suspension_lock.acquire(timeout=0.1):
-                pass
-            try:
+            # relays no more.
+            with self._suspension():
                 self._detached = True
                 signal.signal(signal.SIGTSTP, previous_handler)
-            finally:
-                self._suspension_lock.release()
+
+    @contextlib.contextmanager
+    def _suspension(self) -> Iterator[None]:
+        """Hold the lock that allows one suspension of the whole job at a time.
+
+        It is awaited in short polls: on the main thread, a suspension in progress may need
+        this thread to run suspend_job().
+        """
+        while not self._suspension_lock.acquire(timeout=0.1):
+            pass
+        try:
+            yield
+        finally:
+            self._suspension_lock.release()
 
     @contextlib.contextmanager
     def _lend_terminal(self) -> Iterator[None]:
@@ -975,12 +993,15 @@ class ProcReader:
         """
         import signal
 
-        # Wait in short polls: on the main thread, the suspension being waited for may need this thread to run the SIGTSTP
-        # handler.
-        while not self._suspension_lock.acquire(timeout=0.1):
-            pass
-        try:
+        with self._suspension():
             if self._suspensions != seen or self._detached:
+                return
+            # Only suspend_job() resumes a pipeline stopped for a relay. Should command code have replaced it as SIGTSTP's
+            # handler, or ignored the signal, the pipeline would stay stopped for good. So it goes on, as when cmd2 ignores
+            # Ctrl-Z. Like a suspension, that deals with every stop reported before it.
+            if signal.getsignal(signal.SIGTSTP) is not self._stop_handler:
+                self._signal_pipeline(signal.SIGCONT)
+                self._suspensions += 1
                 return
             with self._terminal_lock:
                 if os.tcgetpgrp(terminal_fd) == self._proc.pid:
@@ -995,8 +1016,6 @@ class ProcReader:
             self._job_resumed.wait()
             self._signal_pipeline(signal.SIGCONT)
             self._suspensions += 1
-        finally:
-            self._suspension_lock.release()
 
     def _relay_producer_stop(self, seen: int) -> None:
         """Suspend the shell's whole job for a stopped producer that joined this pipeline.
@@ -1257,6 +1276,9 @@ class _PipelineWriter(io.FileIO):
         self._reader = reader
         self._interruptible = interruptible
         self._relay: _DescriptorRelay | None = None
+        # Threads may start producers at the same time. A second relay would replace the first, and close() would then leave
+        # the first one's descriptor open: the consumer would never see EOF.
+        self._relay_lock = threading.Lock()
         self._poller = select.poll()
         self._poller.register(fd, select.POLLOUT)
 
@@ -1267,11 +1289,12 @@ class _PipelineWriter(io.FileIO):
         relay (see :class:`_DescriptorRelay`), which lends the consumer the terminal whenever
         such a producer is waiting for the consumer to drain the pipe.
         """
-        if self.closed:
-            raise ValueError("I/O operation on closed file")
-        if self._relay is None:
-            self._relay = _DescriptorRelay(os.dup(super().fileno()), self._reader)
-        return self._relay.write_fd
+        with self._relay_lock:
+            if self.closed:
+                raise ValueError("I/O operation on closed file")
+            if self._relay is None:
+                self._relay = _DescriptorRelay(os.dup(super().fileno()), self._reader)
+            return self._relay.write_fd
 
     def feeds(self, pipeline: ProcReader) -> bool:
         """Whether this is the pipe to pipeline's consumer."""
@@ -1289,11 +1312,12 @@ class _PipelineWriter(io.FileIO):
 
     def close(self) -> None:
         """Close the pipe. The consumer sees EOF once every producer has closed its descriptor too."""
-        try:
-            super().close()
-        finally:
-            if self._relay is not None:
-                self._relay.close_write_fd()
+        with self._relay_lock:
+            try:
+                super().close()
+            finally:
+                if self._relay is not None:
+                    self._relay.close_write_fd()
 
     def write(self, b: Any) -> int:
         """Write all of b, lending the consumer the terminal whenever the pipe is full.

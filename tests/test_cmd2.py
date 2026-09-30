@@ -474,7 +474,7 @@ def test_shell_falls_back_to_own_group_when_pipeline_exited(base_app, tmp_path) 
         spawned_while_lent.append(bool(lent))
         return real_popen(*args, **kwargs)
 
-    pipeline = mock.Mock(_terminal_group=leader.pid, _lend_terminal=_lend_terminal)
+    pipeline = mock.Mock(_terminal_group=leader.pid, _lend_terminal=_lend_terminal, _suspension=contextlib.nullcontext)
     base_app._cur_pipe_proc_reader = pipeline
     base_app.stdout, read_fd = pipeline_stdout(pipeline)
     with mock.patch("subprocess.Popen", popen):
@@ -1024,20 +1024,34 @@ def test_shell_joins_only_the_pipeline_it_writes_to(base_app, tmp_path, stdout) 
     """
     leader = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"], process_group=0)
     spawned = []
+    spawned_in_suspension = []
+    suspension = []
     real_popen = subprocess.Popen
 
     def popen(*args, **kwargs):
         spawned.append(kwargs)
+        spawned_in_suspension.append(bool(suspension))
         return real_popen(*args, **kwargs)
 
-    pipeline = mock.Mock(_terminal_group=leader.pid, _lend_terminal=contextlib.nullcontext)
+    @contextlib.contextmanager
+    def _suspension():
+        suspension.append(True)
+        try:
+            yield
+        finally:
+            suspension.pop()
+
+    pipeline = mock.Mock(_terminal_group=leader.pid, _lend_terminal=contextlib.nullcontext, _suspension=_suspension)
     base_app._cur_pipe_proc_reader = pipeline
     try:
         if stdout == "pipeline":
             base_app.stdout, read_fd = pipeline_stdout(pipeline)
             writer = base_app.stdout.buffer.raw
-            with mock.patch("subprocess.Popen", popen):
+            # As a session leader, cmd2 ignores SIGTSTP to spawn the command. A stop relayed meanwhile would be lost, so the
+            # spawn holds off relays.
+            with mock.patch("subprocess.Popen", popen), mock.patch("os.getsid", return_value=os.getpgrp()):
                 base_app.do_shell("echo joined")
+            assert spawned_in_suspension == [True]
             assert spawned[0]["process_group"] == leader.pid
             assert isinstance(spawned[0]["stdout"], int)
             assert writer._relay is None
@@ -1111,6 +1125,36 @@ def test_restore_output_resets_pipe_state_when_the_wait_fails(base_app) -> None:
 
     assert base_app.stdout is saved_stdout
     assert base_app._cur_pipe_proc_reader is None
+    assert base_app._redirecting is False
+
+
+@pytest.mark.parametrize("failure", ["clipboard", "close"])
+def test_restore_output_restores_stdout_when_ending_the_redirection_fails(base_app, mocker, failure) -> None:
+    """A failed clipboard write, or a pipe that fails to close, must not leave stdout redirected.
+
+    Every later command's output would go to the temporary file, or fail on the closed pipe.
+    """
+    import errno
+
+    statement = base_app.statement_parser.parse("help >" if failure == "clipboard" else "help | less")
+    saved_stdout = base_app.stdout
+    saved = cmd2.utils.RedirectionSavedState(saved_stdout, None, False)
+    saved.redirecting = True
+    redirected = mock.MagicMock()
+    if failure == "clipboard":
+        redirected.read.return_value = "help text"
+        mocker.patch("cmd2.cmd2.write_to_paste_buffer", side_effect=RuntimeError("no clipboard"))
+    else:
+        redirected.close.side_effect = OSError(errno.EIO, "terminal hung up")
+    base_app._redirecting = True
+    base_app.stdout = redirected
+
+    with pytest.raises((RuntimeError, OSError)):
+        base_app._restore_output(statement, saved)
+
+    assert base_app.stdout is saved_stdout
+    # The temporary file is closed even though its contents never reached the clipboard.
+    redirected.close.assert_called_once_with()
     assert base_app._redirecting is False
 
 
