@@ -564,11 +564,11 @@ def _ActionsContainer_add_argument(  # noqa: N802
     new_arg = orig_actions_container_add_argument(self, *args, **kwargs)
 
     # Set the cmd2-specific attributes
-    new_arg.set_nargs_range(nargs_range)  # type: ignore[attr-defined, ty:unresolved-attribute]
-    new_arg.set_choices_provider(choices_provider)  # type: ignore[attr-defined, ty:unresolved-attribute]
-    new_arg.set_completer(completer)  # type: ignore[attr-defined, ty:unresolved-attribute]
-    new_arg.set_suppress_tab_hint(suppress_tab_hint)  # type: ignore[attr-defined, ty:unresolved-attribute]
-    new_arg.set_table_columns(table_columns)  # type: ignore[attr-defined, ty:unresolved-attribute]
+    new_arg.set_nargs_range(nargs_range)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+    new_arg.set_choices_provider(choices_provider)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+    new_arg.set_completer(completer)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+    new_arg.set_suppress_tab_hint(suppress_tab_hint)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+    new_arg.set_table_columns(table_columns)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
 
     # Set other registered custom attributes
     for keyword, value in custom_attribs.items():
@@ -666,14 +666,14 @@ def _SubParsersAction_remove_all_parsers(  # noqa: N802
         # Get the next subcommand name. remove_parser() will remove
         # it and any associated aliases from _name_parser_map.
         name = next(iter(self._name_parser_map))
-        record = self.remove_parser(name)  # type: ignore[attr-defined, ty:unresolved-attribute]
+        record = self.remove_parser(name)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
         records.append(record)
 
     return records
 
 
-argparse._SubParsersAction.remove_parser = _SubParsersAction_remove_parser  # type: ignore[attr-defined, ty:unresolved-attribute]
-argparse._SubParsersAction.remove_all_parsers = _SubParsersAction_remove_all_parsers  # type: ignore[attr-defined, ty:unresolved-attribute]
+argparse._SubParsersAction.remove_parser = _SubParsersAction_remove_parser  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+argparse._SubParsersAction.remove_all_parsers = _SubParsersAction_remove_all_parsers  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
 
 
 @dataclass
@@ -747,8 +747,8 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         super().__init__(
             prog=prog,
             usage=usage,
-            description=description,  # type: ignore[arg-type, ty:invalid-argument-type]
-            epilog=epilog,  # type: ignore[arg-type, ty:invalid-argument-type]
+            description=description,  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+            epilog=epilog,  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
             parents=parents,
             formatter_class=formatter_class,
             prefix_chars=prefix_chars,
@@ -772,7 +772,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         self.description: HelpContent | None  # type: ignore[assignment]
         self.epilog: HelpContent | None  # type: ignore[assignment]
 
-    def print_usage(self, file: IO[str] | None = None) -> None:  # type: ignore[override, ty:invalid-method-override]
+    def print_usage(self, file: IO[str] | None = None) -> None:  # type: ignore[override]  # ty: ignore[invalid-method-override]
         """Override to ensure the formatter is aware of the target file."""
         if file is None:
             file = self._thread_locals.current_output_file
@@ -780,7 +780,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         with self.output_to(file):
             super().print_usage(file)
 
-    def print_help(self, file: IO[str] | None = None) -> None:  # type: ignore[override, ty:invalid-method-override]
+    def print_help(self, file: IO[str] | None = None) -> None:  # type: ignore[override]  # ty: ignore[invalid-method-override]
         """Override to ensure the formatter is aware of the target file."""
         if file is None:
             file = self._thread_locals.current_output_file
@@ -984,7 +984,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         try:
             record = cast(
                 SubcommandRecord,
-                subparsers_action.remove_parser(subcommand),  # type: ignore[attr-defined, ty:unresolved-attribute]
+                subparsers_action.remove_parser(subcommand),  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
             )
         except ValueError:
             raise ValueError(f"Subcommand '{subcommand}' does not exist for '{target_parser.prog}'") from None
@@ -1006,7 +1006,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
         records = cast(
             list[SubcommandRecord],
-            subparsers_action.remove_all_parsers(),  # type: ignore[attr-defined, ty:unresolved-attribute]
+            subparsers_action.remove_all_parsers(),  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
         )
         # Update command for each detached subcommand
         for record in records:
@@ -1046,7 +1046,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
     def _get_nargs_pattern(self, action: argparse.Action) -> str:
         """Override to support nargs ranges."""
-        nargs_range = action.get_nargs_range()  # type: ignore[attr-defined, ty:unresolved-attribute]
+        nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
         if nargs_range:
             range_max = "" if nargs_range[1] == constants.INFINITY else nargs_range[1]
             nargs_pattern = f"(-*A{{{nargs_range[0]},{range_max}}}-*)"
@@ -1066,7 +1066,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
         # raise an exception if we weren't able to find a match
         if match is None:
-            nargs_range = action.get_nargs_range()  # type: ignore[attr-defined, ty:unresolved-attribute]
+            nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
             if nargs_range is not None:
                 raise ArgumentError(action, build_range_error(nargs_range[0], nargs_range[1]))
 

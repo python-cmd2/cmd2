@@ -103,7 +103,7 @@ strict = true
 warn_redundant_casts = true
 warn_return_any = true
 warn_unreachable = true
-warn_unused_ignores = false
+warn_unused_ignores = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

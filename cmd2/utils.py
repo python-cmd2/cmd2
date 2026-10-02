@@ -1130,7 +1130,7 @@ class ProcReader:
         # Run until process completes
         polled = self._terminal_fd is None and self._pipeline is None
         while (self._proc.poll() if polled else self._proc.returncode) is None:
-            available = read_stream.peek()  # type: ignore[attr-defined, ty:unresolved-attribute]
+            available = read_stream.peek()  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
             if available:
                 read_stream.read(len(available))
                 self._write_bytes(write_stream, available)
