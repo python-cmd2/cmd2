@@ -713,7 +713,7 @@ def _make_enum_type(enum_class: type[enum.Enum], *, allow_unknown_entry: bool = 
         raise _invalid_choice(value, _value_map)
 
     _convert.__name__ = enum_class.__name__
-    _convert._cmd2_enum_class = enum_class  # type: ignore[attr-defined, ty:unresolved-attribute]
+    _convert._cmd2_enum_class = enum_class  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
     return _convert
 
 
@@ -1119,7 +1119,7 @@ def _compose_preprocess(preprocess: Callable[[str], str], converter: Callable[[s
     _convert.__name__ = getattr(converter, "__name__", "preprocess")
     enum_class = getattr(converter, "_cmd2_enum_class", None)
     if enum_class is not None:
-        _convert._cmd2_enum_class = enum_class  # type: ignore[attr-defined, ty:unresolved-attribute]
+        _convert._cmd2_enum_class = enum_class  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
     return _convert
 
 

@@ -2610,11 +2610,11 @@ class Cmd:
                             completer.complete, tokens=raw_tokens[1:] if spec.preserve_quotes else tokens[1:], cmd_set=cmd_set
                         )
                     else:
-                        completer_func = self.completedefault  # type: ignore[assignment, ty:invalid-assignment]
+                        completer_func = self.completedefault  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
 
             # Not a recognized macro or command
             else:
-                completer_func = self.completedefault  # type: ignore[assignment, ty:invalid-assignment]
+                completer_func = self.completedefault  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
 
         # Otherwise we are completing the command token or performing custom completion
         else:
@@ -3032,7 +3032,7 @@ class Cmd:
                 with self.sigint_protection:
                     if py_bridge_call:
                         # Start saving command's stdout at this point
-                        self.stdout.pause_storage = False  # type: ignore[attr-defined, ty:invalid-assignment]
+                        self.stdout.pause_storage = False  # type: ignore[attr-defined]  # ty: ignore[invalid-assignment]
 
                     redir_saved_state = self._redirect_output(statement)
 
@@ -3071,7 +3071,7 @@ class Cmd:
 
                     if py_bridge_call:
                         # Stop saving command's stdout before command finalization hooks run
-                        self.stdout.pause_storage = True  # type: ignore[attr-defined, ty:invalid-assignment]
+                        self.stdout.pause_storage = True  # type: ignore[attr-defined]  # ty: ignore[invalid-assignment]
         except (SkipPostcommandHooks, EmptyStatement):
             # Don't do anything, but do allow command finalization hooks to run
             pass
@@ -3875,7 +3875,7 @@ class Cmd:
             "An alias is a command that enables replacement of a word by another string.",
         )
         alias_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description=alias_description)
-        alias_parser.epilog = TextGroup(  # type: ignore[assignment, ty:invalid-assignment]
+        alias_parser.epilog = TextGroup(  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
             "See Also",
             "macro",
         )
@@ -3907,7 +3907,7 @@ class Cmd:
                 "for the actual command the alias resolves to."
             ),
         )
-        alias_create_parser.epilog = TextGroup("Notes", alias_create_notes)  # type: ignore[assignment, ty:invalid-assignment]
+        alias_create_parser.epilog = TextGroup("Notes", alias_create_notes)  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
 
         # Add arguments
         alias_create_parser.add_argument("name", help="name of this alias")
@@ -4089,7 +4089,7 @@ class Cmd:
             "A macro is similar to an alias, but it can contain argument placeholders.",
         )
         macro_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description=macro_description)
-        macro_parser.epilog = TextGroup(  # type: ignore[assignment, ty:invalid-assignment]
+        macro_parser.epilog = TextGroup(  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
             "See Also",
             "alias",
         )
@@ -4152,7 +4152,7 @@ class Cmd:
                 "This default behavior changes if custom completion for macro arguments has been implemented."
             ),
         )
-        macro_create_parser.epilog = TextGroup("Notes", macro_create_notes)  # type: ignore[assignment, ty:invalid-assignment]
+        macro_create_parser.epilog = TextGroup("Notes", macro_create_notes)  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
 
         # Add arguments
         macro_create_parser.add_argument("name", help="name of this macro")
@@ -4648,7 +4648,7 @@ class Cmd:
     @staticmethod
     def _build__eof_parser() -> Cmd2ArgumentParser:
         _eof_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description="Called when Ctrl-D is pressed.")
-        _eof_parser.epilog = TextGroup(  # type: ignore[assignment, ty:invalid-assignment]
+        _eof_parser.epilog = TextGroup(  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
             "Note",
             "This command is for internal use and is not intended to be called from the command line.",
         )
@@ -5108,7 +5108,7 @@ class Cmd:
             # Check if we are running Python code
             if py_code_to_run:
                 try:  # noqa: SIM105
-                    interp.runcode(py_code_to_run)  # type: ignore[arg-type, ty:invalid-argument-type]
+                    interp.runcode(py_code_to_run)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
                 except BaseException:  # noqa: BLE001, S110
                     # We don't care about any exception that happened in the Python code
                     pass
@@ -5547,7 +5547,7 @@ class Cmd:
     def _build_edit_parser(cls) -> Cmd2ArgumentParser:
         edit_description = "Run a text editor and optionally open a file with it."
         edit_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description=edit_description)
-        edit_parser.epilog = TextGroup(  # type: ignore[assignment, ty:invalid-assignment]
+        edit_parser.epilog = TextGroup(  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
             "Note",
             Text.assemble(
                 "To set a new editor, run: ",
@@ -5669,7 +5669,7 @@ class Cmd:
         _relative_run_script_parser = cls._build_base_run_script_parser()
 
         # Append to existing description
-        _relative_run_script_parser.description = Group(  # type: ignore[assignment, ty:invalid-assignment]
+        _relative_run_script_parser.description = Group(  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
             cast(Group, _relative_run_script_parser.description),
             "\n",
             (
@@ -5678,7 +5678,7 @@ class Cmd:
             ),
         )
 
-        _relative_run_script_parser.epilog = TextGroup(  # type: ignore[assignment, ty:invalid-assignment]
+        _relative_run_script_parser.epilog = TextGroup(  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
             "Note",
             "This command is intended to be used from within a text script.",
         )
