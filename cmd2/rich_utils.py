@@ -174,14 +174,12 @@ class Cmd2HelpFormatter(RichHelpFormatter):
         to _set_color() which some versions of RichHelpFormatter don't support.
         """
         # Argparse didn't add color support until 3.14
-        if sys.version_info < (3, 14):
-            return
-
-        try:  # type: ignore[unreachable]
-            super()._set_color(color, **kwargs)
-        except TypeError:
-            # Fallback for older versions of RichHelpFormatter that don't support keyword arguments
-            super()._set_color(color)
+        if sys.version_info >= (3, 14):
+            try:
+                super()._set_color(color, **kwargs)
+            except TypeError:
+                # Fallback for older versions of RichHelpFormatter that don't support keyword arguments
+                super()._set_color(color)
 
     def _build_nargs_range_str(self, nargs_range: tuple[int, int | float]) -> str:
         """Build nargs range string for help text."""
@@ -710,4 +708,4 @@ def _decode_has_linebreak_bug() -> bool:
 
 # Only apply the monkey patch if the bug is present
 if _decode_has_linebreak_bug():
-    AnsiDecoder.decode = _AnsiDecoder_decode  # type: ignore[assignment]
+    AnsiDecoder.decode = _AnsiDecoder_decode  # type: ignore[method-assign]

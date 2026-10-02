@@ -989,7 +989,7 @@ def _unwrap_optional(tp: Any) -> tuple[Any, bool]:
     there alone, so this helper never validates union members itself.
     """
     origin = get_origin(tp)
-    if origin is Union or origin is types.UnionType:  # type: ignore[comparison-overlap]
+    if origin is Union or origin is types.UnionType:
         all_args = get_args(tp)
         non_none = [a for a in all_args if a is not type(None)]
         has_none = len(non_none) < len(all_args)
@@ -1014,14 +1014,14 @@ def _normalize_annotation(annotation: Any) -> _NormalizedAnnotation:
     tp, unwrapped = _unwrap_optional(tp)
     if unwrapped:
         is_optional = True
-        if get_origin(tp) is Annotated:  # type: ignore[comparison-overlap]
+        if get_origin(tp) is Annotated:
             inner_tp = get_args(tp)[0]
             inner_origin = get_origin(inner_tp)
-            inner_is_union = inner_origin is Union or inner_origin is types.UnionType  # type: ignore[comparison-overlap]
+            inner_is_union = inner_origin is Union or inner_origin is types.UnionType
             if not (inner_is_union and type(None) in get_args(inner_tp)):
                 raise TypeError("Annotated[T, meta] | None is ambiguous. Use Annotated[T | None, meta] instead.")
 
-    if get_origin(tp) is Annotated:  # type: ignore[comparison-overlap]
+    if get_origin(tp) is Annotated:
         args = get_args(tp)
         tp = args[0]
         for meta in args[1:]:
