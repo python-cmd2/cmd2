@@ -1,8 +1,10 @@
 """Cmd2 unit/functional testing"""
 
+import contextlib
 import io
 import os
 import signal
+import subprocess
 import sys
 import tempfile
 import threading
@@ -426,6 +428,106 @@ def test_shell_manual_call(base_app) -> None:
     cmd = "&&".join(cmds)
 
     base_app.do_shell(cmd)
+
+
+def pipeline_stdout(pipeline) -> tuple[io.TextIOWrapper, int]:
+    """Return a stdout that writes to pipeline's consumer, as cmd2 builds one, and the pipe's read end."""
+    read_fd, write_fd = os.pipe()
+    writer = cmd2.utils._PipelineWriter(write_fd, pipeline)
+    return io.TextIOWrapper(io.BufferedWriter(writer), encoding="utf-8"), read_fd
+
+
+def read_all(fd: int) -> bytes:
+    data = b""
+    while chunk := os.read(fd, 65536):
+        data += chunk
+    os.close(fd)
+    return data
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
+def test_shell_falls_back_to_own_group_when_pipeline_exited(base_app, tmp_path) -> None:
+    import contextlib
+    import subprocess
+    from unittest import mock
+
+    # A group whose only member has exited cannot be joined. The consumer of a terminal pipeline can exit between the check and
+    # the spawn, like `shell sleep 1 | true`.
+    leader = subprocess.Popen([sys.executable, "-c", "pass"], process_group=0)
+    leader.wait()
+    lent = []
+
+    @contextlib.contextmanager
+    def _lend_terminal():
+        lent.append(True)
+        try:
+            yield
+        finally:
+            lent.pop()
+
+    # The retry runs in our own group, so the terminal has to come back from the dead pipeline first. Otherwise the command
+    # stops with SIGTTIN on its first terminal read.
+    spawned_while_lent = []
+    real_popen = subprocess.Popen
+
+    def popen(*args, **kwargs):
+        spawned_while_lent.append(bool(lent))
+        return real_popen(*args, **kwargs)
+
+    pipeline = mock.Mock(_terminal_group=leader.pid, _lend_terminal=_lend_terminal, _suspension=contextlib.nullcontext)
+    base_app._cur_pipe_proc_reader = pipeline
+    base_app.stdout, read_fd = pipeline_stdout(pipeline)
+    with mock.patch("subprocess.Popen", popen):
+        base_app.do_shell("echo joined")
+    base_app.stdout.close()
+    assert read_all(read_fd) == b"joined\n"
+    assert base_app.last_result == 0
+    assert spawned_while_lent == [True, False]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
+def test_shell_reads_the_pipelines_group_once(base_app) -> None:
+    """The pipeline's watcher can reap the consumer at any moment, after which it has no group to join.
+
+    Deciding to join from one reading and joining with another could spawn the command in
+    cmd2's own group while treating it as the pipeline's: Ctrl-Z would then stop cmd2 itself.
+    """
+    import contextlib
+    import subprocess
+    from unittest import mock
+
+    leader = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"], process_group=0)
+    spawned = []
+    real_popen = subprocess.Popen
+
+    def popen(*args, **kwargs):
+        spawned.append(kwargs)
+        return real_popen(*args, **kwargs)
+
+    pipeline = mock.Mock(_lend_terminal=contextlib.nullcontext, _suspension=contextlib.nullcontext)
+    # The consumer is reaped right after the first reading.
+    type(pipeline)._terminal_group = mock.PropertyMock(side_effect=[leader.pid, None, None])
+    base_app._cur_pipe_proc_reader = pipeline
+    base_app.stdout, read_fd = pipeline_stdout(pipeline)
+    try:
+        with mock.patch("subprocess.Popen", popen):
+            base_app.do_shell("echo joined")
+        assert spawned[0]["process_group"] == leader.pid
+        base_app.stdout.close()
+        assert read_all(read_fd) == b"joined\n"
+    finally:
+        leader.kill()
+        leader.wait()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX shell executable")
+def test_shell_permission_error_unrelated_to_pipeline(base_app, tmp_path, monkeypatch) -> None:
+    unusable_shell = tmp_path / "shell"
+    unusable_shell.write_text("#!/bin/sh\n")
+    unusable_shell.chmod(0o644)
+    monkeypatch.setenv("SHELL", str(unusable_shell))
+    with pytest.raises(PermissionError):
+        base_app.do_shell("echo hi")
 
 
 def test_base_error(base_app) -> None:
@@ -865,7 +967,11 @@ def test_pipe_to_shell_and_redirect(redirection_app, running_pipe_process) -> No
     os.remove(filename)
 
 
-def test_pipe_to_shell_error(redirection_app, mocker, capsys) -> None:
+@pytest.mark.parametrize(
+    "terminal",
+    [False, pytest.param(True, marks=pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control"))],
+)
+def test_pipe_to_shell_error(redirection_app, mocker, capsys, terminal) -> None:
     """An already-exited pipe process must be reported before the command runs.
 
     A real nonexistent command may take longer than the startup probe under load.
@@ -876,13 +982,251 @@ def test_pipe_to_shell_error(redirection_app, mocker, capsys) -> None:
     process = popen.return_value
     process.returncode = 127
     process.wait.return_value = 127
+    if terminal:
+        terminal_stream = mocker.Mock()
+        terminal_stream.isatty.return_value = True
+        terminal_stream.fileno.return_value = 10
+        redirection_app.stdout = terminal_stream
+        mocker.patch("os.tcgetpgrp", return_value=os.getpgrp())
+        mocker.patch("os.getsid", return_value=os.getpgrp())
+        sigmask = mocker.patch("signal.pthread_sigmask", return_value=set())
+        reader = mocker.patch("cmd2.utils.ProcReader").return_value
+        previous_tstp = signal.getsignal(signal.SIGTSTP)
 
-    out, err = run_cmd(redirection_app, "print_output | foobarbaz.this_does_not_exist")
+        def start_pipe(*args, **kwargs):
+            # Session-led pipelines inherit ignored Ctrl-Z, but the caller's handler must be restored even when startup reports
+            # an early exit.
+            assert signal.getsignal(signal.SIGTSTP) == signal.SIG_IGN
+            return process
+
+        popen.side_effect = start_pipe
+
+    if terminal:
+        # run_cmd captures stderr in a StdSim, which deliberately disables terminal handoff.
+        redirection_app.onecmd_plus_hooks("print_output | foobarbaz.this_does_not_exist")
+        out, error_text = capsys.readouterr()
+        err = error_text.splitlines()
+    else:
+        out, err = run_cmd(redirection_app, "print_output | foobarbaz.this_does_not_exist")
     assert not out
     assert "Pipe process exited with code 127 before command could run" in " ".join(err)
     assert capsys.readouterr().out == ""
-    process.wait.assert_called_once()
+    if terminal:
+        assert signal.getsignal(signal.SIGTSTP) == previous_tstp
+        reader._wait_for_exit.assert_called_once_with(0.2)
+        reader.wait.assert_called_once_with()
+        process.wait.assert_not_called()
+        # SIGTTOU is blocked only inside ProcReader's lends. Blocking it for the whole pipeline would leak the mask into every
+        # child the command starts.
+        sigmask.assert_not_called()
+    else:
+        process.wait.assert_called_once()
     assert popen.call_args.kwargs["stdin"].closed
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+@pytest.mark.parametrize("android", [False, True])
+def test_terminal_pipe_start_gate_uses_the_platform_shell(redirection_app, mocker, monkeypatch, android) -> None:
+    """The start gate runs in the POSIX shell Popen() itself would use: Android has no /bin/sh."""
+    if android:
+        monkeypatch.setattr(sys, "getandroidapilevel", lambda: 30, raising=False)
+    else:
+        monkeypatch.delattr(sys, "getandroidapilevel", raising=False)
+    monkeypatch.delenv("SHELL", raising=False)
+    popen = mocker.patch("subprocess.Popen", autospec=True)
+    popen.return_value.returncode = 127
+    terminal_stream = mocker.Mock()
+    terminal_stream.isatty.return_value = True
+    terminal_stream.fileno.return_value = 10
+    redirection_app.stdout = terminal_stream
+    mocker.patch("os.tcgetpgrp", return_value=os.getpgrp())
+    mocker.patch("cmd2.utils.ProcReader")
+    redirection_app.onecmd_plus_hooks("print_output | less")
+    shell = "/system/bin/sh" if android else "/bin/sh"
+    assert popen.call_args.kwargs["executable"] == shell
+    # With SHELL unset, the gate hands the command to that shell, too.
+    assert f"exec {shell} -c less" in popen.call_args.args[0]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")
+@pytest.mark.parametrize("stdout", ["pipeline", "file"])
+def test_shell_joins_only_the_pipeline_it_writes_to(base_app, tmp_path, stdout) -> None:
+    """A shell command joins the pipeline's job only when its output goes to that pipeline.
+
+    Then it writes to the consumer's pipe itself: it holds the terminal lent for as long as it
+    runs, so it needs no relay. A command whose output goes elsewhere, such as a file a
+    command redirected self.stdout to, has no reason to share the consumer's terminal.
+    """
+    leader = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"], process_group=0)
+    spawned = []
+    spawned_in_suspension = []
+    suspension = []
+    real_popen = subprocess.Popen
+
+    def popen(*args, **kwargs):
+        spawned.append(kwargs)
+        spawned_in_suspension.append(bool(suspension))
+        return real_popen(*args, **kwargs)
+
+    @contextlib.contextmanager
+    def _suspension():
+        suspension.append(True)
+        try:
+            yield
+        finally:
+            suspension.pop()
+
+    pipeline = mock.Mock(_terminal_group=leader.pid, _lend_terminal=contextlib.nullcontext, _suspension=_suspension)
+    base_app._cur_pipe_proc_reader = pipeline
+    try:
+        if stdout == "pipeline":
+            base_app.stdout, read_fd = pipeline_stdout(pipeline)
+            writer = base_app.stdout.buffer.raw
+            # As a session leader, cmd2 ignores SIGTSTP to spawn the command. A stop relayed meanwhile would be lost, so the
+            # spawn holds off relays.
+            with mock.patch("subprocess.Popen", popen), mock.patch("os.getsid", return_value=os.getpgrp()):
+                base_app.do_shell("echo joined")
+            assert spawned_in_suspension == [True]
+            assert spawned[0]["process_group"] == leader.pid
+            assert isinstance(spawned[0]["stdout"], int)
+            assert writer._relay is None
+            base_app.stdout.close()
+            assert read_all(read_fd) == b"joined\n"
+        else:
+            with (tmp_path / "output").open("w+") as output, mock.patch("subprocess.Popen", popen):
+                base_app.stdout = output
+                base_app.do_shell("echo elsewhere")
+                output.seek(0)
+                assert output.read() == "elsewhere\n"
+            assert "process_group" not in spawned[0]
+        assert base_app.last_result == 0
+    finally:
+        leader.kill()
+        leader.wait()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+def test_shell_from_a_worker_thread_stays_out_of_the_pipeline(base_app, tmp_path) -> None:
+    """Joining a pipeline's job means relaying stops to the main thread, and may change signal handlers.
+
+    Only the main thread may do that, so a shell command run from another thread does not join.
+    """
+    lent = []
+
+    @contextlib.contextmanager
+    def _lend_terminal():
+        lent.append(True)
+        yield
+
+    spawned = []
+    real_popen = subprocess.Popen
+
+    def popen(*args, **kwargs):
+        spawned.append(kwargs)
+        return real_popen(*args, **kwargs)
+
+    pipeline = mock.Mock(_terminal_group=os.getpgrp(), _lend_terminal=_lend_terminal)
+    base_app._cur_pipe_proc_reader = pipeline
+    base_app.stdout, read_fd = pipeline_stdout(pipeline)
+    with mock.patch("subprocess.Popen", popen):
+        worker = threading.Thread(target=base_app.do_shell, args=("echo worker",))
+        worker.start()
+        worker.join(10)
+    base_app.stdout.close()
+    assert read_all(read_fd) == b"worker\n"
+    assert "process_group" not in spawned[0]
+    assert not lent
+
+
+def test_restore_output_resets_pipe_state_when_the_wait_fails(base_app) -> None:
+    """A failed handback while waiting for the pipe process must not leave it current.
+
+    Otherwise ppaged() would never page again, and Ctrl-C would keep going to a dead group.
+    """
+    import errno
+
+    statement = base_app.statement_parser.parse("help | less")
+    saved_stdout = base_app.stdout
+    saved = cmd2.utils.RedirectionSavedState(saved_stdout, None, False)
+    saved.redirecting = True
+    reader = mock.Mock(_lend_terminal=contextlib.nullcontext)
+    reader.wait.side_effect = OSError(errno.EIO, "terminal hung up")
+    base_app._cur_pipe_proc_reader = reader
+    base_app._redirecting = True
+    base_app.stdout = io.StringIO()
+
+    with pytest.raises(OSError, match="terminal hung up"):
+        base_app._restore_output(statement, saved)
+
+    assert base_app.stdout is saved_stdout
+    assert base_app._cur_pipe_proc_reader is None
+    assert base_app._redirecting is False
+
+
+def test_restore_output_lends_the_terminal_before_the_consumer_reads_eof(base_app) -> None:
+    """A consumer may set its terminal modes once it reads EOF, as `vim -` does after reading its input.
+
+    From the background, that stops it with SIGTTOU, and on macOS the call then fails with
+    EINTR as it is continued. So the pipeline has the terminal before its pipe closes.
+    """
+    import contextlib
+
+    statement = base_app.statement_parser.parse("help | vim -")
+    saved = cmd2.utils.RedirectionSavedState(base_app.stdout, None, False)
+    saved.redirecting = True
+    lent = []
+    events = []
+
+    @contextlib.contextmanager
+    def lend_terminal():
+        lent.append(True)
+        try:
+            yield
+        finally:
+            lent.pop()
+
+    reader = mock.Mock(_lend_terminal=lend_terminal)
+    reader.wait.side_effect = lambda: events.append(("wait", bool(lent)))
+    redirected = mock.Mock()
+    redirected.close.side_effect = lambda: events.append(("close", bool(lent)))
+    base_app._cur_pipe_proc_reader = reader
+    base_app._redirecting = True
+    base_app.stdout = redirected
+
+    base_app._restore_output(statement, saved)
+
+    assert events == [("close", True), ("wait", True)]
+    assert not lent
+
+
+@pytest.mark.parametrize("failure", ["clipboard", "close"])
+def test_restore_output_restores_stdout_when_ending_the_redirection_fails(base_app, mocker, failure) -> None:
+    """A failed clipboard write, or a pipe that fails to close, must not leave stdout redirected.
+
+    Every later command's output would go to the temporary file, or fail on the closed pipe.
+    """
+    import errno
+
+    statement = base_app.statement_parser.parse("help >" if failure == "clipboard" else "help | less")
+    saved_stdout = base_app.stdout
+    saved = cmd2.utils.RedirectionSavedState(saved_stdout, None, False)
+    saved.redirecting = True
+    redirected = mock.MagicMock()
+    if failure == "clipboard":
+        redirected.read.return_value = "help text"
+        mocker.patch("cmd2.cmd2.write_to_paste_buffer", side_effect=RuntimeError("no clipboard"))
+    else:
+        redirected.close.side_effect = OSError(errno.EIO, "terminal hung up")
+    base_app._redirecting = True
+    base_app.stdout = redirected
+
+    with pytest.raises((RuntimeError, OSError)):
+        base_app._restore_output(statement, saved)
+
+    assert base_app.stdout is saved_stdout
+    # The temporary file is closed even though its contents never reached the clipboard.
+    redirected.close.assert_called_once_with()
+    assert base_app._redirecting is False
 
 
 def test_send_to_paste_buffer(redirection_app: RedirectionApp, capsys: pytest.CaptureFixture[str], mocker) -> None:
@@ -3451,6 +3795,40 @@ def test_ppaged_with_pager(outsim_app, monkeypatch, chop) -> None:
     assert expected_cmd == popen_mock.call_args_list[0].args[0]
 
 
+def test_ppaged_pages_utf8_in_a_utf8_console(outsim_app, monkeypatch) -> None:
+    """As for a pipe: the pager gets UTF-8, and on Windows the console is UTF-8 until the pager has exited.
+
+    The pager there is more, which decodes with the console's code page.
+    """
+    stdin_mock = mock.MagicMock()
+    stdin_mock.isatty.return_value = True
+    monkeypatch.setattr(outsim_app, "stdin", stdin_mock)
+    stdout_mock = mock.MagicMock()
+    stdout_mock.isatty.return_value = True
+    monkeypatch.setattr(outsim_app, "stdout", stdout_mock)
+    if not sys.platform.startswith("win") and os.environ.get("TERM") is None:
+        monkeypatch.setenv("TERM", "simulated")
+    events = []
+
+    @contextlib.contextmanager
+    def utf8_console():
+        events.append("utf-8 console")
+        try:
+            yield
+        finally:
+            events.append("restored")
+
+    monkeypatch.setattr("cmd2.utils._utf8_console", utf8_console)
+    popen_mock = mock.MagicMock(name="Popen")
+    popen_mock.side_effect = lambda *args, **kwargs: events.append("pager started") or popen_mock.return_value
+    popen_mock.return_value.communicate.side_effect = lambda *args: events.append("pager exited")
+    monkeypatch.setattr("subprocess.Popen", popen_mock)
+    outsim_app.ppaged("box ─ smile \U0001f642")
+    paged = popen_mock.return_value.communicate.call_args.args[0]
+    assert "box ─ smile \U0001f642".encode() in paged
+    assert events == ["utf-8 console", "pager started", "pager exited", "restored"]
+
+
 def test_ppaged_no_pager(outsim_app) -> None:
     """Since we're not in a fully-functional terminal, ppaged() will just call poutput()."""
     msg = "testing..."
@@ -3509,7 +3887,9 @@ def test_ppaged_terminal_restoration(outsim_app, monkeypatch, has_tcsetpgrp) -> 
     # Verify restoration logic
     if has_tcsetpgrp:
         os.tcsetpgrp.assert_called_once_with(0, 123)
-        signal_mock.signal.assert_any_call(signal_mock.SIGTTOU, signal_mock.SIG_IGN)
+        # SIGTTOU is blocked for this thread alone, not ignored for the whole process.
+        signal_mock.pthread_sigmask.assert_any_call(signal_mock.SIG_BLOCK, {signal_mock.SIGTTOU})
+        signal_mock.signal.assert_not_called()
 
     termios_mock.tcsetattr.assert_called_once_with(0, termios_mock.TCSANOW, dummy_settings)
 

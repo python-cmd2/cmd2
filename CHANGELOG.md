@@ -1,3 +1,23 @@
+## 4.3.0 (TBD)
+
+- Bug Fixes
+    - On POSIX, piping a command's output to an interactive program such as `less`
+      (`help -v | less`) now runs that program as the terminal's foreground job, as a shell pipeline
+      does. It had run in a separate session that never received the terminal, so Ctrl-Z and `fg`
+      did not suspend and resume it together with cmd2. The program now owns the terminal as it
+      starts, so a pager can set its terminal modes, and Ctrl-C and Ctrl-Z reach the whole pipeline.
+      Pipes started from a worker thread, or whose output does not go to the terminal, such as one
+      nested in a command whose own output is piped, still run in their own session
+    - A `shell` command piped to an interactive program, such as `shell git log | less`, now joins
+      the pipeline's job, so both processes receive Ctrl-C and Ctrl-Z
+    - On Windows, fixed piped output appearing garbled in console programs such as `more`
+      (`help -v | more`), a regression in 4.2.4. Pipes are written as UTF-8, but console programs
+      decode their input with the console's code page. While a pipe or the pager runs, cmd2 now sets
+      the console to UTF-8 (code page 65001, as `chcp 65001` does) and restores its code pages
+      afterward, so console programs and UTF-8 tools such as `rg` both read the output correctly
+    - When copying a command's output to the clipboard (`help >`) fails, later commands' output is
+      no longer written to the temporary file that held it
+
 ## 4.2.4 (September 8, 2026)
 
 - Bug Fixes

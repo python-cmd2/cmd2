@@ -1965,11 +1965,12 @@ class Cmd:
                     soft_wrap=soft_wrap,
                     **(rich_print_kwargs if rich_print_kwargs is not None else {}),
                 )
+            # As for a pipe: the pager gets UTF-8, and on Windows the console is UTF-8 while it runs.
             output_bytes = capture.get().encode("utf-8", "replace")
 
             # Prevent KeyboardInterrupts while in the pager. The pager application will
             # still receive the SIGINT since it is in the same process group as us.
-            with self.sigint_protection:
+            with self.sigint_protection, utils._utf8_console():
                 import subprocess
 
                 pipe_proc = subprocess.Popen(  # noqa: S602
@@ -1984,17 +1985,12 @@ class Cmd:
                 # Attempt to restore terminal settings and foreground process group.
                 if not sys.platform.startswith("win") and self._initial_termios_settings is not None and self.stdin.isatty():
                     try:
-                        import signal
                         import termios
 
-                        # Ensure we are in the foreground process group
+                        # Ensure we are in the foreground process group, without being stopped with SIGTTOU for asking from the
+                        # background
                         if hasattr(os, "tcsetpgrp") and hasattr(os, "getpgrp"):
-                            # Ignore SIGTTOU to avoid getting stopped when calling tcsetpgrp from background
-                            old_handler = signal.signal(signal.SIGTTOU, signal.SIG_IGN)
-                            try:
-                                os.tcsetpgrp(self.stdin.fileno(), os.getpgrp())
-                            finally:
-                                signal.signal(signal.SIGTTOU, old_handler)
+                            utils.ProcReader._set_foreground_group(self.stdin.fileno(), os.getpgrp())
 
                         # Restore terminal attributes
                         if self._initial_termios_settings is not None:
@@ -3324,52 +3320,123 @@ class Cmd:
             # Create a pipe with read and write sides
             read_fd, write_fd = os.pipe()
 
-            # Open each side of the pipe. Both ends are given an explicit encoding:
-            # command output is rendered by Rich and routinely contains non-ASCII, which
-            # the locale encoding cannot always represent.
+            # Open each side of the pipe. Both ends use UTF-8 rather than the locale's encoding, which cannot always represent
+            # the non-ASCII that Rich routinely renders. On Windows, the console is UTF-8 too while the pipe runs, for console
+            # programs such as more, which decode with its code page.
             subproc_stdin = open(read_fd, encoding="utf-8")  # noqa: SIM115
             new_stdout: TextIO = cast(TextIO, open(write_fd, "w", encoding="utf-8"))  # noqa: SIM115
 
-            # Create pipe process in a separate group to isolate our signals from it. If a Ctrl-C event occurs,
-            # our sigint handler will forward it only to the most recent pipe process. This makes sure pipe
-            # processes close in the right order (most recent first).
+            # Isolate pipeline signals from cmd2. Terminal pipelines receive the foreground terminal; ProcReader relays their
+            # job-control stops.
             kwargs: dict[str, Any] = {}
             if sys.platform == "win32":
                 kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
             else:
-                kwargs["start_new_session"] = True
-
                 # Attempt to run the pipe process in the user's preferred shell instead of the default behavior of using sh.
                 shell = os.environ.get("SHELL")
                 if shell:
                     kwargs["executable"] = shell
 
             # For any stream that is a StdSim, we will use a pipe so we can capture its output
-            proc = subprocess.Popen(  # noqa: S602
-                statement.redirect_to,
-                stdin=subproc_stdin,
-                stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]
-                stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
-                shell=True,
-                **kwargs,
-            )
+            pipe_stdout = None if isinstance(self.stdout, utils.StdSim) else self.stdout  # type: ignore[unreachable]
+            pipe_stderr = None if isinstance(sys.stderr, utils.StdSim) else sys.stderr
 
-            # Popen was called with shell=True so the user can chain pipe commands and redirect their output
-            # like: !ls -l | grep user | wc -l > out.txt. But this makes it difficult to know if the pipe process
-            # started OK, since the shell itself always starts. Therefore, we will wait a short time and check
-            # if the pipe process is still running.
-            with contextlib.suppress(subprocess.TimeoutExpired):
-                proc.wait(0.2)
+            terminal_fd: int | None = None
+            popen_command = statement.redirect_to
+            if sys.platform != "win32":
+                # Only a pipeline whose output goes to the terminal is the terminal's job. One nested in a command whose output
+                # is piped, for instance, feeds that outer pipeline, whose consumer needs the terminal instead. Job control
+                # installs signal handlers, which only the main thread may do. Otherwise, keep the pipeline in its own session
+                # as before.
+                if threading.current_thread() is threading.main_thread() and pipe_stdout is not None and pipe_stdout.isatty():
+                    with contextlib.suppress(OSError, ValueError):
+                        if os.tcgetpgrp(pipe_stdout.fileno()) == os.getpgrp():
+                            terminal_fd = pipe_stdout.fileno()
+                if terminal_fd is None:
+                    kwargs["start_new_session"] = True
+                else:
+                    kwargs["process_group"] = 0
 
-            # Check if the pipe process already exited
-            if proc.returncode is not None:
+                    # A pager such as less sets its terminal modes as it starts, before it reads the pipe. It must own the
+                    # terminal by then: a background tcsetattr() stops it with SIGTTOU, and on macOS that call fails with EINTR
+                    # when the process is continued instead of being restarted. less ignores the failure and runs on a cooked
+                    # terminal. So hold the pipeline in a POSIX sh until cmd2 has made its group the foreground one and sent a
+                    # newline down the pipe. The read builtin takes no more than that line from a pipe. Then exec the user's
+                    # shell as before.
+                    import shlex
+
+                    # The POSIX shell Popen() itself runs with shell=True
+                    posix_shell = "/system/bin/sh" if hasattr(sys, "getandroidapilevel") else "/bin/sh"
+                    user_shell = shlex.quote(kwargs.get("executable", posix_shell))
+                    popen_command = f"read -r _ || exit 1; exec {user_shell} -c {shlex.quote(statement.redirect_to)}"
+                    kwargs["executable"] = posix_shell
+
+            with contextlib.ExitStack() as pipe_stack, contextlib.ExitStack() as gate_stack:
+                # The console stays UTF-8 from before the pipe process starts, since a program may read the code page once as
+                # it starts, until _restore_output() has reaped it.
+                pipe_stack.enter_context(utils._utf8_console())
+                if terminal_fd is not None:
+                    # Should cmd2 fail before opening the gate, the held pipeline reads EOF and exits.
+                    gate_stack.callback(new_stdout.close)
+                with utils._session_leader_job_stops() if terminal_fd is not None else contextlib.nullcontext():
+                    proc = subprocess.Popen(  # noqa: S602
+                        popen_command,
+                        stdin=subproc_stdin,
+                        stdout=subprocess.PIPE if pipe_stdout is None else pipe_stdout,
+                        stderr=subprocess.PIPE if pipe_stderr is None else pipe_stderr,
+                        shell=True,
+                        **kwargs,
+                    )
+                # Only the child should own a read end. In particular, a consumer exit must unblock a producer writing to a
+                # full pipe immediately.
                 subproc_stdin.close()
-                new_stdout.close()
-                raise RedirectionError(f"Pipe process exited with code {proc.returncode} before command could run")
-            redir_saved_state.redirecting = True
-            cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
+                if terminal_fd is not None:
+                    cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr, terminal_fd=terminal_fd)
+                    pipe_stack.enter_context(cmd_pipe_proc_reader._manage_terminal())
 
-            self.stdout = new_stdout
+                # Popen was called with shell=True so the user can chain pipe commands and redirect their output
+                # like: !ls -l | grep user | wc -l > out.txt. But this makes it difficult to know if the pipe process started
+                # OK, since the shell itself always starts. Therefore, we will wait a short time and check if the pipe process
+                # is still running.
+                with contextlib.suppress(subprocess.TimeoutExpired):
+                    if cmd_pipe_proc_reader is None:
+                        proc.wait(0.2)
+                    else:
+                        # Open the start gate only once the pipeline owns the terminal.
+                        with cmd_pipe_proc_reader._lend_terminal():
+                            with contextlib.suppress(OSError):
+                                os.write(new_stdout.fileno(), b"\n")
+                            gate_stack.pop_all()
+                            cmd_pipe_proc_reader._wait_for_exit(0.2)
+
+                # Check if the pipe process already exited
+                if proc.returncode is not None:
+                    if cmd_pipe_proc_reader is not None:
+                        cmd_pipe_proc_reader.wait()
+                    new_stdout.close()
+                    raise RedirectionError(f"Pipe process exited with code {proc.returncode} before command could run")
+                redir_saved_state.redirecting = True
+                if cmd_pipe_proc_reader is None:
+                    cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
+
+                if terminal_fd is not None:
+                    import io
+
+                    pipe_fd = os.dup(new_stdout.fileno())
+                    new_stdout.close()
+                    new_stdout = io.TextIOWrapper(
+                        io.BufferedWriter(
+                            utils._PipelineWriter(
+                                pipe_fd, cmd_pipe_proc_reader, interruptible=lambda: not self.sigint_protection
+                            )
+                        ),
+                        encoding="utf-8",
+                    )
+
+                self.stdout = new_stdout
+
+                # Keep the UTF-8 console and the pipeline's job control until _restore_output() reaps the pipe process.
+                redir_saved_state.pipe_context = pipe_stack.pop_all()
 
         elif statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND):
             if statement.redirect_to:
@@ -3428,29 +3495,43 @@ class Cmd:
         :param statement: Statement object which contains the parsed input from the user
         :param saved_redir_state: contains information needed to restore state data
         """
-        if saved_redir_state.redirecting:
-            # If we redirected output to the clipboard
-            if (
-                statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND)
-                and not statement.redirect_to
-            ):
-                self.stdout.seek(0)
-                write_to_paste_buffer(self.stdout.read())
+        # The UTF-8 console and the pipeline's job control end once its pipe process has been reaped.
+        with contextlib.ExitStack() as pipe_stack:
+            if saved_redir_state.pipe_context is not None:
+                pipe_stack.callback(saved_redir_state.pipe_context.close)
+                saved_redir_state.pipe_context = None
 
-            with contextlib.suppress(BrokenPipeError):
-                # Close the file or pipe that stdout was redirected to
-                self.stdout.close()
+            try:
+                if saved_redir_state.redirecting:
+                    # Restore self.stdout first, so that a failure to end the redirection cannot leave it in place
+                    redirected_stdout = self.stdout
+                    self.stdout = cast(TextIO, saved_redir_state.saved_self_stdout)
+                    pipe_proc_reader = self._cur_pipe_proc_reader
 
-            # Restore self.stdout
-            self.stdout = cast(TextIO, saved_redir_state.saved_self_stdout)
+                    # A terminal pipeline has the terminal before its consumer reads EOF, which may set its terminal modes as
+                    # it does, and keeps it until it exits. Handing the terminal back then can fail, as after a hangup.
+                    with pipe_proc_reader._lend_terminal() if pipe_proc_reader is not None else contextlib.nullcontext():
+                        try:
+                            # If we redirected output to the clipboard
+                            if (
+                                statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND)
+                                and not statement.redirect_to
+                            ):
+                                redirected_stdout.seek(0)
+                                write_to_paste_buffer(redirected_stdout.read())
+                        finally:
+                            with contextlib.suppress(BrokenPipeError):
+                                # Close the file or pipe that stdout was redirected to
+                                redirected_stdout.close()
 
-            # Check if we need to wait for the process being piped to
-            if self._cur_pipe_proc_reader is not None:
-                self._cur_pipe_proc_reader.wait()
-
-        # These are restored regardless of whether the command redirected
-        self._cur_pipe_proc_reader = saved_redir_state.saved_pipe_proc_reader
-        self._redirecting = saved_redir_state.saved_redirecting
+                        # Check if we need to wait for the process being piped to
+                        if pipe_proc_reader is not None:
+                            pipe_proc_reader.wait()
+            finally:
+                # These are restored regardless of whether the command redirected, or whether restoring it failed: a pipeline
+                # left current would keep ppaged() from paging and send Ctrl-C to a process group that is gone.
+                self._cur_pipe_proc_reader = saved_redir_state.saved_pipe_proc_reader
+                self._redirecting = saved_redir_state.saved_redirecting
 
     def get_command_func(self, command: str) -> BoundCommandFunc[...] | None:
         """Get the bound command function for a command.
@@ -4918,19 +4999,70 @@ class Cmd:
         utils.expand_user_in_tokens(tokens)
         expanded_command = " ".join(tokens)
 
-        # Prevent KeyboardInterrupts while in the shell process. The shell process will
-        # still receive the SIGINT since it is in the same process group as us.
-        with self.sigint_protection:
-            # For any stream that is a StdSim, we will use a pipe so we can capture its output
-            proc = subprocess.Popen(  # noqa: S602
-                expanded_command,
-                stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]
-                stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
-                shell=True,
-                **kwargs,
-            )
+        # A terminal pipeline's consumer needs the terminal to drain the pipe, but a shell command writes into that pipe itself
+        # rather than through self.stdout, which lends the terminal per write. Run the command inside the pipeline's job
+        # instead, for as long as it runs: the consumer keeps the terminal, and Ctrl-C and Ctrl-Z reach both processes, as they
+        # would in a shell pipeline. Only a command whose output goes to that pipeline joins it. A worker thread's command
+        # stays out of it too: job control relays stops to the main thread, and only the main thread may change signal
+        # handlers.
+        pipeline = self._cur_pipe_proc_reader
+        writer = utils._pipeline_writer_of(self.stdout)
+        job_group = None
+        if (
+            pipeline is not None
+            and writer is not None
+            and writer.feeds(pipeline)
+            and threading.current_thread() is threading.main_thread()
+        ):
+            # Read the group once: the pipeline's watcher may reap the consumer at any moment, which leaves none to join.
+            job_group = pipeline._terminal_group
+        joined_writer = writer if job_group is not None else None
 
-            proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
+        # Prevent KeyboardInterrupts while in the shell process. The shell process still receives the SIGINT: it is in our
+        # process group or in the foreground pipeline's.
+        with self.sigint_protection, contextlib.ExitStack() as terminal_stack:
+            if pipeline is not None and joined_writer is not None:
+                kwargs["process_group"] = job_group
+                terminal_stack.enter_context(pipeline._lend_terminal())
+            while True:
+                try:
+                    # For any stream that is a StdSim, we will use a pipe so we can capture its output. A command joining the
+                    # pipeline writes to its consumer's pipe directly, after what cmd2 wrote before it. It is spawned inside
+                    # the lend, which blocks SIGTTOU, and with the job's Ctrl-Z behavior.
+                    stdout: Any = self.stdout
+                    if joined_writer is not None:
+                        self.stdout.flush()
+                        stdout = joined_writer.producer_fileno()
+                    elif isinstance(stdout, utils.StdSim):
+                        stdout = subprocess.PIPE
+                    with (
+                        utils._sigttou_mask(block=False) if joined_writer is not None else contextlib.nullcontext(),
+                        utils._session_leader_job_stops(pipeline) if joined_writer is not None else contextlib.nullcontext(),
+                    ):
+                        proc = subprocess.Popen(  # noqa: S602
+                            expanded_command,
+                            stdout=stdout,
+                            stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
+                            shell=True,
+                            **kwargs,
+                        )
+                    break
+                except PermissionError:
+                    # The pipeline exited before the command could join its group.
+                    if joined_writer is None:
+                        raise
+                    joined_writer = None
+                    del kwargs["process_group"]
+                    # The retry runs in our own group, so take the terminal back from the dead pipeline first. Its watcher left
+                    # it lent, and the command would otherwise stop with SIGTTIN on its first terminal read, with nothing to
+                    # resume it.
+                    terminal_stack.close()
+
+            # A command that joined the pipeline's job is waited for in short polls. Only the main thread runs Python signal
+            # handlers, and the job-control stop the pipeline's watcher relays may wake another thread. Once the consumer and
+            # its watcher are gone, the same wait relays the command's own stops, such as Ctrl-Z.
+            joined_pipeline = pipeline if joined_writer is not None else None
+            proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr, pipeline=joined_pipeline)
             proc_reader.wait()
 
             # Save the return code of the application for use in a pyscript
