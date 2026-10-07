@@ -232,8 +232,8 @@ import threading
 from argparse import ArgumentError
 from collections.abc import (
     Callable,
+    Generator,
     Iterable,
-    Iterator,
     Sequence,
 )
 from dataclasses import dataclass
@@ -695,7 +695,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
     _thread_locals: ClassVar[_ParserThreadLocals] = _ParserThreadLocals()
 
     @contextlib.contextmanager
-    def output_to(self, file: IO[str] | None) -> Iterator[None]:
+    def output_to(self, file: IO[str] | None) -> Generator[None]:
         """Context manager to temporarily set the output stream during argparse operations.
 
         This is helpful for directing output for functions like `parse_args()`, which
