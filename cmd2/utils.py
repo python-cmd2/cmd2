@@ -14,8 +14,8 @@ import sys
 import threading
 from collections.abc import (
     Callable,
+    Generator,
     Iterable,
-    Iterator,
     MutableSequence,
 )
 from difflib import SequenceMatcher
@@ -560,7 +560,7 @@ class _Utf8Console:
         self._saved: tuple[int, int] | None = None
 
     @contextlib.contextmanager
-    def __call__(self) -> Iterator[None]:
+    def __call__(self) -> Generator[None]:
         """Keep the console at UTF-8 for as long as the context lasts."""
         kernel32 = self._kernel32
         if kernel32 is None and sys.platform == "win32":
@@ -595,7 +595,7 @@ _utf8_console = _Utf8Console()
 
 
 @contextlib.contextmanager
-def _sigttou_mask(*, block: bool) -> Iterator[None]:
+def _sigttou_mask(*, block: bool) -> Generator[None]:
     """Block or unblock SIGTTOU for the calling thread, then restore its signal mask.
 
     Blocked, SIGTTOU cannot stop a thread that changes the terminal from the background, as a
@@ -615,7 +615,7 @@ def _sigttou_mask(*, block: bool) -> Iterator[None]:
 
 
 @contextlib.contextmanager
-def _session_leader_job_stops(pipeline: "ProcReader | None" = None) -> Iterator[None]:
+def _session_leader_job_stops(pipeline: "ProcReader | None" = None) -> Generator[None]:
     """Spawn a process for a terminal pipeline's job with the same Ctrl-Z behavior as cmd2.
 
     A session leader's job has no outer shell to resume it, so Ctrl-Z must not stop any part
@@ -787,7 +787,7 @@ class ProcReader:
             os.tcsetpgrp(terminal_fd, group_id)
 
     @contextlib.contextmanager
-    def _manage_terminal(self) -> Iterator[None]:
+    def _manage_terminal(self) -> Generator[None]:
         """Suspend the shell's whole job on the main thread, and relay the pipeline's stops to it."""
         import signal
 
@@ -855,7 +855,7 @@ class ProcReader:
                     signal.signal(signal.SIGTSTP, previous_handler)
 
     @contextlib.contextmanager
-    def _suspension(self) -> Iterator[None]:
+    def _suspension(self) -> Generator[None]:
         """Hold the lock that allows one suspension of the whole job at a time.
 
         It is awaited in short polls: on the main thread, a suspension in progress may need
@@ -869,7 +869,7 @@ class ProcReader:
             self._suspension_lock.release()
 
     @contextlib.contextmanager
-    def _lend_terminal(self) -> Iterator[None]:
+    def _lend_terminal(self) -> Generator[None]:
         """Lend the terminal only while writing to or waiting for the consumer.
 
         Command code retains foreground access between writes, including arbitrary
