@@ -32,7 +32,7 @@ import argparse
 import contextlib
 import copy
 import dataclasses
-import datetime
+import datetime as dt
 import functools
 import glob
 import inspect
@@ -3032,7 +3032,7 @@ class Cmd:
 
                     redir_saved_state = self._redirect_output(statement)
 
-                timestart = datetime.datetime.now(tz=datetime.timezone.utc)
+                timestart = dt.datetime.now(tz=dt.timezone.utc)
 
                 # precommand hooks
                 precmd_data = plugin.PrecommandData(statement)
@@ -3058,7 +3058,7 @@ class Cmd:
                 stop = self.postcmd(stop, statement)
 
                 if self.timing:
-                    self.perror(f"Elapsed: {datetime.datetime.now(tz=datetime.timezone.utc) - timestart}", style=None)
+                    self.perror(f"Elapsed: {dt.datetime.now(tz=dt.timezone.utc) - timestart}", style=None)
             finally:
                 # Get sigint protection while we restore stuff
                 with self.sigint_protection:

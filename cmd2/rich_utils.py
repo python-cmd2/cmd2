@@ -156,7 +156,7 @@ class Cmd2HelpFormatter(RichHelpFormatter):
         return self._console
 
     @console.setter
-    def console(self, console: "Cmd2RichArgparseConsole") -> None:
+    def console(self, console: "Cmd2RichArgparseConsole") -> None:  # ty: ignore[invalid-property-type-override]
         """Set our console instance."""
         self._file = None
         self._console = console
