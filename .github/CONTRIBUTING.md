@@ -117,7 +117,7 @@ Linux). You can install `uv` using instructions at the link above.
 You can then install multiple versions of Python using `uv` like so:
 
 ```sh
-uv python install 3.11 3.12 3.13 3.14
+uv python install 3.11 3.12 3.13 3.14 3.15
 ```
 
 ### Forking the project
