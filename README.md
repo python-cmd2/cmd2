@@ -1,4 +1,7 @@
-<h1 align="center">cmd2: build feature-rich command-line applications in Python</h1>
+<p align="center">
+  <a href="https://github.com/python-cmd2/cmd2"><img src="https://raw.githubusercontent.com/python-cmd2/cmd2/main/docs/assets/cmd2-logo.png" alt="cmd2 logo" width="160"></a>
+</p>
+<h1 align="center">cmd2: build feature-rich command-line apps in Python</h1>
 
 [![Latest Version](https://img.shields.io/pypi/v/cmd2.svg?style=flat-square&label=latest%20stable%20version)](https://pypi.python.org/pypi/cmd2/)
 [![Tests](https://github.com/python-cmd2/cmd2/actions/workflows/tests.yml/badge.svg)](https://github.com/python-cmd2/cmd2/actions/workflows/tests.yml)
