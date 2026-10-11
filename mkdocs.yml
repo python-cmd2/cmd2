@@ -19,9 +19,10 @@ theme:
   name: material
   language: en
   custom_dir: docs/overrides
+  logo: assets/cmd2-logo.png
+  favicon: assets/cmd2-logo.png
   icon:
     repo: fontawesome/brands/github
-    logo: material/home
     edit: material/pencil
     view: material/eye
   palette:
