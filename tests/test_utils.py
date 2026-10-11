@@ -1121,18 +1121,22 @@ def test_proc_reader_watcher_relays_a_stop_after_a_suspension_it_never_saw() -> 
     # As while job control runs, cmd2's own handler takes the relay.
     reader._stop_handler = signal.getsignal(signal.SIGTSTP)
     real_waitpid = os.waitpid
-    first = []
+    calls = []
+    waiting_again = threading.Event()
     relayed = threading.Event()
 
     def waitpid(pid, options):
-        if not first:
-            first.append(True)
+        calls.append(True)
+        if len(calls) == 1:
             # A whole suspension happens before the watcher's first wait, as a direct Ctrl-Z to cmd2 and fg would: the consumer
             # is stopped, then continued.
             os.killpg(child.pid, signal.SIGSTOP)
             time.sleep(0.2)
             os.killpg(child.pid, signal.SIGCONT)
             reader._suspensions += 1
+        else:
+            # The watcher has collected what the suspension left, and read the count afresh
+            waiting_again.set()
         return real_waitpid(pid, options)
 
     def relay(thread_id, signum):
@@ -1148,10 +1152,9 @@ def test_proc_reader_watcher_relays_a_stop_after_a_suspension_it_never_saw() -> 
         ):
             watcher = threading.Thread(target=reader._wait_for_job, args=(10,), daemon=True)
             watcher.start()
-            deadline = time.monotonic() + 5
-            while not first and time.monotonic() < deadline:
-                time.sleep(0.01)
-            time.sleep(0.3)
+            # Any sooner, the suspension's continue could discard this stop, or the first wait could report it against the
+            # count from before the suspension.
+            assert waiting_again.wait(5)
             # A genuine Ctrl-Z
             os.killpg(child.pid, signal.SIGTSTP)
             assert relayed.wait(5)
