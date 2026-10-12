@@ -3371,14 +3371,19 @@ class Cmd:
                     popen_command = f"read -r _ || exit 1; exec {user_shell} -c {shlex.quote(statement.redirect_to)}"
                     kwargs["executable"] = posix_shell
 
-            with contextlib.ExitStack() as pipe_stack, contextlib.ExitStack() as gate_stack:
+            with contextlib.ExitStack() as pipe_stack, contextlib.ExitStack() as setup_stack:
                 # The console stays UTF-8 from before the pipe process starts, since a program may read the code page once as
                 # it starts, until _restore_output() has reaped it.
                 pipe_stack.enter_context(utils._utf8_console())
-                if terminal_fd is not None:
-                    # Should cmd2 fail before opening the gate, the held pipeline reads EOF and exits.
-                    gate_stack.callback(new_stdout.close)
-                with utils._session_leader_job_stops() if terminal_fd is not None else contextlib.nullcontext():
+                # Should cmd2 fail before the command can write to the pipe, close it. A pipeline held at its start gate then
+                # reads EOF and exits.
+                setup_stack.callback(new_stdout.close)
+                # Only the child should own a read end, so close ours once the spawn is done, even if it failed. In
+                # particular, a consumer exit must unblock a producer writing to a full pipe immediately.
+                with (
+                    subproc_stdin,
+                    utils._session_leader_job_stops() if terminal_fd is not None else contextlib.nullcontext(),
+                ):
                     proc = subprocess.Popen(  # noqa: S602
                         popen_command,
                         stdin=subproc_stdin,
@@ -3387,9 +3392,6 @@ class Cmd:
                         shell=True,
                         **kwargs,
                     )
-                # Only the child should own a read end. In particular, a consumer exit must unblock a producer writing to a
-                # full pipe immediately.
-                subproc_stdin.close()
                 if terminal_fd is not None:
                     cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr, terminal_fd=terminal_fd)
                     pipe_stack.enter_context(cmd_pipe_proc_reader._manage_terminal())
@@ -3406,14 +3408,12 @@ class Cmd:
                         with cmd_pipe_proc_reader._lend_terminal():
                             with contextlib.suppress(OSError):
                                 os.write(new_stdout.fileno(), b"\n")
-                            gate_stack.pop_all()
                             cmd_pipe_proc_reader._wait_for_exit(0.2)
 
                 # Check if the pipe process already exited
                 if proc.returncode is not None:
                     if cmd_pipe_proc_reader is not None:
                         cmd_pipe_proc_reader.wait()
-                    new_stdout.close()
                     raise RedirectionError(f"Pipe process exited with code {proc.returncode} before command could run")
                 redir_saved_state.redirecting = True
                 if cmd_pipe_proc_reader is None:
@@ -3434,6 +3434,7 @@ class Cmd:
                     )
 
                 self.stdout = new_stdout
+                setup_stack.pop_all()
 
                 # Keep the UTF-8 console and the pipeline's job control until _restore_output() reaps the pipe process.
                 redir_saved_state.pipe_context = pipe_stack.pop_all()
