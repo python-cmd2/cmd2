@@ -1019,9 +1019,16 @@ class ProcReader:
                 self._signal_pipeline(signal.SIGCONT)
                 self._suspensions += 1
                 return
-            with self._terminal_lock:
-                if os.tcgetpgrp(terminal_fd) == self._proc.pid:
-                    self._set_foreground_group(terminal_fd, self._original_group)
+            try:
+                with self._terminal_lock:
+                    if os.tcgetpgrp(terminal_fd) == self._proc.pid:
+                        self._set_foreground_group(terminal_fd, self._original_group)
+            except OSError:
+                # Job control failed, for instance because the terminal hung up, and no shell is left to resume the job. A
+                # stopped producer would keep the consumer's pipe open, and cmd2 would wait for good. So the pipeline goes on.
+                self._signal_pipeline(signal.SIGCONT)
+                self._suspensions += 1
+                return
             # Stop every terminal reader before returning control to the outer shell.
             self._signal_pipeline(signal.SIGSTOP)
             self._job_resumed.clear()
@@ -1050,7 +1057,6 @@ class ProcReader:
         This is the only waitpid caller for such a producer. It polls so that the main
         thread keeps returning to Python code, where signal handlers run.
         """
-        import signal
         import time
 
         deadline = None if timeout is None else time.monotonic() + timeout
@@ -1068,12 +1074,7 @@ class ProcReader:
                     raise subprocess.TimeoutExpired(self._proc.args, timeout or 0)
                 time.sleep(0.05)
             elif os.WIFSTOPPED(status):
-                try:
-                    pipeline._relay_producer_stop(seen)
-                except OSError:
-                    # Job control failed, for instance because the terminal hung up. As the pipeline's watcher does, continue
-                    # the job: a producer left stopped would keep the consumer's pipe open, and cmd2 would wait for good.
-                    pipeline._signal_pipeline(signal.SIGCONT)
+                pipeline._relay_producer_stop(seen)
             else:
                 self._proc.returncode = os.waitstatus_to_exitcode(status)
 

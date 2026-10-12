@@ -945,6 +945,10 @@ def test_proc_reader_resumes_terminal_access_after_handoff(stop_signal, expired_
         # at collection, where Windows has no SIGTSTP.
         pytest.param(["stopped", (123, 2 << 8)], True, 2, id="hangup"),
         pytest.param(["stopped", ChildProcessError()], True, 0, id="hangup-sigchld-ignored"),
+        # The terminal hangs up as the watcher hands it to a consumer stopped waiting for it. "waiting" stands for its SIGTTIN
+        # stop status.
+        pytest.param(["waiting", (0, 0), (123, 2 << 8)], True, 2, id="hangup-consumer-waiting"),
+        pytest.param(["waiting", (0, 0), ChildProcessError()], True, 0, id="hangup-consumer-waiting-sigchld-ignored"),
     ],
 )
 @pytest.mark.parametrize("signal_error", [ProcessLookupError, PermissionError])
@@ -959,7 +963,10 @@ def test_proc_reader_watcher_always_records_an_exit(waits, hung_up, returncode, 
     reader._original_group = 456
     # As while job control runs, cmd2's own handler takes the relay.
     reader._stop_handler = signal.getsignal(signal.SIGTSTP)
-    waits = [(proc.pid, (signal.SIGTSTP << 8) | 0x7F) if wait == "stopped" else wait for wait in waits]
+    # A write lends the terminal, so a consumer stopped waiting for it gets it.
+    reader._terminal_available.set()
+    stop_signals = {"stopped": signal.SIGTSTP, "waiting": signal.SIGTTIN}
+    waits = [(proc.pid, (stop_signals[wait] << 8) | 0x7F) if wait in stop_signals else wait for wait in waits]
     with (
         leads_own_group(),
         mock.patch("os.waitpid", side_effect=waits),
@@ -970,7 +977,7 @@ def test_proc_reader_watcher_always_records_an_exit(waits, hung_up, returncode, 
     assert proc.returncode == returncode
     assert reader._process_done.is_set()
     if hung_up:
-        # The watcher continues the pipeline, which may be stopped, before waiting for it plainly.
+        # The pipeline, which may be stopped, is continued before the watcher goes on waiting for it.
         killpg.assert_called_once_with(proc.pid, signal.SIGCONT)
 
 
@@ -1209,6 +1216,8 @@ def test_proc_reader_producer_wait_continues_a_stop_after_a_hangup() -> None:
     relay.assert_not_called()
     killpg.assert_called_once_with(pipeline._proc.pid, signal.SIGCONT)
     assert proc.returncode == 0
+    # As a suspension does, this continued the whole pipeline, so any stop reported before it is dealt with.
+    assert pipeline._suspensions == 1
     assert not pipeline._suspension_lock.locked()
 
 
