@@ -116,7 +116,7 @@ class BasicApp(cmd2.Cmd):
         while not self._stop_thread_event.is_set():
             # Get the current time in ISO format with 0.01s precision
             now_dt = dt.datetime.now(dt.timezone.utc).astimezone()
-            now_str = now_dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-4] + dt.strftime("%z")
+            now_str = now_dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-4] + now_dt.strftime("%z")
 
             with self._toolbar_lock:
                 self._toolbar_state["now"] = now_str
