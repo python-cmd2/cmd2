@@ -1050,6 +1050,7 @@ class ProcReader:
         This is the only waitpid caller for such a producer. It polls so that the main
         thread keeps returning to Python code, where signal handlers run.
         """
+        import signal
         import time
 
         deadline = None if timeout is None else time.monotonic() + timeout
@@ -1067,7 +1068,12 @@ class ProcReader:
                     raise subprocess.TimeoutExpired(self._proc.args, timeout or 0)
                 time.sleep(0.05)
             elif os.WIFSTOPPED(status):
-                pipeline._relay_producer_stop(seen)
+                try:
+                    pipeline._relay_producer_stop(seen)
+                except OSError:
+                    # Job control failed, for instance because the terminal hung up. As the pipeline's watcher does, continue
+                    # the job: a producer left stopped would keep the consumer's pipe open, and cmd2 would wait for good.
+                    pipeline._signal_pipeline(signal.SIGCONT)
             else:
                 self._proc.returncode = os.waitstatus_to_exitcode(status)
 

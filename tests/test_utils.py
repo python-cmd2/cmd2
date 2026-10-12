@@ -1184,6 +1184,35 @@ def test_proc_reader_producer_wait_reads_a_continue_as_neither_stop_nor_exit() -
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
+def test_proc_reader_producer_wait_continues_a_stop_after_a_hangup() -> None:
+    """The terminal hangs up as a shell producer's stop is relayed. As the pipeline's watcher does, continue the job.
+
+    The stopped producer would otherwise keep the consumer's pipe open, and cmd2 would wait for
+    the consumer for good.
+    """
+    pipeline = cu.ProcReader(mock.Mock(pid=123, stdout=None, stderr=None, returncode=None), sys.stdout, sys.stderr)
+    pipeline._terminal_fd = 10
+    pipeline._original_group = 456
+    # As while job control runs, cmd2's own handler takes the relay.
+    pipeline._stop_handler = signal.getsignal(signal.SIGTSTP)
+    proc = mock.Mock(pid=321, stdout=None, stderr=None, returncode=None)
+    producer = cu.ProcReader(proc, sys.stdout, sys.stderr, pipeline=pipeline)
+    stopped = (signal.SIGTSTP << 8) | 0x7F
+    with (
+        leads_own_group(),
+        mock.patch("os.waitpid", side_effect=[(proc.pid, stopped), (proc.pid, 0)]),
+        mock.patch("os.tcgetpgrp", side_effect=OSError(errno.EIO, "hung up")),
+        mock.patch("os.killpg") as killpg,
+        mock.patch("signal.pthread_kill") as relay,
+    ):
+        producer._wait_for_exit()
+    relay.assert_not_called()
+    killpg.assert_called_once_with(pipeline._proc.pid, signal.SIGCONT)
+    assert proc.returncode == 0
+    assert not pipeline._suspension_lock.locked()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
 @pytest.mark.parametrize("replacement", ["ignored", "custom"])
 def test_proc_reader_continues_a_stop_it_cannot_relay(replacement) -> None:
     """Only cmd2's own SIGTSTP handler resumes a pipeline stopped for a relay.
