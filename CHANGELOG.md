@@ -17,6 +17,9 @@
       afterward, so console programs and UTF-8 tools such as `rg` both read the output correctly
     - When copying a command's output to the clipboard (`help >`) fails, later commands' output is
       no longer written to the temporary file that held it
+    - When a pipe's process cannot be started, for instance because no more processes can be created
+      or `$SHELL` names a program that cannot run, both ends of the pipe are now closed rather than
+      left open
 
 ## 4.2.4 (September 8, 2026)
 
