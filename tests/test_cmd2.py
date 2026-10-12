@@ -1138,13 +1138,13 @@ def test_shell_from_a_worker_thread_stays_out_of_the_pipeline(base_app, tmp_path
     assert not lent
 
 
-def test_redirect_output_closes_the_pipe_when_the_spawn_fails(base_app) -> None:
-    """A pipe process that cannot be started, such as for want of processes, must not leave the pipe open."""
-    import errno
+@contextlib.contextmanager
+def recording_cmd2_opens():
+    """Record the files cmd2.cmd2 opens, such as the ends of a pipe.
 
-    statement = base_app.statement_parser.parse("help | less")
-    # Holding the pipe's ends keeps garbage collection from closing them, and their state does not depend on which
-    # descriptors other threads open meanwhile.
+    Holding them keeps garbage collection from closing them, and whether they are closed does not
+    depend on which descriptors other threads open meanwhile.
+    """
     opened = []
 
     def recording_open(*args, **kwargs):
@@ -1152,15 +1152,36 @@ def test_redirect_output_closes_the_pipe_when_the_spawn_fails(base_app) -> None:
         opened.append(file)
         return file
 
+    with mock.patch("cmd2.cmd2.open", recording_open, create=True):
+        yield opened
+
+
+def test_redirect_output_closes_the_pipe_when_the_spawn_fails(base_app) -> None:
+    """A pipe process that cannot be started, such as for want of processes, must not leave the pipe open."""
+    import errno
+
+    statement = base_app.statement_parser.parse("help | less")
     base_app.stdout = cmd2.utils.StdSim(io.StringIO())
     with (
-        mock.patch("cmd2.cmd2.open", recording_open, create=True),
+        recording_cmd2_opens() as opened,
         mock.patch("subprocess.Popen", side_effect=OSError(errno.EAGAIN, "Resource temporarily unavailable")),
         pytest.raises(OSError, match="Resource temporarily unavailable"),
     ):
         base_app._redirect_output(statement)
 
     assert len(opened) == 2
+    assert all(file.closed for file in opened)
+
+
+def test_redirect_output_leaves_no_pipe_open_for_a_closed_stdout(base_app, tmp_path) -> None:
+    """Checking where the pipe's output goes fails for a stdout that is closed. No pipe may stay open then either."""
+    statement = base_app.statement_parser.parse("help | less")
+    with (tmp_path / "output").open("w") as closed_stdout:
+        pass
+    base_app.stdout = closed_stdout
+    with recording_cmd2_opens() as opened, pytest.raises(ValueError, match="closed file"):
+        base_app._redirect_output(statement)
+
     assert all(file.closed for file in opened)
 
 

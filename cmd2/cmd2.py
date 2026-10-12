@@ -3317,15 +3317,6 @@ class Cmd:
             pass
 
         elif statement.redirector == constants.REDIRECTION_PIPE:
-            # Create a pipe with read and write sides
-            read_fd, write_fd = os.pipe()
-
-            # Open each side of the pipe. Both ends use UTF-8 rather than the locale's encoding, which cannot always represent
-            # the non-ASCII that Rich routinely renders. On Windows, the console is UTF-8 too while the pipe runs, for console
-            # programs such as more, which decode with its code page.
-            subproc_stdin = open(read_fd, encoding="utf-8")  # noqa: SIM115
-            new_stdout: TextIO = cast(TextIO, open(write_fd, "w", encoding="utf-8"))  # noqa: SIM115
-
             # Isolate pipeline signals from cmd2. Terminal pipelines receive the foreground terminal; ProcReader relays their
             # job-control stops.
             kwargs: dict[str, Any] = {}
@@ -3375,6 +3366,16 @@ class Cmd:
                 # The console stays UTF-8 from before the pipe process starts, since a program may read the code page once as
                 # it starts, until _restore_output() has reaped it.
                 pipe_stack.enter_context(utils._utf8_console())
+
+                # Create a pipe with read and write sides
+                read_fd, write_fd = os.pipe()
+
+                # Open each side of the pipe. Both ends use UTF-8 rather than the locale's encoding, which cannot always
+                # represent the non-ASCII that Rich routinely renders. On Windows, the console is UTF-8 too while the pipe
+                # runs, for console programs such as more, which decode with its code page.
+                subproc_stdin = open(read_fd, encoding="utf-8")  # noqa: SIM115
+                new_stdout: TextIO = cast(TextIO, open(write_fd, "w", encoding="utf-8"))  # noqa: SIM115
+
                 # Should cmd2 fail before the command can write to the pipe, close it. A pipeline held at its start gate then
                 # reads EOF and exits.
                 setup_stack.callback(new_stdout.close)
