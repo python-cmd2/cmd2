@@ -20,6 +20,8 @@
     - When a pipe's process cannot be started, for instance because no more processes can be created
       or `$SHELL` names a program that cannot run, both ends of the pipe are now closed rather than
       left open
+    - When a pipe's process exits before the command runs, what it wrote, such as the shell's
+      "command not found", is no longer lost when cmd2 captures the output, as in a pyscript
 
 ## 4.2.4 (September 8, 2026)
 

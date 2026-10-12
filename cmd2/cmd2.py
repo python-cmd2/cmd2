@@ -3393,8 +3393,8 @@ class Cmd:
                         shell=True,
                         **kwargs,
                     )
+                cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr, terminal_fd=terminal_fd)
                 if terminal_fd is not None:
-                    cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr, terminal_fd=terminal_fd)
                     pipe_stack.enter_context(cmd_pipe_proc_reader._manage_terminal())
 
                 # Popen was called with shell=True so the user can chain pipe commands and redirect their output
@@ -3402,7 +3402,7 @@ class Cmd:
                 # OK, since the shell itself always starts. Therefore, we will wait a short time and check if the pipe process
                 # is still running.
                 with contextlib.suppress(subprocess.TimeoutExpired):
-                    if cmd_pipe_proc_reader is None:
+                    if terminal_fd is None:
                         proc.wait(0.2)
                     else:
                         # Open the start gate only once the pipeline owns the terminal.
@@ -3411,14 +3411,11 @@ class Cmd:
                                 os.write(new_stdout.fileno(), b"\n")
                             cmd_pipe_proc_reader._wait_for_exit(0.2)
 
-                # Check if the pipe process already exited
+                # Check if the pipe process already exited. Pass on what it wrote to a pipe, such as why it failed.
                 if proc.returncode is not None:
-                    if cmd_pipe_proc_reader is not None:
-                        cmd_pipe_proc_reader.wait()
+                    cmd_pipe_proc_reader.wait()
                     raise RedirectionError(f"Pipe process exited with code {proc.returncode} before command could run")
                 redir_saved_state.redirecting = True
-                if cmd_pipe_proc_reader is None:
-                    cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
 
                 if terminal_fd is not None:
                     import io

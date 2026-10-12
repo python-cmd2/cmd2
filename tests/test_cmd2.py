@@ -982,6 +982,7 @@ def test_pipe_to_shell_error(redirection_app, mocker, capsys, terminal) -> None:
     process = popen.return_value
     process.returncode = 127
     process.wait.return_value = 127
+    reader = mocker.patch("cmd2.utils.ProcReader").return_value
     if terminal:
         terminal_stream = mocker.Mock()
         terminal_stream.isatty.return_value = True
@@ -990,7 +991,6 @@ def test_pipe_to_shell_error(redirection_app, mocker, capsys, terminal) -> None:
         mocker.patch("os.tcgetpgrp", return_value=os.getpgrp())
         mocker.patch("os.getsid", return_value=os.getpgrp())
         sigmask = mocker.patch("signal.pthread_sigmask", return_value=set())
-        reader = mocker.patch("cmd2.utils.ProcReader").return_value
         previous_tstp = signal.getsignal(signal.SIGTSTP)
 
         def start_pipe(*args, **kwargs):
@@ -1011,10 +1011,11 @@ def test_pipe_to_shell_error(redirection_app, mocker, capsys, terminal) -> None:
     assert not out
     assert "Pipe process exited with code 127 before command could run" in " ".join(err)
     assert capsys.readouterr().out == ""
+    # The pipe process is reaped, and what it wrote to a pipe passed on.
+    reader.wait.assert_called_once_with()
     if terminal:
         assert signal.getsignal(signal.SIGTSTP) == previous_tstp
         reader._wait_for_exit.assert_called_once_with(0.2)
-        reader.wait.assert_called_once_with()
         process.wait.assert_not_called()
         # SIGTTOU is blocked only inside ProcReader's lends. Blocking it for the whole pipeline would leak the mask into every
         # child the command starts.
@@ -1022,6 +1023,26 @@ def test_pipe_to_shell_error(redirection_app, mocker, capsys, terminal) -> None:
     else:
         process.wait.assert_called_once()
     assert popen.call_args.kwargs["stdin"].closed
+
+
+def test_pipe_to_shell_error_keeps_what_the_pipe_process_wrote(redirection_app, mocker) -> None:
+    """A pipe process that exits before the command runs may say why, as a shell does for a command it cannot find.
+
+    With its output captured, as in a pyscript, that must reach the captured stderr too.
+    """
+    real_popen = subprocess.Popen
+
+    def popen(*args, **kwargs):
+        process = real_popen(*args, **kwargs)
+        # Exit before the startup check, however loaded the system is
+        process.wait()
+        return process
+
+    mocker.patch("subprocess.Popen", popen)
+    out, err = run_cmd(redirection_app, "print_output | echo pipe output && cmd2_test_no_such_command")
+    assert out == ["pipe output"]
+    assert "cmd2_test_no_such_command" in " ".join(err)
+    assert "before command could run" in err[-1]
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control")
