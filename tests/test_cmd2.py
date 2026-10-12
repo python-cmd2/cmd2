@@ -1143,28 +1143,25 @@ def test_redirect_output_closes_the_pipe_when_the_spawn_fails(base_app) -> None:
     import errno
 
     statement = base_app.statement_parser.parse("help | less")
-    pipe_fds = []
-    real_pipe = os.pipe
+    # Holding the pipe's ends keeps garbage collection from closing them, and their state does not depend on which
+    # descriptors other threads open meanwhile.
+    opened = []
 
-    def pipe():
-        fds = real_pipe()
-        pipe_fds.extend(fds)
-        return fds
+    def recording_open(*args, **kwargs):
+        file = open(*args, **kwargs)  # noqa: SIM115
+        opened.append(file)
+        return file
 
     base_app.stdout = cmd2.utils.StdSim(io.StringIO())
     with (
-        mock.patch("os.pipe", pipe),
+        mock.patch("cmd2.cmd2.open", recording_open, create=True),
         mock.patch("subprocess.Popen", side_effect=OSError(errno.EAGAIN, "Resource temporarily unavailable")),
-        pytest.raises(OSError, match="Resource temporarily unavailable") as excinfo,
+        pytest.raises(OSError, match="Resource temporarily unavailable"),
     ):
         base_app._redirect_output(statement)
 
-    # The traceback keeps the redirection's locals alive, so garbage collection has not closed the pipe either.
-    assert excinfo.traceback
-    assert len(pipe_fds) == 2
-    for fd in pipe_fds:
-        with pytest.raises(OSError, match="Bad file descriptor"):
-            os.fstat(fd)
+    assert len(opened) == 2
+    assert all(file.closed for file in opened)
 
 
 def test_restore_output_resets_pipe_state_when_the_wait_fails(base_app) -> None:
