@@ -1,5 +1,11 @@
-## 4.3.0 (TBD)
+## 4.3.0 (October 13, 2026)
 
+- Stabilized features
+    - `@with_annotated` is no longer experimental. It was introduced as an experimental feature in
+      4.0.0 and is now a fully supported way to define a command's arguments, alongside
+      `@with_argparser`. This covers the decorator and its supporting API in `cmd2.annotated`,
+      including `Argument`, `Option`, `Group`, and `ArgumentBlock`.
+      [Annotated Argument Processing](https://cmd2.readthedocs.io/en/latest/features/annotated/).
 - Bug Fixes
     - On POSIX, piping a command's output to an interactive program such as `less`
       (`help -v | less`) now runs that program as the terminal's foreground job, as a shell pipeline

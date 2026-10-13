@@ -71,8 +71,9 @@ Three layers, all producing a `Cmd2ArgumentParser`:
   range `nargs` tuples, per-argument completion metadata, and subcommand records.
 - `cmd2/decorators.py` — `@with_argparser`, `@with_argument_list`, `@with_category`,
   `@as_subcommand_to` attach parsers/metadata to `do_*` methods.
-- `cmd2/annotated.py` — the newer, still-experimental Typer-style path: `@with_annotated` builds a
-  parser from a function's type hints, with `Argument`/`Option` metadata via `typing.Annotated`.
+- `cmd2/annotated.py` — the newer Typer-style path (experimental in 4.0.0, stable as of 4.3.0):
+  `@with_annotated` builds a parser from a function's type hints, with `Argument`/`Option` metadata
+  via `typing.Annotated`.
 
 Parsers are built lazily and cached by the `CommandParsers` class in `cmd2.py` (`_build_parser`), so
 that `CommandSet`-supplied subcommands can be attached and detached at runtime.

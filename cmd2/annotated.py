@@ -1,9 +1,5 @@
 """Build argparse parsers from type-annotated function signatures.
 
-!!! warning "Experimental"
-
-    This module is experimental and its behavior may change in future releases.
-
 The [`with_annotated`][cmd2.annotated.with_annotated] decorator inspects a command function's type hints and
 default values to build a ``Cmd2ArgumentParser``.  [`Argument`][cmd2.annotated.Argument] and
 [`Option`][cmd2.annotated.Option] metadata classes give finer per-parameter control via

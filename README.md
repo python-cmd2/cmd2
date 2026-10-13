@@ -89,7 +89,9 @@ to build a more complete application.
 
 - Define commands as Python methods and use familiar
   [`argparse`](https://cmd2.readthedocs.io/en/latest/features/argument_processing/) parsers for
-  arguments and subcommands. A single parser definition drives validation, help, and completion.
+  arguments and subcommands, or plain type hints via
+  [`@with_annotated`](https://cmd2.readthedocs.io/en/latest/features/annotated/). A single parser
+  definition drives validation, help, and completion.
 - Render Rich tables and other styled objects, with consistent helpers for
   [normal output, errors, warnings, and paging](https://cmd2.readthedocs.io/en/latest/features/generating_output/).
 - Organize large applications into independently testable and dynamically loadable
