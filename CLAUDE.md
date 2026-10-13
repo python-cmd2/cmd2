@@ -111,8 +111,8 @@ embedded Python/IPython shells and `run_pyscript` while keeping isolation.
 - Anything not documented under `docs/api/` is not public API (`cmd2/constants.py` says so
   explicitly).
 - Add user-visible changes to `CHANGELOG.md` under the current in-progress version heading.
-- `main` is the branch for the next PATCH release; MAJOR/MINOR work happens on a branch named for
-  the target version. Releases are tagged and published from `main`.
+- `main` is the branch for the next release, whether PATCH, MINOR, or MAJOR. Feature branches merge
+  into `main`, and all releases are tagged and published from it.
 - Do not commit spec, plan, or markdown documents without asking first. Save plans to
   `~/.superpowers/plans/` rather than the project directory.
 - This project uses a 127 character maximum line length for all Python code, including for comments.
