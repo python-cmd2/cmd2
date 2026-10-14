@@ -768,9 +768,9 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         self.completer_class = completer_class
 
         # To assist type checkers, recast these to reflect our usage of rich-argparse.
-        self.formatter_class: type[Cmd2HelpFormatter]
-        self.description: HelpContent | None  # type: ignore[assignment]
-        self.epilog: HelpContent | None  # type: ignore[assignment]
+        self.formatter_class: type[Cmd2HelpFormatter]  # ty: ignore[invalid-mutable-override]
+        self.description: HelpContent | None  # type: ignore[assignment]  # ty: ignore[invalid-attribute-override]
+        self.epilog: HelpContent | None  # type: ignore[assignment]  # ty: ignore[invalid-attribute-override]
 
     def print_usage(self, file: IO[str] | None = None) -> None:  # type: ignore[override]  # ty: ignore[invalid-method-override]
         """Override to ensure the formatter is aware of the target file."""
