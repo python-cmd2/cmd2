@@ -36,11 +36,11 @@ import json
 import sys
 import time
 from datetime import datetime
-from typing import Any
+from typing import Any, ClassVar
 
 from prompt_toolkit.application import get_app_session
 from textual.app import App, ComposeResult
-from textual.binding import Binding
+from textual.binding import Binding, BindingType
 from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
 from textual.widgets import Footer, Header, Static
@@ -178,7 +178,7 @@ class Cmd2InTextual(App[None]):
     """
 
     # Priority bindings are needed because the focused Terminal sends every key press to the cmd2 application
-    BINDINGS = [Binding("ctrl+q", "quit", "Quit", priority=True)]
+    BINDINGS: ClassVar[list[BindingType]] = [Binding("ctrl+q", "quit", "Quit", priority=True)]
 
     def compose(self) -> ComposeResult:
         """Create the layout: the terminal running cmd2 on the left and the status panels on the right."""
@@ -204,7 +204,7 @@ class Cmd2InTextual(App[None]):
             return
         self.query_one(StatusPanel).apply(status)
 
-    def on_terminal_process_exited(self, event: Terminal.ProcessExited) -> None:
+    def on_terminal_process_exited(self, _event: Terminal.ProcessExited) -> None:
         """Exit when the cmd2 application exits, for example due to the quit command."""
         self.exit()
 
