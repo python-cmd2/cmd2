@@ -163,9 +163,13 @@ class Cmd2InTextual(App[None]):
     TITLE = "cmd2 inside Textual"
 
     CSS = """
-    #cmd2 {
+    #cmd2-pane {
         width: 2fr;
         border: round $primary;
+    }
+    #cmd2 {
+        width: 1fr;
+        height: 1fr;
     }
     #sidebar {
         width: 1fr;
@@ -184,7 +188,10 @@ class Cmd2InTextual(App[None]):
         """Create the layout: the terminal running cmd2 on the left and the status panels on the right."""
         yield Header()
         with Horizontal():
-            yield Terminal(command=[sys.executable, __file__, "--cmd2-only"], id="cmd2")
+            # The border is on a container because a Terminal sizes its pseudo-terminal from its outer size, so a
+            # border on the Terminal itself makes the cmd2 app draw more rows than are visible and hides its prompt
+            with Vertical(id="cmd2-pane"):
+                yield Terminal(command=[sys.executable, __file__, "--cmd2-only"], id="cmd2")
             with Vertical(id="sidebar"):
                 yield StatusPanel(id="status")
                 yield ClockPanel(id="clock")
