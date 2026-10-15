@@ -5,4 +5,4 @@ recursive-include docs *
 prune .github
 prune build
 exclude .github .gitignore .readthedocs.yaml
-global-exclude htmlcov/** .coverage* __pycache__/** .gitignore
+global-exclude htmlcov/** .coverage* __pycache__/** .gitignore .DS_Store
