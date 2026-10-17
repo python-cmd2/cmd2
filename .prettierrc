@@ -1,4 +1,5 @@
 {
+  "endOfLine": "lf",
   "printWidth": 100,
   "proseWrap": "always",
   "overrides": [

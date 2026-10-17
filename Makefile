@@ -5,8 +5,8 @@
 .PHONY: install
 install: ## Install the virtual environment with dependencies
 	@echo "🚀 Creating uv Python virtual environment"
-	@uv python install 3.14
-	@uv sync --python=3.14
+	@uv python install 3.15
+	@uv sync --python=3.15
 	@echo "🚀 Installing Git prek hooks locally"
 	@uv run prek install -f
 	@echo "🚀 Installing Prettier using npm"
@@ -47,7 +47,7 @@ typecheck: ## Perform type checking using both mypy and ty
 .PHONY: test
 test: ## Test the code with pytest.
 	@echo "🚀 Testing code: Running pytest"
-	@uv run python -Xutf8 -m pytest --cov --cov-config=pyproject.toml --cov-report=xml tests
+	@uv run python -Xutf8 -m pytest tests
 
 .PHONY: docs-test
 docs-test: ## Test if documentation can be built without warnings or errors

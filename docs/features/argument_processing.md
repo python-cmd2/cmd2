@@ -57,14 +57,10 @@ stores internally. A consequence is that parsers don't need to be unique across 
 
 ## with_annotated decorator
 
-!!! warning "Experimental"
-
-    The `@with_annotated` decorator is **experimental** and its API may change in future releases.
-
 The [@with_annotated][cmd2.with_annotated] decorator builds an argparse parser automatically from
 the decorated function's type annotations -- no manual `add_argument()` calls required. See
 [Annotated Argument Processing](annotated.md) for the full reference, including type mapping,
-metadata classes, subcommands, and stability caveats.
+metadata classes, and subcommands.
 
 ## Argument Parsing
 
