@@ -1,3 +1,8 @@
+## 4.3.1 (TBD)
+
+- Fixed history ranges starting past the end selecting the last command, including when using
+  `history --run`.
+
 ## 4.3.0 (October 13, 2026)
 
 - Stabilized features
