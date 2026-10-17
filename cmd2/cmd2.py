@@ -32,7 +32,7 @@ import argparse
 import contextlib
 import copy
 import dataclasses
-import datetime
+import datetime as dt
 import functools
 import glob
 import inspect
@@ -47,8 +47,8 @@ from code import InteractiveConsole
 from collections import deque
 from collections.abc import (
     Callable,
+    Generator,
     Iterable,
-    Iterator,
     Mapping,
     Sequence,
 )
@@ -187,13 +187,13 @@ from .types import (
 
 try:
     if sys.platform == "win32":
-        from prompt_toolkit.output.win32 import NoConsoleScreenBufferError  # type: ignore[attr-defined]
+        from prompt_toolkit.output.win32 import NoConsoleScreenBufferError
     else:
         # Trigger the except block for non-Windows platforms
         raise ImportError  # noqa: TRY301
 except ImportError:
 
-    class NoConsoleScreenBufferError(Exception):  # type: ignore[no-redef]
+    class NoConsoleScreenBufferError(Exception):  # type: ignore[no-redef, unused-ignore]
         """Dummy exception to use when prompt_toolkit.output.win32.NoConsoleScreenBufferError is not available."""
 
         def __init__(self, msg: str = "") -> None:
@@ -641,7 +641,7 @@ class Cmd:
 
         # Store initial termios settings to restore after each command.
         # This is a faster way of accomplishing what "stty sane" does.
-        self._initial_termios_settings = None
+        self._initial_termios_settings: list[Any] | None = None
         if not sys.platform.startswith("win") and self.stdin.isatty():
             try:
                 import io
@@ -1069,7 +1069,7 @@ class Cmd:
 
         # Verify the factory returned the required type
         if not isinstance(parser, Cmd2ArgumentParser):
-            builder_name = getattr(parser_source, "__name__", str(parser_source))  # type: ignore[unreachable]
+            builder_name = getattr(parser_source, "__name__", str(parser_source))
             raise TypeError(
                 f"'{builder_name}' must return a 'Cmd2ArgumentParser' (or subclass). Received: '{type(parser).__name__}'."
             )
@@ -2018,11 +2018,12 @@ class Cmd:
                 self._command_toolbar.page(output, chop=chop)
                 return
 
+            # As for a pipe: the pager gets UTF-8, and on Windows the console is UTF-8 while it runs.
             output_bytes = output.encode("utf-8", "replace")
 
             # Prevent KeyboardInterrupts while in the pager. The pager application will
             # still receive the SIGINT since it is in the same process group as us.
-            with self.suspend_bottom_toolbar(), self.sigint_protection:
+            with self.suspend_bottom_toolbar(), self.sigint_protection, utils._utf8_console():
                 import subprocess
 
                 pipe_proc = subprocess.Popen(  # noqa: S602
@@ -2035,19 +2036,14 @@ class Cmd:
 
                 # If the pager was killed (e.g. SIGKILL), the terminal might be in a bad state.
                 # Attempt to restore terminal settings and foreground process group.
-                if self._initial_termios_settings is not None and self.stdin.isatty():  # type: ignore[unreachable]
-                    try:  # type: ignore[unreachable]
-                        import signal
+                if not sys.platform.startswith("win") and self._initial_termios_settings is not None and self.stdin.isatty():
+                    try:
                         import termios
 
-                        # Ensure we are in the foreground process group
+                        # Ensure we are in the foreground process group, without being stopped with SIGTTOU for asking from the
+                        # background
                         if hasattr(os, "tcsetpgrp") and hasattr(os, "getpgrp"):
-                            # Ignore SIGTTOU to avoid getting stopped when calling tcsetpgrp from background
-                            old_handler = signal.signal(signal.SIGTTOU, signal.SIG_IGN)
-                            try:
-                                os.tcsetpgrp(self.stdin.fileno(), os.getpgrp())
-                            finally:
-                                signal.signal(signal.SIGTTOU, old_handler)
+                            utils.ProcReader._set_foreground_group(self.stdin.fileno(), os.getpgrp())
 
                         # Restore terminal attributes
                         if self._initial_termios_settings is not None:
@@ -2170,7 +2166,7 @@ class Cmd:
         raise RuntimeError("the bottom toolbar's display has not released the terminal")
 
     @contextlib.contextmanager
-    def suspend_bottom_toolbar(self) -> Iterator[None]:
+    def suspend_bottom_toolbar(self) -> Generator[None]:
         """Temporarily hide the command toolbar and give exclusive access to the terminal.
 
         Use this context manager around application-specific calls to ``input()``, other
@@ -2193,7 +2189,7 @@ class Cmd:
                     yield
 
     @contextlib.contextmanager
-    def _quiesce_bottom_toolbar(self) -> Iterator[None]:
+    def _quiesce_bottom_toolbar(self) -> Generator[None]:
         """Stop the command display without giving the terminal away.
 
         This is the other half of the distinction the reserved row makes necessary. Pausing
@@ -2214,7 +2210,7 @@ class Cmd:
         return self._reserved_toolbar
 
     @contextlib.contextmanager
-    def _reserved_toolbar_context(self) -> Iterator[None]:
+    def _reserved_toolbar_context(self) -> Generator[None]:
         """Own the reserved-row toolbar for the lifetime of one command loop.
 
         The mode is chosen here rather than at construction because the answer depends on the
@@ -2245,7 +2241,7 @@ class Cmd:
             self._reserved_toolbar = None
 
     @contextlib.contextmanager
-    def _command_toolbar_context(self) -> Iterator[None]:
+    def _command_toolbar_context(self) -> Generator[None]:
         """Display the toolbar around commands launched by the interactive command loop."""
         if (
             self._command_toolbar is not None
@@ -2808,11 +2804,11 @@ class Cmd:
                             completer.complete, tokens=raw_tokens[1:] if spec.preserve_quotes else tokens[1:], cmd_set=cmd_set
                         )
                     else:
-                        completer_func = self.completedefault  # type: ignore[assignment, ty:invalid-assignment]
+                        completer_func = self.completedefault  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
 
             # Not a recognized macro or command
             else:
-                completer_func = self.completedefault  # type: ignore[assignment, ty:invalid-assignment]
+                completer_func = self.completedefault  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
 
         # Otherwise we are completing the command token or performing custom completion
         else:
@@ -3230,11 +3226,11 @@ class Cmd:
                 with self.sigint_protection:
                     if py_bridge_call:
                         # Start saving command's stdout at this point
-                        self.stdout.pause_storage = False  # type: ignore[attr-defined, ty:invalid-assignment]
+                        self.stdout.pause_storage = False  # type: ignore[attr-defined]  # ty: ignore[invalid-assignment]
 
                     redir_saved_state = self._redirect_output(statement)
 
-                timestart = datetime.datetime.now(tz=datetime.timezone.utc)
+                timestart = dt.datetime.now(tz=dt.timezone.utc)
 
                 # precommand hooks
                 precmd_data = plugin.PrecommandData(statement)
@@ -3260,7 +3256,7 @@ class Cmd:
                 stop = self.postcmd(stop, statement)
 
                 if self.timing:
-                    self.perror(f"Elapsed: {datetime.datetime.now(tz=datetime.timezone.utc) - timestart}", style=None)
+                    self.perror(f"Elapsed: {dt.datetime.now(tz=dt.timezone.utc) - timestart}", style=None)
             finally:
                 # Get sigint protection while we restore stuff
                 with self.sigint_protection:
@@ -3269,7 +3265,7 @@ class Cmd:
 
                     if py_bridge_call:
                         # Stop saving command's stdout before command finalization hooks run
-                        self.stdout.pause_storage = True  # type: ignore[attr-defined, ty:invalid-assignment]
+                        self.stdout.pause_storage = True  # type: ignore[attr-defined]  # ty: ignore[invalid-assignment]
         except (SkipPostcommandHooks, EmptyStatement):
             # Don't do anything, but do allow command finalization hooks to run
             pass
@@ -3308,8 +3304,8 @@ class Cmd:
     @command_toolbar.quiesce_toolbar
     def _run_cmdfinalization_hooks(self, stop: bool, statement: Statement | None) -> bool:
         """Run the command finalization hooks."""
-        if self._initial_termios_settings is not None and self.stdin.isatty():  # type: ignore[unreachable]
-            import io  # type: ignore[unreachable]
+        if not sys.platform.startswith("win") and self._initial_termios_settings is not None and self.stdin.isatty():
+            import io
             import termios
 
             # Before the next command runs, fix any terminal problems like those
@@ -3520,24 +3516,12 @@ class Cmd:
             pass
 
         elif statement.redirector == constants.REDIRECTION_PIPE:
-            # Create a pipe with read and write sides
-            read_fd, write_fd = os.pipe()
-
-            # Open each side of the pipe. Both ends are given an explicit encoding:
-            # command output is rendered by Rich and routinely contains non-ASCII, which
-            # the locale encoding cannot always represent.
-            subproc_stdin = open(read_fd, encoding="utf-8")  # noqa: SIM115
-            new_stdout: TextIO = cast(TextIO, open(write_fd, "w", encoding="utf-8"))  # noqa: SIM115
-
-            # Create pipe process in a separate group to isolate our signals from it. If a Ctrl-C event occurs,
-            # our sigint handler will forward it only to the most recent pipe process. This makes sure pipe
-            # processes close in the right order (most recent first).
+            # Isolate pipeline signals from cmd2. Terminal pipelines receive the foreground terminal; ProcReader relays their
+            # job-control stops.
             kwargs: dict[str, Any] = {}
             if sys.platform == "win32":
                 kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
             else:
-                kwargs["start_new_session"] = True
-
                 # Attempt to run the pipe process in the user's preferred shell instead of the default behavior of using sh.
                 shell = os.environ.get("SHELL")
                 if shell:
@@ -3553,40 +3537,117 @@ class Cmd:
             )
             pipe_stderr = None if isinstance(sys.stderr, utils.StdSim) else command_toolbar.pipe_target(sys.stderr)
 
-            with contextlib.ExitStack() as terminal_stack:
-                # The toolbar can neither draw nor hold the keyboard while a pipe process owns
-                # the terminal, so step aside until that process has finished.
-                if pipe_stdout is not None or pipe_stderr is not None:
-                    terminal_stack.enter_context(self.suspend_bottom_toolbar())
+            terminal_fd: int | None = None
+            popen_command = statement.redirect_to
+            if sys.platform != "win32":
+                # Only a pipeline whose output goes to the terminal is the terminal's job. One nested in a command whose output
+                # is piped, for instance, feeds that outer pipeline, whose consumer needs the terminal instead. Job control
+                # installs signal handlers, which only the main thread may do. Otherwise, keep the pipeline in its own session
+                # as before.
+                if threading.current_thread() is threading.main_thread() and pipe_stdout is not None and pipe_stdout.isatty():
+                    with contextlib.suppress(OSError, ValueError):
+                        if os.tcgetpgrp(pipe_stdout.fileno()) == os.getpgrp():
+                            terminal_fd = pipe_stdout.fileno()
+                if terminal_fd is None:
+                    kwargs["start_new_session"] = True
+                else:
+                    kwargs["process_group"] = 0
 
-                proc = subprocess.Popen(  # noqa: S602
-                    statement.redirect_to,
-                    stdin=subproc_stdin,
-                    stdout=subprocess.PIPE if pipe_stdout is None else pipe_stdout,
-                    stderr=subprocess.PIPE if pipe_stderr is None else pipe_stderr,
-                    shell=True,
-                    **kwargs,
-                )
+                    # A pager such as less sets its terminal modes as it starts, before it reads the pipe. It must own the
+                    # terminal by then: a background tcsetattr() stops it with SIGTTOU, and on macOS that call fails with EINTR
+                    # when the process is continued instead of being restarted. less ignores the failure and runs on a cooked
+                    # terminal. So hold the pipeline in a POSIX sh until cmd2 has made its group the foreground one and sent a
+                    # newline down the pipe. The read builtin takes no more than that line from a pipe. Then exec the user's
+                    # shell as before.
+                    import shlex
+
+                    # The POSIX shell Popen() itself runs with shell=True
+                    posix_shell = "/system/bin/sh" if hasattr(sys, "getandroidapilevel") else "/bin/sh"
+                    user_shell = shlex.quote(kwargs.get("executable", posix_shell))
+                    popen_command = f"read -r _ || exit 1; exec {user_shell} -c {shlex.quote(statement.redirect_to)}"
+                    kwargs["executable"] = posix_shell
+
+            with contextlib.ExitStack() as pipe_stack, contextlib.ExitStack() as setup_stack:
+                # The toolbar can neither draw nor hold the keyboard while a pipe process owns the terminal, so step aside
+                # until _restore_output() has reaped it. Entered first, the suspension ends last, once cmd2 has the terminal
+                # back.
+                if pipe_stdout is not None or pipe_stderr is not None:
+                    pipe_stack.enter_context(self.suspend_bottom_toolbar())
+
+                # The console stays UTF-8 from before the pipe process starts, since a program may read the code page once as
+                # it starts, until _restore_output() has reaped it.
+                pipe_stack.enter_context(utils._utf8_console())
+
+                # Create a pipe with read and write sides
+                read_fd, write_fd = os.pipe()
+
+                # Open each side of the pipe. Both ends use UTF-8 rather than the locale's encoding, which cannot always
+                # represent the non-ASCII that Rich routinely renders. On Windows, the console is UTF-8 too while the pipe
+                # runs, for console programs such as more, which decode with its code page.
+                subproc_stdin = open(read_fd, encoding="utf-8")  # noqa: SIM115
+                new_stdout: TextIO = cast(TextIO, open(write_fd, "w", encoding="utf-8"))  # noqa: SIM115
+
+                # Should cmd2 fail before the command can write to the pipe, close it. A pipeline held at its start gate then
+                # reads EOF and exits.
+                setup_stack.callback(new_stdout.close)
+                # Only the child should own a read end, so close ours once the spawn is done, even if it failed. In
+                # particular, a consumer exit must unblock a producer writing to a full pipe immediately.
+                with (
+                    subproc_stdin,
+                    utils._session_leader_job_stops() if terminal_fd is not None else contextlib.nullcontext(),
+                ):
+                    proc = subprocess.Popen(  # noqa: S602
+                        popen_command,
+                        stdin=subproc_stdin,
+                        stdout=subprocess.PIPE if pipe_stdout is None else pipe_stdout,
+                        stderr=subprocess.PIPE if pipe_stderr is None else pipe_stderr,
+                        shell=True,
+                        **kwargs,
+                    )
+                cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr, terminal_fd=terminal_fd)
+                if terminal_fd is not None:
+                    pipe_stack.enter_context(cmd_pipe_proc_reader._manage_terminal())
 
                 # Popen was called with shell=True so the user can chain pipe commands and redirect their output
-                # like: !ls -l | grep user | wc -l > out.txt. But this makes it difficult to know if the pipe process
-                # started OK, since the shell itself always starts. Therefore, we will wait a short time and check
-                # if the pipe process is still running.
+                # like: !ls -l | grep user | wc -l > out.txt. But this makes it difficult to know if the pipe process started
+                # OK, since the shell itself always starts. Therefore, we will wait a short time and check if the pipe process
+                # is still running.
                 with contextlib.suppress(subprocess.TimeoutExpired):
-                    proc.wait(0.2)
+                    if terminal_fd is None:
+                        proc.wait(0.2)
+                    else:
+                        # Open the start gate only once the pipeline owns the terminal.
+                        with cmd_pipe_proc_reader._lend_terminal():
+                            with contextlib.suppress(OSError):
+                                os.write(new_stdout.fileno(), b"\n")
+                            cmd_pipe_proc_reader._wait_for_exit(0.2)
 
-                # Check if the pipe process already exited
+                # Check if the pipe process already exited. Pass on what it wrote to a pipe, such as why it failed.
                 if proc.returncode is not None:
-                    subproc_stdin.close()
-                    new_stdout.close()
+                    cmd_pipe_proc_reader.wait()
                     raise RedirectionError(f"Pipe process exited with code {proc.returncode} before command could run")
                 redir_saved_state.redirecting = True
-                cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
+
+                if terminal_fd is not None:
+                    import io
+
+                    pipe_fd = os.dup(new_stdout.fileno())
+                    new_stdout.close()
+                    new_stdout = io.TextIOWrapper(
+                        io.BufferedWriter(
+                            utils._PipelineWriter(
+                                pipe_fd, cmd_pipe_proc_reader, interruptible=lambda: not self.sigint_protection
+                            )
+                        ),
+                        encoding="utf-8",
+                    )
 
                 self.stdout = new_stdout
+                setup_stack.pop_all()
 
-                # Hold the suspension open until _restore_output() reaps the pipe process.
-                redir_saved_state.toolbar_suspension = terminal_stack.pop_all()
+                # Keep the toolbar suspended, the UTF-8 console and the pipeline's job control until _restore_output() reaps
+                # the pipe process.
+                redir_saved_state.pipe_context = pipe_stack.pop_all()
 
         elif statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND):
             if statement.redirect_to:
@@ -3645,35 +3706,44 @@ class Cmd:
         :param statement: Statement object which contains the parsed input from the user
         :param saved_redir_state: contains information needed to restore state data
         """
-        # The toolbar gets the terminal back once the pipe process is done with it.
-        with contextlib.ExitStack() as terminal_stack:
-            if saved_redir_state.toolbar_suspension is not None:
-                terminal_stack.callback(saved_redir_state.toolbar_suspension.close)
-                saved_redir_state.toolbar_suspension = None
+        # The UTF-8 console and the pipeline's job control end once its pipe process has been reaped, and then the toolbar
+        # gets the terminal back.
+        with contextlib.ExitStack() as pipe_stack:
+            if saved_redir_state.pipe_context is not None:
+                pipe_stack.callback(saved_redir_state.pipe_context.close)
+                saved_redir_state.pipe_context = None
 
-            if saved_redir_state.redirecting:
-                # If we redirected output to the clipboard
-                if (
-                    statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND)
-                    and not statement.redirect_to
-                ):
-                    self.stdout.seek(0)
-                    write_to_paste_buffer(self.stdout.read())
+            try:
+                if saved_redir_state.redirecting:
+                    # Restore self.stdout first, so that a failure to end the redirection cannot leave it in place
+                    redirected_stdout = self.stdout
+                    self.stdout = cast(TextIO, saved_redir_state.saved_self_stdout)
+                    pipe_proc_reader = self._cur_pipe_proc_reader
 
-                with contextlib.suppress(BrokenPipeError):
-                    # Close the file or pipe that stdout was redirected to
-                    self.stdout.close()
+                    # A terminal pipeline has the terminal before its consumer reads EOF, which may set its terminal modes as
+                    # it does, and keeps it until it exits. Handing the terminal back then can fail, as after a hangup.
+                    with pipe_proc_reader._lend_terminal() if pipe_proc_reader is not None else contextlib.nullcontext():
+                        try:
+                            # If we redirected output to the clipboard
+                            if (
+                                statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND)
+                                and not statement.redirect_to
+                            ):
+                                redirected_stdout.seek(0)
+                                write_to_paste_buffer(redirected_stdout.read())
+                        finally:
+                            with contextlib.suppress(BrokenPipeError):
+                                # Close the file or pipe that stdout was redirected to
+                                redirected_stdout.close()
 
-                # Restore self.stdout
-                self.stdout = cast(TextIO, saved_redir_state.saved_self_stdout)
-
-                # Check if we need to wait for the process being piped to
-                if self._cur_pipe_proc_reader is not None:
-                    self._cur_pipe_proc_reader.wait()
-
-            # These are restored regardless of whether the command redirected
-            self._cur_pipe_proc_reader = saved_redir_state.saved_pipe_proc_reader
-            self._redirecting = saved_redir_state.saved_redirecting
+                        # Check if we need to wait for the process being piped to
+                        if pipe_proc_reader is not None:
+                            pipe_proc_reader.wait()
+            finally:
+                # These are restored regardless of whether the command redirected, or whether restoring it failed: a pipeline
+                # left current would keep ppaged() from paging and send Ctrl-C to a process group that is gone.
+                self._cur_pipe_proc_reader = saved_redir_state.saved_pipe_proc_reader
+                self._redirecting = saved_redir_state.saved_redirecting
 
     def get_command_func(self, command: str) -> BoundCommandFunc[...] | None:
         """Get the bound command function for a command.
@@ -4135,7 +4205,7 @@ class Cmd:
             "An alias is a command that enables replacement of a word by another string.",
         )
         alias_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description=alias_description)
-        alias_parser.epilog = TextGroup(  # type: ignore[assignment, ty:invalid-assignment]
+        alias_parser.epilog = TextGroup(  # ty: ignore[invalid-assignment]
             "See Also",
             "macro",
         )
@@ -4167,7 +4237,7 @@ class Cmd:
                 "for the actual command the alias resolves to."
             ),
         )
-        alias_create_parser.epilog = TextGroup("Notes", alias_create_notes)  # type: ignore[assignment, ty:invalid-assignment]
+        alias_create_parser.epilog = TextGroup("Notes", alias_create_notes)  # ty: ignore[invalid-assignment]
 
         # Add arguments
         alias_create_parser.add_argument("name", help="name of this alias")
@@ -4349,7 +4419,7 @@ class Cmd:
             "A macro is similar to an alias, but it can contain argument placeholders.",
         )
         macro_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description=macro_description)
-        macro_parser.epilog = TextGroup(  # type: ignore[assignment, ty:invalid-assignment]
+        macro_parser.epilog = TextGroup(  # ty: ignore[invalid-assignment]
             "See Also",
             "alias",
         )
@@ -4412,7 +4482,7 @@ class Cmd:
                 "This default behavior changes if custom completion for macro arguments has been implemented."
             ),
         )
-        macro_create_parser.epilog = TextGroup("Notes", macro_create_notes)  # type: ignore[assignment, ty:invalid-assignment]
+        macro_create_parser.epilog = TextGroup("Notes", macro_create_notes)  # ty: ignore[invalid-assignment]
 
         # Add arguments
         macro_create_parser.add_argument("name", help="name of this macro")
@@ -4908,7 +4978,7 @@ class Cmd:
     @staticmethod
     def _build__eof_parser() -> Cmd2ArgumentParser:
         _eof_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description="Called when Ctrl-D is pressed.")
-        _eof_parser.epilog = TextGroup(  # type: ignore[assignment, ty:invalid-assignment]
+        _eof_parser.epilog = TextGroup(  # ty: ignore[invalid-assignment]
             "Note",
             "This command is for internal use and is not intended to be called from the command line.",
         )
@@ -5180,19 +5250,70 @@ class Cmd:
         utils.expand_user_in_tokens(tokens)
         expanded_command = " ".join(tokens)
 
-        # Prevent KeyboardInterrupts while in the shell process. The shell process will
-        # still receive the SIGINT since it is in the same process group as us.
-        with self.sigint_protection:
-            # For any stream that is a StdSim, we will use a pipe so we can capture its output
-            proc = subprocess.Popen(  # noqa: S602
-                expanded_command,
-                stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]
-                stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
-                shell=True,
-                **kwargs,
-            )
+        # A terminal pipeline's consumer needs the terminal to drain the pipe, but a shell command writes into that pipe itself
+        # rather than through self.stdout, which lends the terminal per write. Run the command inside the pipeline's job
+        # instead, for as long as it runs: the consumer keeps the terminal, and Ctrl-C and Ctrl-Z reach both processes, as they
+        # would in a shell pipeline. Only a command whose output goes to that pipeline joins it. A worker thread's command
+        # stays out of it too: job control relays stops to the main thread, and only the main thread may change signal
+        # handlers.
+        pipeline = self._cur_pipe_proc_reader
+        writer = utils._pipeline_writer_of(self.stdout)
+        job_group = None
+        if (
+            pipeline is not None
+            and writer is not None
+            and writer.feeds(pipeline)
+            and threading.current_thread() is threading.main_thread()
+        ):
+            # Read the group once: the pipeline's watcher may reap the consumer at any moment, which leaves none to join.
+            job_group = pipeline._terminal_group
+        joined_writer = writer if job_group is not None else None
 
-            proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
+        # Prevent KeyboardInterrupts while in the shell process. The shell process still receives the SIGINT: it is in our
+        # process group or in the foreground pipeline's.
+        with self.sigint_protection, contextlib.ExitStack() as terminal_stack:
+            if pipeline is not None and joined_writer is not None:
+                kwargs["process_group"] = job_group
+                terminal_stack.enter_context(pipeline._lend_terminal())
+            while True:
+                try:
+                    # For any stream that is a StdSim, we will use a pipe so we can capture its output. A command joining the
+                    # pipeline writes to its consumer's pipe directly, after what cmd2 wrote before it. It is spawned inside
+                    # the lend, which blocks SIGTTOU, and with the job's Ctrl-Z behavior.
+                    stdout: Any = self.stdout
+                    if joined_writer is not None:
+                        self.stdout.flush()
+                        stdout = joined_writer.producer_fileno()
+                    elif isinstance(stdout, utils.StdSim):
+                        stdout = subprocess.PIPE
+                    with (
+                        utils._sigttou_mask(block=False) if joined_writer is not None else contextlib.nullcontext(),
+                        utils._session_leader_job_stops(pipeline) if joined_writer is not None else contextlib.nullcontext(),
+                    ):
+                        proc = subprocess.Popen(  # noqa: S602
+                            expanded_command,
+                            stdout=stdout,
+                            stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
+                            shell=True,
+                            **kwargs,
+                        )
+                    break
+                except PermissionError:
+                    # The pipeline exited before the command could join its group.
+                    if joined_writer is None:
+                        raise
+                    joined_writer = None
+                    del kwargs["process_group"]
+                    # The retry runs in our own group, so take the terminal back from the dead pipeline first. Its watcher left
+                    # it lent, and the command would otherwise stop with SIGTTIN on its first terminal read, with nothing to
+                    # resume it.
+                    terminal_stack.close()
+
+            # A command that joined the pipeline's job is waited for in short polls. Only the main thread runs Python signal
+            # handlers, and the job-control stop the pipeline's watcher relays may wake another thread. Once the consumer and
+            # its watcher are gone, the same wait relays the command's own stops, such as Ctrl-Z.
+            joined_pipeline = pipeline if joined_writer is not None else None
+            proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr, pipeline=joined_pipeline)
             proc_reader.wait()
 
             # Save the return code of the application for use in a pyscript
@@ -5244,7 +5365,7 @@ class Cmd:
             cmd2_env.completer = readline.get_completer()
 
             # Set the completer to use the interpreter's locals
-            readline.set_completer(rlcompleter.Completer(interp.locals).complete)  # type: ignore[arg-type]
+            readline.set_completer(rlcompleter.Completer(interp.locals).complete)
 
             # Use the correct binding based on whether LibEdit or Readline is being used
             if "libedit" in (readline.__doc__ or ""):
@@ -5371,7 +5492,7 @@ class Cmd:
             # Check if we are running Python code
             if py_code_to_run:
                 try:  # noqa: SIM105
-                    interp.runcode(py_code_to_run)  # type: ignore[arg-type, ty:invalid-argument-type]
+                    interp.runcode(py_code_to_run)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
                 except BaseException:  # noqa: BLE001, S110
                     # We don't care about any exception that happened in the Python code
                     pass
@@ -5523,7 +5644,7 @@ class Cmd:
             )
 
             # Start IPython
-            start_ipython(config=config, argv=[], user_ns=local_vars)  # type: ignore[no-untyped-call]
+            start_ipython(config=config, argv=[], user_ns=local_vars)
             self.poutput("Now exiting IPython shell...")
 
             # The IPython application is a singleton and won't be recreated next time
@@ -5811,7 +5932,7 @@ class Cmd:
     def _build_edit_parser(cls) -> Cmd2ArgumentParser:
         edit_description = "Run a text editor and optionally open a file with it."
         edit_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description=edit_description)
-        edit_parser.epilog = TextGroup(  # type: ignore[assignment, ty:invalid-assignment]
+        edit_parser.epilog = TextGroup(  # ty: ignore[invalid-assignment]
             "Note",
             Text.assemble(
                 "To set a new editor, run: ",
@@ -5933,7 +6054,7 @@ class Cmd:
         _relative_run_script_parser = cls._build_base_run_script_parser()
 
         # Append to existing description
-        _relative_run_script_parser.description = Group(  # type: ignore[assignment, ty:invalid-assignment]
+        _relative_run_script_parser.description = Group(  # ty: ignore[invalid-assignment]
             cast(Group, _relative_run_script_parser.description),
             "\n",
             (
@@ -5942,7 +6063,7 @@ class Cmd:
             ),
         )
 
-        _relative_run_script_parser.epilog = TextGroup(  # type: ignore[assignment, ty:invalid-assignment]
+        _relative_run_script_parser.epilog = TextGroup(  # ty: ignore[invalid-assignment]
             "Note",
             "This command is intended to be used from within a text script.",
         )

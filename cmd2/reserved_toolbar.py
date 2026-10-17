@@ -34,7 +34,7 @@ from .theme import get_pt_theme
 from .toolbar_painter import ToolbarPainter
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Generator
 
     from prompt_toolkit.formatted_text import AnyFormattedText
     from prompt_toolkit.shortcuts import PromptSession
@@ -240,7 +240,7 @@ class ReservedToolbar:
         return error
 
     @contextmanager
-    def suspended(self) -> "Iterator[None]":
+    def suspended(self) -> "Generator[None]":
         """Give the rows back for the duration of the block, and take them again after.
 
         A program that inherits the terminal -- a shell command, an editor, an external pager

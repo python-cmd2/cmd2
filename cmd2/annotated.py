@@ -1,9 +1,5 @@
 """Build argparse parsers from type-annotated function signatures.
 
-!!! warning "Experimental"
-
-    This module is experimental and its behavior may change in future releases.
-
 The [`with_annotated`][cmd2.annotated.with_annotated] decorator inspects a command function's type hints and
 default values to build a ``Cmd2ArgumentParser``.  [`Argument`][cmd2.annotated.Argument] and
 [`Option`][cmd2.annotated.Option] metadata classes give finer per-parameter control via
@@ -713,7 +709,7 @@ def _make_enum_type(enum_class: type[enum.Enum], *, allow_unknown_entry: bool = 
         raise _invalid_choice(value, _value_map)
 
     _convert.__name__ = enum_class.__name__
-    _convert._cmd2_enum_class = enum_class  # type: ignore[attr-defined, ty:unresolved-attribute]
+    _convert._cmd2_enum_class = enum_class  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
     return _convert
 
 
@@ -989,7 +985,7 @@ def _unwrap_optional(tp: Any) -> tuple[Any, bool]:
     there alone, so this helper never validates union members itself.
     """
     origin = get_origin(tp)
-    if origin is Union or origin is types.UnionType:  # type: ignore[comparison-overlap]
+    if origin is Union or origin is types.UnionType:
         all_args = get_args(tp)
         non_none = [a for a in all_args if a is not type(None)]
         has_none = len(non_none) < len(all_args)
@@ -1014,14 +1010,14 @@ def _normalize_annotation(annotation: Any) -> _NormalizedAnnotation:
     tp, unwrapped = _unwrap_optional(tp)
     if unwrapped:
         is_optional = True
-        if get_origin(tp) is Annotated:  # type: ignore[comparison-overlap]
+        if get_origin(tp) is Annotated:
             inner_tp = get_args(tp)[0]
             inner_origin = get_origin(inner_tp)
-            inner_is_union = inner_origin is Union or inner_origin is types.UnionType  # type: ignore[comparison-overlap]
+            inner_is_union = inner_origin is Union or inner_origin is types.UnionType
             if not (inner_is_union and type(None) in get_args(inner_tp)):
                 raise TypeError("Annotated[T, meta] | None is ambiguous. Use Annotated[T | None, meta] instead.")
 
-    if get_origin(tp) is Annotated:  # type: ignore[comparison-overlap]
+    if get_origin(tp) is Annotated:
         args = get_args(tp)
         tp = args[0]
         for meta in args[1:]:
@@ -1119,7 +1115,7 @@ def _compose_preprocess(preprocess: Callable[[str], str], converter: Callable[[s
     _convert.__name__ = getattr(converter, "__name__", "preprocess")
     enum_class = getattr(converter, "_cmd2_enum_class", None)
     if enum_class is not None:
-        _convert._cmd2_enum_class = enum_class  # type: ignore[attr-defined, ty:unresolved-attribute]
+        _convert._cmd2_enum_class = enum_class  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
     return _convert
 
 

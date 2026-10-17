@@ -71,8 +71,9 @@ Three layers, all producing a `Cmd2ArgumentParser`:
   range `nargs` tuples, per-argument completion metadata, and subcommand records.
 - `cmd2/decorators.py` — `@with_argparser`, `@with_argument_list`, `@with_category`,
   `@as_subcommand_to` attach parsers/metadata to `do_*` methods.
-- `cmd2/annotated.py` — the newer, still-experimental Typer-style path: `@with_annotated` builds a
-  parser from a function's type hints, with `Argument`/`Option` metadata via `typing.Annotated`.
+- `cmd2/annotated.py` — the newer Typer-style path (experimental in 4.0.0, stable as of 4.3.0):
+  `@with_annotated` builds a parser from a function's type hints, with `Argument`/`Option` metadata
+  via `typing.Annotated`.
 
 Parsers are built lazily and cached by the `CommandParsers` class in `cmd2.py` (`_build_parser`), so
 that `CommandSet`-supplied subcommands can be attached and detached at runtime.
@@ -111,10 +112,12 @@ embedded Python/IPython shells and `run_pyscript` while keeping isolation.
 - Anything not documented under `docs/api/` is not public API (`cmd2/constants.py` says so
   explicitly).
 - Add user-visible changes to `CHANGELOG.md` under the current in-progress version heading.
-- `main` is the branch for the next PATCH release; MAJOR/MINOR work happens on a branch named for
-  the target version. Releases are tagged and published from `main`.
+- `main` is the branch for the next release, whether PATCH, MINOR, or MAJOR. Feature branches merge
+  into `main`, and all releases are tagged and published from it.
 - Do not commit spec, plan, or markdown documents without asking first. Save plans to
   `~/.superpowers/plans/` rather than the project directory.
+- This project uses a 127 character maximum line length for all Python code, including for comments.
+- This project uses a 100 character maximum line length for Markdown files.
 
 ## Commit conventions
 
