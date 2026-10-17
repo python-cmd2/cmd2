@@ -3171,11 +3171,12 @@ def with_annotated(
                 namespace = ns_provider(provider_self if provider_self is not None else cmd2_app)
 
             try:
-                if with_unknown_args:
-                    ns, unknown = arg_parser.parse_known_args(parsed_arglist, namespace)
-                else:
-                    ns = arg_parser.parse_args(parsed_arglist, namespace)
-                    unknown = None
+                with arg_parser.output_to(cmd2_app.stdout):
+                    if with_unknown_args:
+                        ns, unknown = arg_parser.parse_known_args(parsed_arglist, namespace)
+                    else:
+                        ns = arg_parser.parse_args(parsed_arglist, namespace)
+                        unknown = None
             except SystemExit as exc:
                 raise Cmd2ArgparseError from exc
 
