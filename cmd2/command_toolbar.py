@@ -8,7 +8,7 @@ import os
 import signal
 import sys
 import threading
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator
 from typing import TYPE_CHECKING, Any, TextIO, TypeVar, cast
 
 from prompt_toolkit.application import Application, create_app_session
@@ -341,7 +341,7 @@ class CommandToolbar:
                 self._stack = None
 
     @contextlib.contextmanager
-    def suspend(self) -> Iterator[None]:
+    def suspend(self) -> Generator[None]:
         """Temporarily restore ordinary terminal access, including nested suspensions."""
         if self._proxy is None:
             yield

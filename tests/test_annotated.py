@@ -6,7 +6,7 @@ We do NOT re-test argparse parsing logic or cmd2 integration here.
 """
 
 import argparse
-import datetime
+import datetime as dt
 import decimal
 import enum
 import functools
@@ -1809,8 +1809,8 @@ class TestUnsupportedPatterns:
     @pytest.mark.parametrize(
         "annotation",
         [
-            pytest.param(datetime.datetime, id="datetime"),
-            pytest.param(datetime.date, id="date"),
+            pytest.param(dt.datetime, id="datetime"),
+            pytest.param(dt.date, id="date"),
             pytest.param(uuid.UUID, id="uuid"),
             pytest.param(bytes, id="bytes"),
             pytest.param(complex, id="complex"),
@@ -4291,9 +4291,9 @@ def _csv_ints(value: str) -> set[int]:
     return {int(piece) for piece in value.split(",")}
 
 
-def _parse_iso(value: str) -> datetime.datetime:
+def _parse_iso(value: str) -> dt.datetime:
     """Parse an ISO-8601 timestamp (test converter for an otherwise-unsupported type)."""
-    return datetime.datetime.fromisoformat(value)
+    return dt.datetime.fromisoformat(value)
 
 
 class TestConverter:
@@ -4306,7 +4306,7 @@ class TestConverter:
 
     def test_converter_allows_unsupported_annotation_type(self) -> None:
         """A converter suppresses the 'unsupported scalar type' error: the annotation may be anything."""
-        action = _action_for(Annotated[datetime.datetime, Argument(converter=_parse_iso)])
+        action = _action_for(Annotated[dt.datetime, Argument(converter=_parse_iso)])
         assert action.type is _parse_iso
 
     def test_converter_parses_end_to_end(self) -> None:
@@ -4342,7 +4342,7 @@ class TestConverter:
     def test_converter_allows_unsupported_collection_element(self) -> None:
         """A converter on ``list[Unsupported]`` keeps the collection shape and suppresses the element error."""
         parser = build_parser_from_function(
-            _make_func(Annotated[list[datetime.datetime], Option("--ts", converter=_parse_iso)], name="ts")
+            _make_func(Annotated[list[dt.datetime], Option("--ts", converter=_parse_iso)], name="ts")
         )
         parsed = parser.parse_args(["--ts", "2020-01-01", "2021-06-15"]).ts
         assert parsed == [_parse_iso("2020-01-01"), _parse_iso("2021-06-15")]
@@ -4356,7 +4356,7 @@ class TestConverter:
         """A converter legalizes ``T | None``: the optional collapses to ``T`` and the converter owns conversion."""
         parser = build_parser_from_function(
             _make_func(
-                Annotated[datetime.datetime | None, Option("--until", converter=_parse_iso)],
+                Annotated[dt.datetime | None, Option("--until", converter=_parse_iso)],
                 name="until",
                 kind="kw",
                 default=None,

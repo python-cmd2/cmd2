@@ -17,7 +17,7 @@ Usage::
     python examples/annotated_example.py
 """
 
-import datetime
+import datetime as dt
 import os
 import sys
 from argparse import Namespace
@@ -85,9 +85,9 @@ def parse_size(value: str) -> int:
     return int(digits) * multiplier
 
 
-def parse_iso(value: str) -> datetime.datetime:
+def parse_iso(value: str) -> dt.datetime:
     """Parse an ISO-8601 timestamp (a ``converter=`` for an otherwise-unsupported type)."""
-    return datetime.datetime.fromisoformat(value)
+    return dt.datetime.fromisoformat(value)
 
 
 @dataclass
@@ -473,7 +473,7 @@ class AnnotatedExample(Cmd):
         self,
         size: Annotated[int, Argument(converter=parse_size, help_text="size with optional K/M/G suffix")],
         until: Annotated[
-            datetime.datetime | None,
+            dt.datetime | None,
             Option("--until", converter=parse_iso, help_text="ISO-8601 expiry (an unsupported type)"),
         ] = None,
     ) -> None:
