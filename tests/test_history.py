@@ -228,6 +228,19 @@ def test_history_class_span(hist) -> None:
             hist.span(tryit)
 
 
+@pytest.mark.parametrize("suffix", [":", ":999", ":-1", "..", "..999", "..-1"])
+def test_history_span_past_end(hist, suffix) -> None:
+    assert hist.span(f"{len(hist) + 1}{suffix}") == {}
+
+
+@pytest.mark.parametrize(
+    ("span", "indices"),
+    [("4:", [4]), ("1:999", [1, 2, 3, 4]), ("-999:-1", [1, 2, 3, 4]), ("999:1", [])],
+)
+def test_history_span_boundaries(hist, span, indices) -> None:
+    assert list(hist.span(span)) == indices
+
+
 def test_persisted_history_span(persisted_hist) -> None:
     span = persisted_hist.span("2..")
     assert len(span) == 5
@@ -642,6 +655,20 @@ def test_history_with_span_end(base_app) -> None:
     )
     assert out == expected
     verify_hi_last_result(base_app, 2)
+
+
+@pytest.mark.parametrize("span", ["2:", "2:3", "2..", "2..3"])
+def test_history_run_span_past_end(base_app, span) -> None:
+    run_cmd(base_app, "set debug true")
+    assert len(base_app.history) == 1
+    base_app.debug = False
+
+    out, err = run_cmd(base_app, f"history --run {span}")
+
+    assert base_app.debug is False
+    assert out == []
+    assert err == []
+    assert len(base_app.history) == 1
 
 
 def test_history_with_span_index_error(base_app) -> None:
