@@ -1,16 +1,5 @@
 # Annotated Argument Processing
 
-!!! warning "Experimental"
-
-    The `@with_annotated` decorator and its supporting `Argument` / `Option` metadata classes are
-    **experimental**. The public API, the surface of accepted type annotations, and the generated
-    argparse behavior may all change in future releases without a deprecation cycle. Pin a specific
-    `cmd2` version if you depend on the exact current semantics, and expect to revisit your usage on
-    upgrades.
-
-    For production code that needs stable behavior, use
-    [@with_argparser](argument_processing.md#with_argparser-decorator) instead.
-
 The [@with_annotated][cmd2.with_annotated] decorator builds an argparse parser automatically from
 the decorated function's type annotations. No manual `add_argument()` calls are required, and the
 command body receives typed keyword arguments directly instead of an `argparse.Namespace`.
@@ -45,9 +34,8 @@ The two decorators are interchangeable -- here is the same command written both 
 
 The annotated version is more concise, gives you typed parameters, and supports several advanced
 cmd2 features directly, including `ns_provider`, `with_unknown_args`, and typed subcommands. Pick
-`@with_argparser` when you need a stable, well-established API or fine-grained control over the
-parser; pick `@with_annotated` when you want type-hint-driven ergonomics and can accept the
-experimental status.
+`@with_argparser` when you want direct control over the parser or already have one; pick
+`@with_annotated` when you want type-hint-driven ergonomics.
 
 ## Basic usage
 
@@ -815,16 +803,3 @@ Specifically:
 
 With `@with_argparser`, provide `choices`, `choices_provider`, or `completer` explicitly when you
 want completion behavior.
-
-## Stability and feedback
-
-Because this feature is experimental:
-
-- Behavior of edge cases (mixed-type tuples, deeply-nested `Annotated`, conflicting metadata) may
-  change.
-- Diagnostic error messages may be reworded.
-- The set of supported type annotations may be expanded or trimmed.
-
-If you depend on `@with_annotated`, please share feedback and edge cases via the
-[issue tracker](https://github.com/python-cmd2/cmd2/issues) so behavior can be locked in before the
-feature graduates out of experimental.

@@ -38,7 +38,7 @@ from .theme import get_pt_theme
 from .toolbar_painter import ToolbarPainter
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Generator
 
     from prompt_toolkit.formatted_text import AnyFormattedText
     from prompt_toolkit.shortcuts import PromptSession
@@ -248,7 +248,7 @@ class ReservedToolbar:
         return error
 
     @contextmanager
-    def _job_control(self, app: Any) -> "Iterator[None]":
+    def _job_control(self, app: Any) -> "Generator[None]":
         """Release the physical reservation inside upstream's cooked-mode handoff."""
         original = app.suspend_to_background
         # Whether anything had replaced upstream's method. The command display installs its own
@@ -289,7 +289,7 @@ class ReservedToolbar:
         )
 
     @contextmanager
-    def prompt_session(self, session: "PromptSession[Any]") -> "Iterator[None]":
+    def prompt_session(self, session: "PromptSession[Any]") -> "Generator[None]":
         """Lend the reservation to a temporary prompt after the command reader has stopped."""
         if session is self._session:
             yield
@@ -301,7 +301,7 @@ class ReservedToolbar:
             yield
 
     @contextmanager
-    def prompt_application(self, app: Any, native: ConditionalContainer | None = None) -> "Iterator[None]":
+    def prompt_application(self, app: Any, native: ConditionalContainer | None = None) -> "Generator[None]":
         """Bind a managed input application while retaining the physical reservation."""
         previous_output, previous_renderer_output = app.output, app.renderer.output
         previous_filter = native.filter if native is not None else Never()
@@ -343,7 +343,7 @@ class ReservedToolbar:
             yield
 
     @contextmanager
-    def suspended(self, *, defer_band_clear: bool = False) -> "Iterator[None]":
+    def suspended(self, *, defer_band_clear: bool = False) -> "Generator[None]":
         """Give the rows back for the duration of the block, and take them again after.
 
         A program that inherits the terminal -- a shell command, an editor, an external pager

@@ -84,16 +84,15 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
     pager.write_text(
         "import errno, os, pathlib, signal, sys, termios, tty\n"
         f"if {launcher == 'exec'!r}: assert signal.getsignal(signal.SIGTSTP) == signal.SIG_IGN\n"
-        # Interactive bash leaves TTIN/TTOU ignored when exec replaces it. Give
-        # the simulated pager normal terminal-access stops: EOF can arrive before
-        # cmd2 lends it the terminal, and an ignored TTIN makes that read fail with
-        # EIO instead of waiting for the handoff. Preserve the inherited TSTP policy.
+        # Interactive bash leaves TTIN/TTOU ignored when exec replaces it. Give the simulated pager normal terminal-access
+        # stops: EOF can arrive before cmd2 lends it the terminal, and an ignored TTIN makes that read fail with EIO instead of
+        # waiting for the handoff. Preserve the inherited TSTP policy.
         "signal.signal(signal.SIGTTIN, signal.SIG_DFL)\n"
         "signal.signal(signal.SIGTTOU, signal.SIG_DFL)\n"
         f"pathlib.Path({str(pager_pid)!r}).write_text(str(os.getpid()))\n"
         f"if {finish != 'exit_sigint'!r}: sys.stdin.read()\n"
-        # Like less, use an inherited terminal descriptor for keyboard input when
-        # stdin is a pipe. This also works in the broken detached-session case.
+        # Like less, use an inherited terminal descriptor for keyboard input when stdin is a pipe. This also works in the
+        # broken detached-session case.
         "with os.fdopen(os.dup(sys.stderr.fileno()), 'rb', buffering=0) as terminal:\n"
         "    saved = termios.tcgetattr(terminal)\n"
         "    def setcbreak():\n"
@@ -103,9 +102,9 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
         "                return\n"
         "            except termios.error as error:\n"
         "                if error.args[0] != errno.EINTR: raise\n"
-        # os.write rather than print: a signal handler that uses buffered stdout raises
-        # "reentrant call inside <_io.BufferedWriter>" when the signal lands mid-write,
-        # which happens when the job is stopped while still reporting readiness.
+        # os.write rather than print: a signal handler that uses buffered stdout raises "reentrant call inside
+        # <_io.BufferedWriter>" when the signal lands mid-write, which happens when the job is stopped while still reporting
+        # readiness.
         "    def resume(*args):\n"
         "        setcbreak()\n"
         "        os.write(1, b'PAGER_RESUMED\\n')\n"
@@ -137,9 +136,9 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
         "import getpass, os, pathlib, signal, threading, time\n"
         "signal.signal(signal.SIGTSTP, signal.SIG_DFL)\n"
         f"if {relay == 'worker'!r}:\n"
-        # The kernel may hand a signal to a thread other than the one it was aimed at.
-        # Deliver the job-control relay to the watcher that sends it, so the main thread,
-        # blocked in a pipe write or a wait, only learns of it if it returns on its own.
+        # The kernel may hand a signal to a thread other than the one it was aimed at. Deliver the job-control relay to the
+        # watcher that sends it, so the main thread, blocked in a pipe write or a wait, only learns of it if it returns on its
+        # own.
         "    _pthread_kill = signal.pthread_kill\n"
         "    signal.pthread_kill = lambda thread_id, signum: _pthread_kill(threading.get_ident(), signum)\n"
         f"pathlib.Path({str(application_pid)!r}).write_text(str(os.getpid()))\n"
@@ -175,8 +174,8 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
         "            while not request.exists():\n"
         "                time.sleep(0.01)\n"
         "            request.unlink()\n"
-        # A process-directed signal can be delivered to any unblocked thread.
-        # Force that case so an indefinite main-thread wait cannot pass by luck.
+        # A process-directed signal can be delivered to any unblocked thread. Force that case so an indefinite main-thread wait
+        # cannot pass by luck.
         "            signal.pthread_kill(threading.get_ident(), signal.SIGINT)\n"
         "    threading.Thread(target=interrupt_from_worker, daemon=True).start()\n"
         "app.cmdloop()\n",
@@ -184,19 +183,15 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
     )
     master, slave = pty.openpty()
     fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 24, 80, 0, 0))
-    if finish == "exit_sigint":
-        settings = termios.tcgetattr(slave)
-        settings[3] |= termios.TOSTOP
-        termios.tcsetattr(slave, termios.TCSANOW, settings)
-    # Establish a controlling terminal in a fresh interpreter, avoiding preexec_fn
-    # (unsafe when pytest or its plugins have started threads).
+    # Establish a controlling terminal in a fresh interpreter, avoiding preexec_fn (unsafe when pytest or its plugins have
+    # started threads).
     bootstrap = (
         "import os, fcntl, termios; os.setsid(); "
         "fcntl.ioctl(0, termios.TIOCSCTTY, 0); "
         "os.execv(os.environ['TEST_SHELL'], ['bash', '--noprofile', '--norc', '-i'])"
     )
-    # Exercise the same pipeline shell on developer machines and in CI. An
-    # inherited zsh can exec the pager directly, hiding bash's stop/wait behavior.
+    # Exercise the same pipeline shell on developer machines and in CI. An inherited zsh can exec the pager directly, hiding
+    # bash's stop/wait behavior.
     env = dict(os.environ, TERM="xterm-256color", PS1="OUTER> ", TEST_SHELL=shell, SHELL=shell)
     env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
     process = subprocess.Popen([sys.executable, "-c", bootstrap], stdin=slave, stdout=slave, stderr=slave, env=env)
@@ -206,9 +201,27 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
     stream = pyte.Stream(screen)
     decoder = codecs.getincrementaldecoder("utf-8")("replace")
     transcript = ""
+    # Each resize with the size read back straight after it, to tell a resize that never took effect from one undone later.
+    resizes: list[str] = []
+
+    def terminal_size() -> tuple[int, int]:
+        rows, columns, _, _ = struct.unpack("HHHH", fcntl.ioctl(master, termios.TIOCGWINSZ, b"\0" * 8))
+        return rows, columns
 
     def send(data):
         os.write(master, data.encode())
+
+    def stop_background_output():
+        """Set TOSTOP, so that a write from the background stops the writer.
+
+        Ctrl-C's handler may write while cmd2 has lent the terminal to the pager. Set it only
+        while cmd2's command runs: bash intermittently stops a job it has just started on a
+        TOSTOP terminal, before the job runs a line of its own. When the job stops, bash
+        restores its own terminal modes, so its commands during the stop run without it.
+        """
+        settings = termios.tcgetattr(master)
+        settings[3] |= termios.TOSTOP
+        termios.tcsetattr(master, termios.TCSANOW, settings)
 
     def wait_until(predicate):
         nonlocal transcript
@@ -220,7 +233,10 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
                 stream.feed(data)
             if predicate():
                 return
-        pytest.fail(f"terminal condition timed out:\n{transcript}\n{describe_processes(process.pid, master)}")
+        pytest.fail(
+            f"terminal condition timed out:\n{transcript}\n{describe_processes(process.pid, master)}\n"
+            f"resizes: {resizes}\nterminal size at timeout: {terminal_size()}"
+        )
 
     def stopped(*pids: int) -> bool:
         """Whether every process is stopped, not merely deprived of the terminal.
@@ -252,18 +268,16 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
             launch = "exec " + launch
         send(launch + "\n")
         wait_until(lambda: "TEST>" in "\n".join(screen.display))
-        # A foreground-group query is an observation, not the child's identity.
-        # It can change during startup and handoffs. Never use an unverified
-        # foreground query as a kill()/killpg() destination.
+        # A foreground-group query is an observation, not the child's identity. It can change during startup and handoffs.
+        # Never use an unverified foreground query as a kill()/killpg() destination.
         app_pid = int(application_pid.read_text())
         job_group = os.getpgid(app_pid)
         assert job_group > 1
         wait_until(lambda: os.tcgetpgrp(master) == job_group)
         command = "busy" if finish == "exit_sigint" else "help -v"
         if producer == "shell":
-            # A shell command writes into the pipe itself rather than through cmd2's
-            # stdout, so cmd2 cannot lend the terminal write by write. Like seq or git
-            # log, this producer dies from SIGINT rather than handling it.
+            # A shell command writes into the pipe itself rather than through cmd2's stdout, so cmd2 cannot lend the terminal
+            # write by write. Like seq or git log, this producer dies from SIGINT rather than handling it.
             busy_script = tmp_path / "busy.py"
             busy_script.write_text(
                 "import os, signal, sys, time\n"
@@ -285,8 +299,8 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
             command = f"shell {shlex.quote(sys.executable)} {shlex.quote(str(input_script))}"
         pipe_command = f"{shlex.quote(sys.executable)} {shlex.quote(str(pager))}"
         if shell_child:
-            # Keep a shell between Popen and the terminal reader, rather than allowing
-            # the final command to replace it with exec.
+            # Keep a shell between Popen and the terminal reader, rather than allowing the final command to replace it with
+            # exec.
             pipe_command = f"{shlex.quote(shell)} -c {shlex.quote(pipe_command + '; :')}"
         send(f"{command} | {pipe_command}\n")
         if finish == "direct_input":
@@ -305,12 +319,14 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
         pipeline_group = os.getpgid(pager_process)
         assert pipeline_group > 1
         assert pipeline_group != job_group
-        # Readiness output can precede the foreground handoff. Send terminal
-        # signals and keystrokes only once the pipeline can receive them.
+        # Readiness output can precede the foreground handoff. Send terminal signals and keystrokes only once the pipeline can
+        # receive them.
         wait_until(lambda: os.tcgetpgrp(master) == pipeline_group)
+        if finish == "exit_sigint":
+            stop_background_output()
         if launcher == "exec":
-            # There is no outer shell to run fg: Ctrl-Z must leave the pager
-            # usable. Require a fresh read acknowledgement, not a SIGCONT.
+            # There is no outer shell to run fg: Ctrl-Z must leave the pager usable. Require a fresh read acknowledgement, not
+            # a SIGCONT.
             start = len(transcript)
             send("\x1ap")
             wait_until(lambda: "PAGER_ALIVE\r\n" in transcript[start:])
@@ -323,22 +339,36 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
             # A child left running can steal these keystrokes from the shell.
             send("printf 'SHELL_%s\\n' OWNS_INPUT\n")
             wait_until(lambda start=start: "SHELL_OWNS_INPUT" in transcript[start:])
-            fcntl.ioctl(master, termios.TIOCSWINSZ, struct.pack("HHHH", rows, 80, 0, 0))
             screen.resize(lines=rows, columns=80)
-            start = len(transcript)
-            send("stty size\n")
-            # Bash 5.1+ turns bracketed paste off with "\x1b[?2004l\r" before running the
-            # command, so the reply may follow a bare "\r" rather than "\r\n".
-            wait_until(lambda start=start, rows=rows: re.search(rf"[\r\n]{rows} 80\r\n", transcript[start:]) is not None)
+            # The shell sees the resize while the job is stopped. Under a loaded parallel run the pseudo-terminal occasionally
+            # reports its old size again, though every process of the job is stopped and nothing here sets a size. So confirm
+            # the size through the shell, and resize again if it saw the old one. Every attempt is reported on failure.
+            for _ in range(5):
+                fcntl.ioctl(master, termios.TIOCSWINSZ, struct.pack("HHHH", rows, 80, 0, 0))
+                resizes.append(f"requested {rows}x80, read back {terminal_size()}")
+                start = len(transcript)
+                send("stty size\n")
+                # Bash 5.1+ turns bracketed paste off with "\x1b[?2004l\r" before running the command, so the reply may follow
+                # a bare "\r" rather than "\r\n".
+                wait_until(lambda start=start: re.search(r"[\r\n]\d+ \d+\r\n", transcript[start:]) is not None)
+                reply = re.search(r"[\r\n](\d+) (\d+)\r\n", transcript[start:])
+                assert reply is not None
+                resizes.append(f"the shell saw {reply.group(1)}x{reply.group(2)}")
+                if reply.groups() == (str(rows), "80"):
+                    break
+            else:
+                pytest.fail(f"the shell never saw a {rows}x80 terminal: {resizes}")
             start = len(transcript)
             send("fg\n")
             wait_until(lambda start=start: "PAGER_RESUMED\r\n" in transcript[start:])
             assert os.tcgetpgrp(master) == pipeline_group
+            if finish == "exit_sigint":
+                stop_background_output()
         if finish == "exit_sigint":
             send("\x03")
         elif finish == "interrupts":
-            # Exercise every signal route on this live pipeline, avoiding a fresh
-            # interpreter and terminal setup for each overlapping matrix combination.
+            # Exercise every signal route on this live pipeline, avoiding a fresh interpreter and terminal setup for each
+            # overlapping matrix combination.
             sources = ("terminal", "terminal", "process", "process", "thread", "thread", "group", "group")
             for expected_count, source in enumerate(sources, start=1):
                 if source == "process":
@@ -351,8 +381,8 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
                 else:
                     send("\x03")
                 wait_until(lambda count=expected_count: transcript.count("PAGER_INTERRUPT\r\n") >= count)
-                # Keep the handler alive long enough to observe a duplicate delivery,
-                # then also check that a second real interrupt is not suppressed.
+                # Keep the handler alive long enough to observe a duplicate delivery, then also check that a second real
+                # interrupt is not suppressed.
                 deadline = time.monotonic() + 0.1
                 wait_until(lambda deadline=deadline: time.monotonic() >= deadline)
                 assert interrupts.read_text() == "I" * expected_count
@@ -360,8 +390,8 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
             send("q")
         wait_until(lambda: os.tcgetpgrp(master) == job_group and "TEST>" in "\n".join(screen.display))
         if producer == "shell":
-            # Ctrl-C reached the producer directly, as in a shell pipeline. It did not
-            # merely die of a broken pipe once the pager was gone.
+            # Ctrl-C reached the producer directly, as in a shell pipeline. It did not merely die of a broken pipe once the
+            # pager was gone.
             wait_until(last_result.exists)
             assert last_result.read_text() == repr(-signal.SIGINT)
         start = len(transcript)
@@ -381,8 +411,8 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
         if pipeline_group is not None:
             with contextlib.suppress(ProcessLookupError):
                 os.killpg(pipeline_group, signal.SIGKILL)
-        # Release the PTY before reaping its session leader. On macOS, waiting
-        # while the master is still open can leave terminal teardown blocked.
+        # Release the PTY before reaping its session leader. On macOS, waiting while the master is still open can leave
+        # terminal teardown blocked.
         os.close(master)
         process.kill()
         process.wait(timeout=5)
@@ -401,9 +431,9 @@ def test_pipeline_from_worker_thread_stays_isolated(tmp_path) -> None:
         pytest.skip("requires an interactive bash shell")
     application = tmp_path / "application.py"
     application.write_text(
-        "from cmd2 import Cmd, ToolbarMode\n"
+        "from cmd2 import Cmd\n"
         "import os, threading\n"
-        "app = Cmd(bottom_toolbar_mode=ToolbarMode.OFF)\n"
+        "app = Cmd()\n"
         "outcome = []\n"
         "worker = threading.Thread(target=lambda: outcome.append(app.onecmd_plus_hooks('help quit | cat')))\n"
         "worker.start()\n"
@@ -474,8 +504,8 @@ def test_pager_resumes_with_raw_terminal_after_suspend(tmp_path, mode) -> None:
         "class App(Cmd):\n"
         "    def do_page(self, statement):\n"
         "        self.ppaged('\\n'.join(f'line {n:04d}' for n in range(400)))\n"
-        # A refreshing toolbar, as in the examples: its periodic redraws are what turn a
-        # cooked terminal into a stream of echoed cursor reports.
+        # A refreshing toolbar, as in the examples: its periodic redraws are what turn a cooked terminal into a stream of echoed
+        # cursor reports.
         f"app = App(bottom_toolbar_mode=ToolbarMode.{mode.upper()}, refresh_interval=0.5)\n"
         "app.prompt = 'TEST> '\n"
         "app.main_session.bottom_toolbar = 'STATUS'\n"
@@ -550,12 +580,16 @@ def test_pager_resumes_with_raw_terminal_after_suspend(tmp_path, mode) -> None:
 
 
 @pytest.mark.parametrize("mode", ["off", "reserved"])
-def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path, mode) -> None:
+@pytest.mark.parametrize("parent_delay", [False, True])
+def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path, mode, parent_delay) -> None:
     """A pager such as less puts the terminal in raw mode as it starts, before reading its pipe.
 
     It has to own the terminal by then. A background tcsetattr() stops it with SIGTTOU, and
     on macOS the call then fails with EINTR once it is continued rather than being restarted.
     less ignores that failure, leaving a cooked terminal: q needs Enter and keys are echoed.
+
+    However late cmd2 gets to hand the terminal over after starting the pipeline, the pager
+    must not start before it has.
     """
     import pty
     import termios
@@ -588,18 +622,25 @@ def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path, mode) -> Non
     application.write_text(
         "import pathlib, time\n"
         "from cmd2 import Cmd, ToolbarMode, utils\n"
-        # The pipeline's first wait is cmd2's 0.2s startup check. Hold it open until the pager
-        # has reported, so the test does not race that timer on a busy CI runner: what it checks
-        # is that the pager owns the terminal throughout the check, however slowly it starts.
-        "startup_wait = utils.ProcReader.wait_for_exit\n"
+        # The pipeline's first wait is cmd2's 0.2s startup check. Hold it open until the pager has reported, so the test does
+        # not race that timer on a busy CI runner: what it checks is that the pager owns the terminal throughout the check,
+        # however slowly it starts.
+        "startup_wait = utils.ProcReader._wait_for_exit\n"
         "def held_startup_wait(reader, timeout=None):\n"
-        "    utils.ProcReader.wait_for_exit = startup_wait\n"
+        "    utils.ProcReader._wait_for_exit = startup_wait\n"
         f"    outcome = pathlib.Path({str(outcome)!r})\n"
         "    deadline = time.monotonic() + 5\n"
         "    while time.monotonic() < deadline and not (outcome.exists() and outcome.read_text()):\n"
         "        time.sleep(0.01)\n"
         "    return startup_wait(reader, timeout)\n"
-        "utils.ProcReader.wait_for_exit = held_startup_wait\n"
+        "utils.ProcReader._wait_for_exit = held_startup_wait\n"
+        f"if {parent_delay!r}:\n"
+        # Stall between starting the pipeline and handing it the terminal.
+        "    start_job_control = utils.ProcReader._manage_terminal\n"
+        "    def late_job_control(reader):\n"
+        "        time.sleep(0.5)\n"
+        "        return start_job_control(reader)\n"
+        "    utils.ProcReader._manage_terminal = late_job_control\n"
         f"app = Cmd(bottom_toolbar_mode=ToolbarMode.{mode.upper()})\n"
         "app.prompt = 'TEST> '\n"
         "app.main_session.bottom_toolbar = 'STATUS'\n"
@@ -764,10 +805,7 @@ def test_shell_producer_keeps_the_terminal_after_its_consumer_exits(tmp_path, su
     )
     application = tmp_path / "application.py"
     application.write_text(
-        "from cmd2 import Cmd, ToolbarMode\n"
-        "app = Cmd(bottom_toolbar_mode=ToolbarMode.OFF)\n"
-        "app.prompt = 'TEST> '\n"
-        "app.cmdloop()\n",
+        "from cmd2 import Cmd\napp = Cmd()\napp.prompt = 'TEST> '\napp.cmdloop()\n",
         encoding="utf-8",
     )
     master, slave = pty.openpty()
@@ -820,6 +858,624 @@ def test_shell_producer_keeps_the_terminal_after_its_consumer_exits(tmp_path, su
         wait_until(lambda: "Exit this application" in transcript[start:])
         os.write(master, b"quit\n")
         wait_until(lambda: os.tcgetpgrp(master) == process.pid)
+    finally:
+        os.close(master)
+        process.kill()
+        process.wait(timeout=5)
+
+
+@pytest.mark.parametrize("producer", ["subprocess", "script_shell", "nested_pipe"])
+def test_pager_gets_the_terminal_for_output_written_to_the_descriptor(tmp_path, producer) -> None:
+    """A producer that writes to the pipe's descriptor itself, bypassing cmd2's writes, cannot trigger a lend per write.
+
+    Such as a subprocess given self.stdout, a shell command run by a script, or a pipeline nested
+    in a piped command. Once the pipe is full, the pager has to be lent the terminal to read the
+    keys that let it go on. Otherwise it stops with SIGTTIN while the producer waits on it forever.
+    """
+    import pty
+
+    shell = shutil.which("bash")
+    if shell is None:
+        pytest.skip("requires an interactive bash shell")
+    big = tmp_path / "big.py"
+    big.write_text("import sys\nsys.stdout.write('x' * 1048576)\n", encoding="utf-8")
+    pager = tmp_path / "pager.py"
+    pager.write_text(
+        "import os, signal, sys\n"
+        # Interactive bash leaves TTIN ignored in what it execs, which turns a background read into EIO.
+        "signal.signal(signal.SIGTTIN, signal.SIG_DFL)\n"
+        "sys.stdin.buffer.read(4096)\n"
+        "os.write(2, b'PAGER_READY\\n')\n"
+        # Like less, read the keyboard from an inherited terminal descriptor. Quit without draining the pipe, which the
+        # producer must then learn of.
+        "os.write(2, b'PAGER_GOT ' + os.read(2, 1) + b'\\n')\n",
+        encoding="utf-8",
+    )
+    python = shlex.quote(sys.executable)
+    script = tmp_path / "script.txt"
+    script.write_text(
+        f"!{python} {shlex.quote(str(big))}\n" if producer == "script_shell" else "big | cat\n", encoding="utf-8"
+    )
+    application = tmp_path / "application.py"
+    application.write_text(
+        "import subprocess, sys\n"
+        "from cmd2 import Cmd\n"
+        "class App(Cmd):\n"
+        "    def do_sub(self, _):\n"
+        f"        subprocess.run([sys.executable, {str(big)!r}], stdout=self.stdout, check=False)\n"
+        "    def do_big(self, _):\n"
+        "        self.poutput('y' * 1048576)\n"
+        "app = App()\n"
+        "app.prompt = 'TEST> '\n"
+        "app.cmdloop()\n",
+        encoding="utf-8",
+    )
+    master, slave = pty.openpty()
+    bootstrap = (
+        "import os, fcntl, termios; os.setsid(); "
+        "fcntl.ioctl(0, termios.TIOCSCTTY, 0); "
+        "os.execv(os.environ['TEST_SHELL'], ['bash', '--noprofile', '--norc', '-i'])"
+    )
+    env = dict(os.environ, TERM="xterm-256color", PS1="OUTER> ", TEST_SHELL=shell, SHELL=shell)
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
+    process = subprocess.Popen([sys.executable, "-c", bootstrap], stdin=slave, stdout=slave, stderr=slave, env=env)
+    os.close(slave)
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    transcript = ""
+
+    def wait_until(predicate):
+        nonlocal transcript
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if select.select([master], [], [], 0.05)[0]:
+                data = decoder.decode(os.read(master, 65536))
+                transcript += data
+                if "\x1b[6n" in data:
+                    # Answer prompt-toolkit's cursor-position request as a terminal would.
+                    os.write(master, b"\x1b[1;1R")
+            if predicate():
+                return
+        pytest.fail(f"terminal condition timed out:\n{transcript}\n{describe_processes(process.pid, master)}")
+
+    command = "sub" if producer == "subprocess" else f"run_script {shlex.quote(str(script))}"
+    try:
+        wait_until(lambda: "OUTER> " in transcript)
+        os.write(master, f"{python} {shlex.quote(str(application))}\n".encode())
+        wait_until(lambda: "TEST>" in transcript)
+        os.write(master, f"{command} | {python} {shlex.quote(str(pager))}\n".encode())
+        wait_until(lambda: "PAGER_READY\r\n" in transcript)
+        # The pipe fills once the pager has read its first chunk.
+        time.sleep(0.5)
+        start = len(transcript)
+        # The terminal is still canonical: this pager, unlike less, sets no modes.
+        os.write(master, b"q\n")
+        wait_until(lambda: "PAGER_GOT q" in transcript[start:])
+        wait_until(lambda: "TEST>" in transcript[start:])
+        os.write(master, b"quit\n")
+        wait_until(lambda: os.tcgetpgrp(master) == process.pid)
+    finally:
+        os.close(master)
+        process.kill()
+        process.wait(timeout=5)
+
+
+def test_ctrl_z_between_pipe_writes_stops_the_whole_pipeline(tmp_path) -> None:
+    """Ctrl-Z while cmd2 owns the terminal, between writes to its pipe, reaches only cmd2's group.
+
+    A shell would stop the whole job. cmd2 must stop the pipeline along with itself, or a
+    consumer that keeps working goes on writing into the shell session, and continue it on fg.
+    """
+    import pty
+
+    shell = shutil.which("bash")
+    if shell is None:
+        pytest.skip("requires an interactive bash shell")
+    ticks = tmp_path / "ticks"
+    ticker = tmp_path / "ticker.py"
+    ticker.write_text(
+        "import os, select, sys\n"
+        # Tick until cmd2 closes the pipe.
+        "while not select.select([sys.stdin], [], [], 0.05)[0] or sys.stdin.read(1):\n"
+        f"    with open({str(ticks)!r}, 'a') as out: out.write('t')\n",
+        encoding="utf-8",
+    )
+    application = tmp_path / "application.py"
+    application.write_text(
+        "import time\n"
+        "from cmd2 import Cmd\n"
+        "class App(Cmd):\n"
+        "    def do_slow(self, _):\n"
+        "        time.sleep(3)\n"
+        "app = App()\n"
+        "app.prompt = 'TEST> '\n"
+        "app.cmdloop()\n",
+        encoding="utf-8",
+    )
+    master, slave = pty.openpty()
+    bootstrap = (
+        "import os, fcntl, termios; os.setsid(); "
+        "fcntl.ioctl(0, termios.TIOCSCTTY, 0); "
+        "os.execv(os.environ['TEST_SHELL'], ['bash', '--noprofile', '--norc', '-i'])"
+    )
+    env = dict(os.environ, TERM="xterm-256color", PS1="OUTER> ", TEST_SHELL=shell, SHELL=shell)
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
+    process = subprocess.Popen([sys.executable, "-c", bootstrap], stdin=slave, stdout=slave, stderr=slave, env=env)
+    os.close(slave)
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    transcript = ""
+
+    def wait_until(predicate):
+        nonlocal transcript
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if select.select([master], [], [], 0.05)[0]:
+                data = decoder.decode(os.read(master, 65536))
+                transcript += data
+                if "\x1b[6n" in data:
+                    # Answer prompt-toolkit's cursor-position request as a terminal would.
+                    os.write(master, b"\x1b[1;1R")
+            if predicate():
+                return
+        pytest.fail(f"terminal condition timed out:\n{transcript}\n{describe_processes(process.pid, master)}")
+
+    def tick_count() -> int:
+        return len(ticks.read_text()) if ticks.exists() else 0
+
+    python = shlex.quote(sys.executable)
+    try:
+        wait_until(lambda: "OUTER> " in transcript)
+        os.write(master, f"{python} {shlex.quote(str(application))}\n".encode())
+        wait_until(lambda: "TEST>" in transcript)
+        os.write(master, f"slow | {python} {shlex.quote(str(ticker))}\n".encode())
+        wait_until(lambda: tick_count() >= 3)
+        start = len(transcript)
+        os.write(master, b"\x1a")
+        wait_until(lambda: os.tcgetpgrp(master) == process.pid and "OUTER> " in transcript[start:])
+        # A tick in flight as the job stops may still land.
+        deadline = time.monotonic() + 0.2
+        wait_until(lambda: time.monotonic() >= deadline)
+        stopped_at = tick_count()
+        deadline = time.monotonic() + 0.5
+        wait_until(lambda: time.monotonic() >= deadline)
+        assert tick_count() == stopped_at
+        start = len(transcript)
+        os.write(master, b"fg\n")
+        wait_until(lambda: tick_count() > stopped_at)
+        # Only once: cmd2 must not relay the stop it sent the pipeline as a second suspension.
+        wait_until(lambda: "TEST>" in transcript[start:])
+        assert "Stopped" not in transcript[start:]
+        os.write(master, b"quit\n")
+        wait_until(lambda: os.tcgetpgrp(master) == process.pid)
+    finally:
+        os.close(master)
+        process.kill()
+        process.wait(timeout=5)
+
+
+def test_pipeline_continued_in_the_background_leaves_the_terminal_to_the_shell(tmp_path) -> None:
+    """After Ctrl-Z, bg continues cmd2 in the background, and the shell keeps the terminal.
+
+    A write that fills the pipe must not lend it to the consumer, nor take it for cmd2 as the
+    lend ends: either would leave the shell unable to read its own terminal.
+    """
+    import pty
+
+    shell = shutil.which("bash")
+    if shell is None:
+        pytest.skip("requires an interactive bash shell")
+    ready = tmp_path / "ready"
+    drain = tmp_path / "drain"
+    received = tmp_path / "received"
+    consumer = tmp_path / "consumer.py"
+    consumer.write_text(
+        "import os, sys, time\n"
+        f"open({str(ready)!r}, 'w').close()\n"
+        # Like a pager waiting for a key, read nothing until told to.
+        f"while not os.path.exists({str(drain)!r}): time.sleep(0.05)\n"
+        f"open({str(received)!r}, 'w').write(str(len(sys.stdin.buffer.read())))\n",
+        encoding="utf-8",
+    )
+    application = tmp_path / "application.py"
+    application.write_text(
+        "import sys, time\n"
+        "from cmd2 import Cmd\n"
+        "class App(Cmd):\n"
+        "    def do_flood(self, _):\n"
+        "        time.sleep(2)\n"
+        "        sys.stderr.write('FLOOD_START\\n')\n"
+        "        sys.stderr.flush()\n"
+        "        self.stdout.write('x' * 1000000)\n"
+        "        self.stdout.flush()\n"
+        "app = App()\n"
+        "app.prompt = 'TEST> '\n"
+        "app.cmdloop()\n",
+        encoding="utf-8",
+    )
+    master, slave = pty.openpty()
+    bootstrap = (
+        "import os, fcntl, termios; os.setsid(); "
+        "fcntl.ioctl(0, termios.TIOCSCTTY, 0); "
+        "os.execv(os.environ['TEST_SHELL'], ['bash', '--noprofile', '--norc', '-i'])"
+    )
+    env = dict(os.environ, TERM="xterm-256color", PS1="OUTER> ", TEST_SHELL=shell, SHELL=shell)
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
+    process = subprocess.Popen([sys.executable, "-c", bootstrap], stdin=slave, stdout=slave, stderr=slave, env=env)
+    os.close(slave)
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    transcript = ""
+
+    def wait_until(predicate):
+        nonlocal transcript
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if select.select([master], [], [], 0.05)[0]:
+                data = decoder.decode(os.read(master, 65536))
+                transcript += data
+                if "\x1b[6n" in data:
+                    # Answer prompt-toolkit's cursor-position request as a terminal would.
+                    os.write(master, b"\x1b[1;1R")
+            if predicate():
+                return
+        pytest.fail(f"terminal condition timed out:\n{transcript}\n{describe_processes(process.pid, master)}")
+
+    def pause(seconds: float) -> None:
+        deadline = time.monotonic() + seconds
+        wait_until(lambda: time.monotonic() >= deadline)
+
+    python = shlex.quote(sys.executable)
+    try:
+        wait_until(lambda: "OUTER> " in transcript)
+        os.write(master, f"{python} {shlex.quote(str(application))}\n".encode())
+        wait_until(lambda: "TEST>" in transcript)
+        os.write(master, f"flood | {python} {shlex.quote(str(consumer))}\n".encode())
+        wait_until(ready.exists)
+        pause(0.5)
+        start = len(transcript)
+        os.write(master, b"\x1a")
+        wait_until(lambda: os.tcgetpgrp(master) == process.pid and "OUTER> " in transcript[start:])
+        start = len(transcript)
+        os.write(master, b"bg\n")
+        # The command fills the pipe from the background, and waits for the consumer.
+        wait_until(lambda: "FLOOD_START" in transcript[start:])
+        pause(0.5)
+        assert os.tcgetpgrp(master) == process.pid, describe_processes(process.pid, master)
+        start = len(transcript)
+        os.write(master, b"echo AL''IVE\n")
+        wait_until(lambda: "ALIVE" in transcript[start:])
+        drain.touch()
+        wait_until(received.exists)
+        wait_until(lambda: received.read_text() == "1000000")
+        # Back at its prompt in the background, cmd2 stops to read the terminal until fg.
+        start = len(transcript)
+        os.write(master, b"fg\n")
+        wait_until(lambda: "TEST>" in transcript[start:])
+        os.write(master, b"quit\n")
+        wait_until(lambda: os.tcgetpgrp(master) == process.pid and "OUTER> " in transcript[start:])
+    finally:
+        os.close(master)
+        process.kill()
+        process.wait(timeout=5)
+
+
+def test_pipeline_when_the_application_ignores_sigchld(tmp_path) -> None:
+    """With SIGCHLD ignored, the system reaps the pipeline and waitpid() fails with ECHILD.
+
+    The pipeline's watcher must record an exit rather than die with a traceback.
+    """
+    import pty
+
+    shell = shutil.which("bash")
+    if shell is None:
+        pytest.skip("requires an interactive bash shell")
+    application = tmp_path / "application.py"
+    application.write_text(
+        "import signal\n"
+        "from cmd2 import Cmd\n"
+        "class App(Cmd):\n"
+        "    def do_ignoring(self, statement):\n"
+        "        signal.signal(signal.SIGCHLD, signal.SIG_IGN)\n"
+        "        self.onecmd_plus_hooks(statement.args)\n"
+        "        self.poutput('IGNORING_DONE')\n"
+        "app = App()\n"
+        "app.prompt = 'TEST> '\n"
+        "app.cmdloop()\n",
+        encoding="utf-8",
+    )
+    master, slave = pty.openpty()
+    bootstrap = (
+        "import os, fcntl, termios; os.setsid(); "
+        "fcntl.ioctl(0, termios.TIOCSCTTY, 0); "
+        "os.execv(os.environ['TEST_SHELL'], ['bash', '--noprofile', '--norc', '-i'])"
+    )
+    env = dict(os.environ, TERM="xterm-256color", PS1="OUTER> ", TEST_SHELL=shell, SHELL=shell)
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
+    process = subprocess.Popen([sys.executable, "-c", bootstrap], stdin=slave, stdout=slave, stderr=slave, env=env)
+    os.close(slave)
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    transcript = ""
+
+    def wait_until(predicate):
+        nonlocal transcript
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if select.select([master], [], [], 0.05)[0]:
+                data = decoder.decode(os.read(master, 65536))
+                transcript += data
+                if "\x1b[6n" in data:
+                    # Answer prompt-toolkit's cursor-position request as a terminal would.
+                    os.write(master, b"\x1b[1;1R")
+            if predicate():
+                return
+        pytest.fail(f"terminal condition timed out:\n{transcript}\n{describe_processes(process.pid, master)}")
+
+    try:
+        wait_until(lambda: "OUTER> " in transcript)
+        os.write(master, f"{shlex.quote(sys.executable)} {shlex.quote(str(application))}\n".encode())
+        wait_until(lambda: "TEST>" in transcript)
+        start = len(transcript)
+        os.write(master, b"ignoring help quit | cat\n")
+        wait_until(lambda: "IGNORING_DONE" in transcript[start:] and "TEST>" in transcript[start:])
+        assert "Exit this application" in transcript[start:]
+        # A dying watcher thread reports its traceback on its own time, which nothing here can wait for. Allow another command
+        # and a moment more.
+        os.write(master, b"help quit\n")
+        wait_until(lambda: transcript[start:].count("Exit this application") == 2)
+        deadline = time.monotonic() + 0.5
+        wait_until(lambda: time.monotonic() >= deadline)
+        assert "Exception in thread" not in transcript[start:]
+        assert "Traceback" not in transcript[start:]
+        os.write(master, b"quit\n")
+        wait_until(lambda: os.tcgetpgrp(master) == process.pid)
+    finally:
+        os.close(master)
+        process.kill()
+        process.wait(timeout=5)
+
+
+def test_ctrl_c_ending_the_pager_does_not_interrupt_protected_code(tmp_path) -> None:
+    """Code under sigint_protection must not get a KeyboardInterrupt, even from a pipe write.
+
+    A pipe write that finds the consumer ended by Ctrl-C raises KeyboardInterrupt, so a command
+    that catches BrokenPipeError is still cancelled. Protected code gets the BrokenPipeError.
+    """
+    import pty
+
+    shell = shutil.which("bash")
+    if shell is None:
+        pytest.skip("requires an interactive bash shell")
+    application = tmp_path / "application.py"
+    application.write_text(
+        "import os\n"
+        "from cmd2 import Cmd\n"
+        "class App(Cmd):\n"
+        "    def do_protected(self, _):\n"
+        "        try:\n"
+        "            with self.sigint_protection:\n"
+        "                os.write(2, b'WRITING\\n')\n"
+        "                self.stdout.write('x' * 1048576)\n"
+        "                self.stdout.flush()\n"
+        "        except BrokenPipeError:\n"
+        "            os.write(2, b'GOT_BROKEN_PIPE\\n')\n"
+        "        except KeyboardInterrupt:\n"
+        "            os.write(2, b'GOT_KEYBOARD_INTERRUPT\\n')\n"
+        "app = App()\n"
+        "app.prompt = 'TEST> '\n"
+        "app.cmdloop()\n",
+        encoding="utf-8",
+    )
+    master, slave = pty.openpty()
+    bootstrap = (
+        "import os, fcntl, termios; os.setsid(); "
+        "fcntl.ioctl(0, termios.TIOCSCTTY, 0); "
+        "os.execv(os.environ['TEST_SHELL'], ['bash', '--noprofile', '--norc', '-i'])"
+    )
+    env = dict(os.environ, TERM="xterm-256color", PS1="OUTER> ", TEST_SHELL=shell, SHELL=shell)
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
+    process = subprocess.Popen([sys.executable, "-c", bootstrap], stdin=slave, stdout=slave, stderr=slave, env=env)
+    os.close(slave)
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    transcript = ""
+
+    def wait_until(predicate):
+        nonlocal transcript
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if select.select([master], [], [], 0.05)[0]:
+                data = decoder.decode(os.read(master, 65536))
+                transcript += data
+                if "\x1b[6n" in data:
+                    # Answer prompt-toolkit's cursor-position request as a terminal would.
+                    os.write(master, b"\x1b[1;1R")
+            if predicate():
+                return
+        pytest.fail(f"terminal condition timed out:\n{transcript}\n{describe_processes(process.pid, master)}")
+
+    try:
+        wait_until(lambda: "OUTER> " in transcript)
+        os.write(master, f"{shlex.quote(sys.executable)} {shlex.quote(str(application))}\n".encode())
+        wait_until(lambda: "TEST>" in transcript)
+        # sleep reads nothing, so the write blocks with the terminal lent to it.
+        os.write(master, b"protected | sleep 30\n")
+        wait_until(lambda: "WRITING\r\n" in transcript)
+        wait_until(lambda: os.tcgetpgrp(master) not in (process.pid, os.getpgid(process.pid)))
+        start = len(transcript)
+        os.write(master, b"\x03")
+        wait_until(lambda: "GOT_" in transcript[start:])
+        assert "GOT_BROKEN_PIPE" in transcript[start:]
+        wait_until(lambda: "TEST>" in transcript[start:])
+        os.write(master, b"quit\n")
+        wait_until(lambda: os.tcgetpgrp(master) == process.pid)
+    finally:
+        os.close(master)
+        process.kill()
+        process.wait(timeout=5)
+
+
+@pytest.mark.parametrize("launcher", ["plain", "exec"])
+@pytest.mark.parametrize("consumer", ["stops", "ignores_ctrl_z"])
+def test_ctrl_z_with_a_shell_producer_in_the_pipeline(tmp_path, launcher, consumer) -> None:
+    """Ctrl-Z in `shell <producer> | <consumer>` suspends the whole job, or none of it.
+
+    The producer joins the pipeline's job. Run from a shell, whichever process stops first
+    suspends the job, including when the consumer ignores Ctrl-Z and never stops itself. As a
+    session leader, cmd2's job has no shell to resume it, so Ctrl-Z must stop none of it: the
+    producer ignores SIGTSTP just as the consumer does. Otherwise the producer stops for good
+    while cmd2 waits for it.
+    """
+    import pty
+
+    shell = shutil.which("bash")
+    if shell is None:
+        pytest.skip("requires an interactive bash shell")
+    python = shlex.quote(sys.executable)
+    producer = tmp_path / "producer.py"
+    producer.write_text(
+        "import os, time\nos.write(2, b'PRODUCER_READY\\n')\ntime.sleep(1.5)\nprint('PRODUCED')\n",
+        encoding="utf-8",
+    )
+    ignoring = tmp_path / "ignoring.py"
+    ignoring.write_text(
+        "import signal, sys\nsignal.signal(signal.SIGTSTP, signal.SIG_IGN)\nsys.stdout.write(sys.stdin.read())\n",
+        encoding="utf-8",
+    )
+    application = tmp_path / "application.py"
+    application.write_text(
+        "from cmd2 import Cmd\napp = Cmd()\napp.prompt = 'TEST> '\napp.cmdloop()\n",
+        encoding="utf-8",
+    )
+    master, slave = pty.openpty()
+    bootstrap = (
+        "import os, fcntl, termios; os.setsid(); "
+        "fcntl.ioctl(0, termios.TIOCSCTTY, 0); "
+        "os.execv(os.environ['TEST_SHELL'], ['bash', '--noprofile', '--norc', '-i'])"
+    )
+    env = dict(os.environ, TERM="xterm-256color", PS1="OUTER> ", TEST_SHELL=shell, SHELL=shell)
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
+    process = subprocess.Popen([sys.executable, "-c", bootstrap], stdin=slave, stdout=slave, stderr=slave, env=env)
+    os.close(slave)
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    transcript = ""
+
+    def wait_until(predicate):
+        nonlocal transcript
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if select.select([master], [], [], 0.05)[0]:
+                data = decoder.decode(os.read(master, 65536))
+                transcript += data
+                if "\x1b[6n" in data:
+                    # Answer prompt-toolkit's cursor-position request as a terminal would.
+                    os.write(master, b"\x1b[1;1R")
+            if predicate():
+                return
+        pytest.fail(f"terminal condition timed out:\n{transcript}\n{describe_processes(process.pid, master)}")
+
+    consumer_command = "cat" if consumer == "stops" else f"{python} {shlex.quote(str(ignoring))}"
+    try:
+        wait_until(lambda: "OUTER> " in transcript)
+        prefix = "exec " if launcher == "exec" else ""
+        os.write(master, f"{prefix}{python} {shlex.quote(str(application))}\n".encode())
+        wait_until(lambda: "TEST>" in transcript)
+        start = len(transcript)
+        os.write(master, f"shell {python} {shlex.quote(str(producer))} | {consumer_command}\n".encode())
+        wait_until(lambda: "PRODUCER_READY\r\n" in transcript[start:])
+        # The producer and consumer own the terminal, so Ctrl-Z reaches both.
+        wait_until(lambda: os.tcgetpgrp(master) not in (process.pid, os.getpgid(process.pid)))
+        os.write(master, b"\x1a")
+        if launcher == "plain":
+            wait_until(lambda: os.tcgetpgrp(master) == process.pid and "OUTER> " in transcript[start:])
+            os.write(master, b"fg\n")
+        wait_until(lambda: "PRODUCED\r\n" in transcript[start:])
+        # cmd2 gets its prompt back. The command, sent early, runs once it has.
+        os.write(master, b"help quit\n")
+        wait_until(lambda: "Exit this application" in transcript[start:])
+        if launcher == "exec":
+            assert "Stopped" not in transcript[start:]
+        os.write(master, b"quit\n")
+    finally:
+        os.close(master)
+        process.kill()
+        process.wait(timeout=5)
+
+
+@pytest.mark.parametrize("launcher", ["plain", "exec"])
+def test_command_reads_the_terminal_after_a_subprocess_wrote_to_a_slow_pipe(tmp_path, launcher) -> None:
+    """Command code resumes in the foreground once a subprocess writing to the pipe has finished.
+
+    Its output can still be on its way to a slow consumer. The consumer never reads the keyboard,
+    so it is never lent the terminal: were it lent, the command's next terminal read would stop
+    cmd2 with SIGTTIN, or fail with EIO in an orphaned session.
+    """
+    import pty
+
+    shell = shutil.which("bash")
+    if shell is None:
+        pytest.skip("requires an interactive bash shell")
+    python = shlex.quote(sys.executable)
+    producer = tmp_path / "producer.py"
+    producer.write_text("import sys\nsys.stdout.write('x' * 262144)\n", encoding="utf-8")
+    slow = tmp_path / "slow.py"
+    slow.write_text("import sys, time\nwhile sys.stdin.buffer.read(16384):\n    time.sleep(0.15)\n", encoding="utf-8")
+    application = tmp_path / "application.py"
+    application.write_text(
+        "import os, subprocess, sys\n"
+        "from cmd2 import Cmd\n"
+        "class App(Cmd):\n"
+        "    def do_produce(self, _):\n"
+        f"        subprocess.run([sys.executable, {str(producer)!r}], stdout=self.stdout, check=True)\n"
+        "        os.write(2, b'ASKING\\n')\n"
+        "        try:\n"
+        "            os.write(2, f'ANSWER={input()}\\n'.encode())\n"
+        "        except (OSError, EOFError) as error:\n"
+        "            os.write(2, f'READ_FAILED {error!r}\\n'.encode())\n"
+        "app = App()\n"
+        "app.prompt = 'TEST> '\n"
+        "app.cmdloop()\n",
+        encoding="utf-8",
+    )
+    master, slave = pty.openpty()
+    bootstrap = (
+        "import os, fcntl, termios; os.setsid(); "
+        "fcntl.ioctl(0, termios.TIOCSCTTY, 0); "
+        "os.execv(os.environ['TEST_SHELL'], ['bash', '--noprofile', '--norc', '-i'])"
+    )
+    env = dict(os.environ, TERM="xterm-256color", PS1="OUTER> ", TEST_SHELL=shell, SHELL=shell)
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
+    process = subprocess.Popen([sys.executable, "-c", bootstrap], stdin=slave, stdout=slave, stderr=slave, env=env)
+    os.close(slave)
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    transcript = ""
+
+    def wait_until(predicate):
+        nonlocal transcript
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
+            if select.select([master], [], [], 0.05)[0]:
+                data = decoder.decode(os.read(master, 65536))
+                transcript += data
+                if "\x1b[6n" in data:
+                    # Answer prompt-toolkit's cursor-position request as a terminal would.
+                    os.write(master, b"\x1b[1;1R")
+            if predicate():
+                return
+        pytest.fail(f"terminal condition timed out:\n{transcript}\n{describe_processes(process.pid, master)}")
+
+    try:
+        wait_until(lambda: "OUTER> " in transcript)
+        prefix = "exec " if launcher == "exec" else ""
+        os.write(master, f"{prefix}{python} {shlex.quote(str(application))}\n".encode())
+        wait_until(lambda: "TEST>" in transcript)
+        start = len(transcript)
+        os.write(master, f"produce | {python} {shlex.quote(str(slow))}\n".encode())
+        # The subprocess finishes long before the consumer has read its output.
+        wait_until(lambda: "ASKING\r\n" in transcript[start:])
+        os.write(master, b"answer\n")
+        wait_until(
+            lambda: (
+                "ANSWER=answer" in transcript[start:] or "READ_FAILED" in transcript[start:] or "Stopped" in transcript[start:]
+            )
+        )
+        assert "ANSWER=answer" in transcript[start:]
     finally:
         os.close(master)
         process.kill()

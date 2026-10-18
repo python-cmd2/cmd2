@@ -29,7 +29,7 @@ cheaper than the class of bug it catches is to diagnose from a hung terminal.
 """
 
 import threading
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from types import TracebackType
@@ -204,7 +204,7 @@ class TerminalLock:
         return _state.transaction is not None
 
     @contextmanager
-    def transaction(self, kind: str, generation: int | None = None) -> Iterator[TransactionState]:
+    def transaction(self, kind: str, generation: int | None = None) -> Generator[TransactionState]:
         """Hold the terminal for the duration of one transaction.
 
         :param kind: what the transaction is for, for diagnostics

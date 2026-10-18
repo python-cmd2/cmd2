@@ -9,7 +9,7 @@ import signal
 import sys
 import threading
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator
 from concurrent.futures import Future
 from concurrent.futures import TimeoutError as FutureTimeoutError
 from typing import TYPE_CHECKING, Any, TextIO, TypeVar, cast
@@ -878,7 +878,7 @@ class CommandToolbar:
             self._call_in_ui(self._restore_legacy_display)
 
     @contextlib.contextmanager
-    def suspend(self) -> Iterator[None]:
+    def suspend(self) -> Generator[None]:
         """Temporarily restore ordinary terminal access, including nested suspensions.
 
         Whether output is proxied or serialized, what has to stop is the display: its renderer

@@ -171,7 +171,7 @@ def _console_mode() -> str:
     """
     try:
         from ctypes import byref, windll  # type: ignore[attr-defined]
-        from ctypes.wintypes import DWORD, HANDLE  # type: ignore[attr-defined]
+        from ctypes.wintypes import DWORD, HANDLE
 
         handle = HANDLE(windll.kernel32.GetStdHandle(-11))
         mode = DWORD()

@@ -21,7 +21,7 @@ Features demonstrated include all of the following:
 """
 
 import argparse
-import datetime
+import datetime as dt
 import pathlib
 import sys
 import threading
@@ -117,11 +117,11 @@ class BasicApp(cmd2.Cmd):
         """Background thread worker to update toolbar state continuously."""
         while not self._stop_thread_event.is_set():
             # Get the current time in ISO format with 0.01s precision
-            dt = datetime.datetime.now(datetime.timezone.utc).astimezone()
-            now = dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-4] + dt.strftime("%z")
+            now_dt = dt.datetime.now(dt.timezone.utc).astimezone()
+            now_str = now_dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-4] + now_dt.strftime("%z")
 
             with self._toolbar_lock:
-                self._toolbar_state["now"] = now
+                self._toolbar_state["now"] = now_str
 
             # Sleep to yield CPU, polling 4 times a second
             self._stop_thread_event.wait(0.25)
