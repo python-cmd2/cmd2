@@ -1471,8 +1471,8 @@ class RedirectionSavedState:
         self.saved_pipe_proc_reader = pipe_proc_reader
         self.saved_redirecting = saved_redirecting
 
-        # Holds what a pipe needs until its pipe process has been reaped: on Windows a UTF-8 console, and for a terminal
-        # pipeline its job control
+        # Holds what a pipe needs until its pipe process has been reaped: the bottom toolbar's suspension while the pipe
+        # process owns the terminal, on Windows a UTF-8 console, and for a terminal pipeline its job control
         self.pipe_context: contextlib.ExitStack | None = None
 
 
