@@ -7,6 +7,7 @@ the caller the legacy behaviour they asked it not to use.
 """
 
 import io
+from importlib.metadata import PackageNotFoundError
 
 import pytest
 from prompt_toolkit.data_structures import Size
@@ -14,6 +15,7 @@ from prompt_toolkit.output import DummyOutput
 from prompt_toolkit.output.vt100 import Vt100_Output
 
 import cmd2
+from cmd2 import toolbar_mode
 from cmd2.toolbar_mode import (
     QUALIFIED_PROMPT_TOOLKIT_VERSIONS,
     ToolbarMode,
@@ -64,6 +66,22 @@ class TestDependencyQualification:
         supported, reason = _dependency_capability("3.0.99")
         assert supported is False
         assert "3.0.99" in reason
+
+    def test_missing_package_metadata_is_unqualified(self, monkeypatch) -> None:
+        """A frozen or vendored application may have no metadata to read the version from."""
+
+        def missing(name: str) -> str:
+            raise PackageNotFoundError(name)
+
+        monkeypatch.setattr(toolbar_mode, "_installed_version", missing)
+        supported, reason = _dependency_capability()
+        assert supported is False
+        assert "cannot be determined" in reason
+
+        # auto falls back rather than failing the command loop.
+        mode, reason = _select_toolbar_mode("auto", qualified_output(), toolbar_enabled=True, interactive=True)
+        assert mode is ToolbarMode.LEGACY
+        assert "cannot be determined" in reason
 
 
 class TestAutomaticSelection:

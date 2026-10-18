@@ -355,7 +355,7 @@ class ToolbarPainter:
         self._autowrap_after_paint = autowrap_after_paint
         self._last_frame: ToolbarFrame | None = None
         self._last_attrs: Mapping[str, Attrs] | None = None
-        self._last_band: tuple[int, int, int, object] | None = None
+        self._last_band: tuple[int, int, int, object, int] | None = None
         self._pending_error: BaseException | None = None
 
     @property
@@ -438,7 +438,16 @@ class ToolbarPainter:
                 return False
 
             frame = prepared.frame
-            band = (geometry.physical_rows, geometry.columns, geometry.reserved_rows, geometry.buffer_id)
+            # Identical coordinates do not imply retained cells. A shrink below the
+            # reservation floor can erase the band, then growth can reacquire exactly
+            # the same dimensions and viewport. The new generation needs a full paint.
+            band = (
+                geometry.physical_rows,
+                geometry.columns,
+                geometry.reserved_rows,
+                geometry.buffer_id,
+                geometry.generation,
+            )
             previous = self._last_frame if band == self._last_band else None
             previous_attrs = self._last_attrs if previous is not None else None
             runs = _changed_runs(previous, previous_attrs, frame, prepared.attrs)

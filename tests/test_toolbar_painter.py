@@ -470,6 +470,23 @@ class TestPainting:
         assert harness.paint("hi") is True
         assert "\x1b[12;1Hhi   " in harness.visible()
 
+    @pytest.mark.parametrize("prepare_while_inactive", [False, True])
+    def test_reacquiring_the_same_band_repaints_all_cells(self, prepare_while_inactive: bool) -> None:
+        """Returning from fallback must not reuse cells painted before the reservation ended."""
+        harness = Harness(rows=3)
+        assert harness.paint("hi") is True
+        harness.display.resize(2)
+        assert not harness.display.is_reserved
+        if prepare_while_inactive:
+            assert harness.painter.prepare(lambda: "hi") is None
+        harness.display.resize(3)
+        harness.clear()
+        assert harness.paint("hi") is True
+        assert "\x1b[3;1Hhi   " in harness.visible()
+        harness.clear()
+        assert harness.paint("hi") is False
+        assert harness.written() == ""
+
     def test_empty_content_is_painted_rather_than_skipped(self) -> None:
         """An empty toolbar is an intentional visibility change and must reach the band."""
         harness = Harness()

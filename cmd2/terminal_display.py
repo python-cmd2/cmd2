@@ -330,6 +330,7 @@ class TerminalDisplay:
         self._depth = 0
         self._adapter: Any = None
         self._handoff_active = False
+        self._deferred_band: Geometry | None = None
 
     @property
     def terminal(self) -> PhysicalTerminal:
@@ -345,6 +346,11 @@ class TerminalDisplay:
     def is_reserved(self) -> bool:
         """Whether a reservation is currently installed."""
         return self._geometry is not None
+
+    @property
+    def handoff_active(self) -> bool:
+        """Whether another terminal owner holds the screen, even below the height floor."""
+        return self._handoff_active
 
     @property
     def output(self) -> "Output":
@@ -428,6 +434,7 @@ class TerminalDisplay:
 
     def _teardown(self) -> None:
         """Restore full-screen margins and drop the adapter."""
+        self.clear_deferred_band()
         self._adapter = None
         self._handoff_active = False
         if self._geometry is None:
@@ -488,7 +495,7 @@ class TerminalDisplay:
             self._adapter = self._make_adapter()
         return True
 
-    def release_region_for_handoff(self) -> None:
+    def release_region_for_handoff(self, *, defer_band_clear: bool = False) -> None:
         """Restore full-screen margins for a program taking the terminal over.
 
         The reservation is remembered rather than dropped: the lease is still held, and
@@ -500,6 +507,9 @@ class TerminalDisplay:
         that had shrunk below the floor is released but still ours, and a guest can take it
         from that state just as readily; tying the record to the geometry snapshot would let
         a later resize reinstall margins over the guest's screen.
+
+        :param defer_band_clear: retain the bar while a managed pager prepares its first
+            frame. The bridge clears it before commit; recovery and teardown clear it too.
         """
         if self._depth == 0:
             return
@@ -507,7 +517,19 @@ class TerminalDisplay:
         if self._geometry is None:
             return
         geometry, self._geometry = self._geometry, None
-        self._terminal.release_region(geometry)
+        if defer_band_clear:
+            # A managed pager can prepare its full-screen frame while the old bar remains
+            # visible. Clear it only when that frame is ready to replace the main screen.
+            self._deferred_band = geometry
+            self._terminal.release_region()
+        else:
+            self._terminal.release_region(geometry)
+
+    def clear_deferred_band(self) -> None:
+        """Clear a pager's retained main-screen bar before emission, recovery, or shutdown."""
+        geometry, self._deferred_band = self._deferred_band, None
+        if geometry is not None:
+            self._terminal.release_region(geometry)
 
     def reacquire_region_after_handoff(self) -> None:
         """Re-establish the reservation after a program hands the terminal back.
@@ -518,6 +540,7 @@ class TerminalDisplay:
         """
         if not self._handoff_active or self._depth == 0:
             return
+        self.clear_deferred_band()
         self._handoff_active = False
         # Coming back is an ordinary reconfiguration, so it goes through the one path that
         # does the whole job: re-check backend capability, measure, install only if the

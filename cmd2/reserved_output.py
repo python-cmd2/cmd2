@@ -55,6 +55,7 @@ class ReservedOutput(Output):
         """
         self._wrapped = wrapped
         self._display = display
+        self._alternate_handoff_owned = False
         # A plain attribute rather than a property: Output declares stdout as writable, and
         # code that reaches for the real stream must find the backend's, not a copy of it.
         self.stdout = getattr(wrapped, "stdout", None)
@@ -158,13 +159,17 @@ class ReservedOutput(Output):
         nothing about a reservation. Margins are restored before the switch so the main
         buffer is left in the state the shell expects if the switch is never undone.
         """
-        self._display.release_region_for_handoff()
+        self._alternate_handoff_owned = not self._display.handoff_active
+        if self._alternate_handoff_owned:
+            self._display.release_region_for_handoff()
         self._wrapped.enter_alternate_screen()
 
     def quit_alternate_screen(self) -> None:
         """Return to the main buffer and re-establish the reservation for its geometry."""
         self._wrapped.quit_alternate_screen()
-        self._display.reacquire_region_after_handoff()
+        if self._alternate_handoff_owned:
+            self._alternate_handoff_owned = False
+            self._display.reacquire_region_after_handoff()
 
     def scroll_buffer_to_prompt(self) -> None:
         """Scroll the Windows viewport to the prompt, then re-check the viewport origin.

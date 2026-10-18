@@ -63,6 +63,9 @@ class SerializedTerminalWriter:
         """
         with self._lock.transaction("managed write"):
             try:
+                before_write = getattr(self.bridge, "before_managed_write", None)
+                if before_write is not None:
+                    before_write()
                 if self._output is None:
                     written = self._stream.write(data)
                 else:
