@@ -229,7 +229,9 @@ class History(list[HistoryItem]):
         :param span: string containing an index or a slice
         :param include_persisted: if True, then retrieve full results including from persisted history
         :return: a dictionary of history items keyed by their 1-based index in ascending order,
-                 or an empty dictionary if no results were found
+                 or an empty dictionary if an open-start range has no results
+        :raises ValueError: if the range format is invalid or an index is zero
+        :raises IndexError: if a range with an explicit start selects no history items
 
         This method can accommodate input in any of these forms:
 
@@ -269,6 +271,9 @@ class History(list[HistoryItem]):
                 end = max(0, len(self) + end + 1)
         else:
             end = len(self)
+
+        if start_token and (start >= len(self) or end <= start):
+            raise IndexError("No history items in range")
 
         return self._build_result_dictionary(start, end)
 

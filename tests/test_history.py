@@ -230,15 +230,38 @@ def test_history_class_span(hist) -> None:
 
 @pytest.mark.parametrize("suffix", [":", ":999", ":-1", "..", "..999", "..-1"])
 def test_history_span_past_end(hist, suffix) -> None:
-    assert hist.span(f"{len(hist) + 1}{suffix}") == {}
+    with pytest.raises(IndexError, match="No history items in range"):
+        hist.span(f"{len(hist) + 1}{suffix}")
 
 
 @pytest.mark.parametrize(
     ("span", "indices"),
-    [("4:", [4]), ("1:999", [1, 2, 3, 4]), ("-999:-1", [1, 2, 3, 4]), ("999:1", [])],
+    [("4:", [4]), ("1:999", [1, 2, 3, 4]), ("-999:-1", [1, 2, 3, 4])],
 )
 def test_history_span_boundaries(hist, span, indices) -> None:
     assert list(hist.span(span)) == indices
+
+
+@pytest.mark.parametrize("span", ["999:1", "3:1", "2:-4", "1:-999"])
+def test_history_span_explicit_start_without_matches(hist, span) -> None:
+    with pytest.raises(IndexError, match="No history items in range"):
+        hist.span(span)
+
+
+@pytest.mark.parametrize("span", ["1:", "-1:"])
+def test_history_span_explicit_start_on_empty_history(hist, span) -> None:
+    hist.clear()
+    with pytest.raises(IndexError, match="No history items in range"):
+        hist.span(span)
+
+
+@pytest.mark.parametrize("span", [":", "..", ":2", ":-999"])
+@pytest.mark.parametrize("empty_history", [False, True])
+def test_history_span_open_start_without_matches(hist, span, empty_history) -> None:
+    if empty_history:
+        hist.clear()
+    hist.start_session()
+    assert hist.span(span) == {}
 
 
 def test_persisted_history_span(persisted_hist) -> None:
@@ -661,6 +684,88 @@ def test_history_with_span_end(base_app) -> None:
 EMPTY_HISTORY_SPANS = ["2", "5", "999", "-2", "2:", "2:3", "2..", "2..3", "2:1"]
 
 
+@pytest.mark.parametrize("selector", ["", ":", "..", ":2"])
+@pytest.mark.parametrize("empty_history", [False, True])
+def test_history_open_start_on_fresh_session(tmp_path, selector, empty_history) -> None:
+    history_file = str(tmp_path / "history.dat")
+    previous_app = cmd2.Cmd(persistent_history_file=history_file)
+    if not empty_history:
+        run_cmd(previous_app, "help")
+        run_cmd(previous_app, "shortcuts")
+    previous_app._persist_history()
+    app = cmd2.Cmd(persistent_history_file=history_file)
+    assert app.history.session_start_index == len(app.history)
+
+    out, err = run_cmd(app, f"history {selector}")
+
+    assert out == []
+    assert err == []
+    assert app.last_result == {}
+
+
+@pytest.mark.parametrize("action", ["--run", "--edit", "--output-file"])
+@pytest.mark.parametrize("selector", [":", "..", ":2"])
+def test_history_open_start_empty_actions(base_app, hist, monkeypatch, tmp_path, action, selector) -> None:
+    base_app.history = hist
+    hist.start_session()
+    output_file = tmp_path / "out.txt"
+    output_file.write_text("old contents\n")
+    edit_mock = mock.MagicMock(name="run_editor")
+    monkeypatch.setattr(base_app, "run_editor", edit_mock)
+    run_script_mock = mock.MagicMock(name="do_run_script")
+    monkeypatch.setattr(base_app, "do_run_script", run_script_mock)
+    run_mock = mock.MagicMock(name="runcmds_plus_hooks")
+    monkeypatch.setattr(base_app, "runcmds_plus_hooks", run_mock)
+    options = f'--output-file "{output_file}"' if action == "--output-file" else action
+
+    _out, err = run_cmd(base_app, f"history {options} {selector}")
+
+    assert err == []
+    if action == "--run":
+        run_mock.assert_called_once_with([])
+        assert base_app.last_result is True
+    elif action == "--edit":
+        edit_mock.assert_called_once()
+        run_script_mock.assert_called_once()
+    else:
+        assert output_file.read_text() == ""
+        assert base_app.last_result is True
+
+
+@pytest.mark.parametrize("span", ["3:1", "2:-4", "1:-999"])
+@pytest.mark.parametrize("action", ["", "--run", "--edit", "--output-file"])
+@pytest.mark.parametrize("debug", [False, True])
+def test_history_reversed_span_has_no_side_effects(base_app, hist, monkeypatch, tmp_path, span, action, debug) -> None:
+    base_app.history = hist
+    base_app.debug = debug
+    mkstemp_mock = mock.MagicMock(name="mkstemp")
+    monkeypatch.setattr("cmd2.cmd2.tempfile.mkstemp", mkstemp_mock)
+    edit_mock = mock.MagicMock(name="run_editor")
+    monkeypatch.setattr(base_app, "run_editor", edit_mock)
+    run_script_mock = mock.MagicMock(name="do_run_script")
+    monkeypatch.setattr(base_app, "do_run_script", run_script_mock)
+    run_mock = mock.MagicMock(name="runcmds_plus_hooks")
+    monkeypatch.setattr(base_app, "runcmds_plus_hooks", run_mock)
+    existing_file = tmp_path / "existing.txt"
+    existing_file.write_text("keep me\n")
+    missing_file = tmp_path / "missing.txt"
+
+    for output_file in (existing_file, missing_file):
+        options = f'--output-file "{output_file}"' if action == "--output-file" else action
+        out, err = run_cmd(base_app, f"history {options} {span}")
+        assert out == []
+        assert err == ["No history items in range"]
+        assert base_app.last_result is False
+
+    mkstemp_mock.assert_not_called()
+    edit_mock.assert_not_called()
+    run_script_mock.assert_not_called()
+    run_mock.assert_not_called()
+    assert len(base_app.history) == 4
+    assert existing_file.read_text() == "keep me\n"
+    assert not missing_file.exists()
+
+
 @pytest.fixture
 def debug_history_app(base_app) -> cmd2.Cmd:
     """App whose only history item is 'set debug true', with debug reset so a rerun is detectable"""
@@ -751,7 +856,7 @@ def test_history_index_past_end_with_three_items(base_app, monkeypatch, tmp_path
     assert output_file.read_text() == "keep me\n"
 
 
-@pytest.mark.parametrize("span", ["1", "-1", "1:", "-1:"])
+@pytest.mark.parametrize("span", ["1", "-1", "1:", "-1:", "-999:"])
 def test_history_run_valid_span(debug_history_app, span) -> None:
     _out, err = run_cmd(debug_history_app, f"history --run -- {span}")
 
@@ -760,7 +865,7 @@ def test_history_run_valid_span(debug_history_app, span) -> None:
     assert debug_history_app.debug is True
 
 
-@pytest.mark.parametrize("span", ["1", "-1", "1:", "-1:"])
+@pytest.mark.parametrize("span", ["1", "-1", "1:", "-1:", "-999:"])
 def test_history_output_file_valid_span(debug_history_app, tmp_path, span) -> None:
     output_file = tmp_path / "out.txt"
     output_file.write_text("old contents\n")
@@ -772,7 +877,7 @@ def test_history_output_file_valid_span(debug_history_app, tmp_path, span) -> No
     assert output_file.read_text() == "set debug true\n"
 
 
-@pytest.mark.parametrize("span", ["1", "-1", "1:"])
+@pytest.mark.parametrize("span", ["1", "-1", "1:", "-999:"])
 def test_history_edit_valid_span(debug_history_app, monkeypatch, span) -> None:
     edited = []
 
@@ -784,7 +889,7 @@ def test_history_edit_valid_span(debug_history_app, monkeypatch, span) -> None:
     run_script_mock = mock.MagicMock(name="do_run_script")
     monkeypatch.setattr("cmd2.Cmd.do_run_script", run_script_mock)
 
-    _out, err = run_cmd(debug_history_app, f"history --edit {span}")
+    _out, err = run_cmd(debug_history_app, f"history --edit -- {span}")
 
     assert err == []
     assert edited == ["set debug true\n"]

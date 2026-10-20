@@ -5501,17 +5501,8 @@ class Cmd:
         # If an argument was supplied, then retrieve partial contents of the history, otherwise retrieve it all
         history = self._get_history(args)
 
-        # Fail fast on an index or range which selects nothing, before running, editing, or saving anything.
-        # A string or regex search which finds nothing is not an error.
-        if not history and args.arg:
-            try:
-                int(args.arg)
-                selects_by_index = True
-            except ValueError:
-                selects_by_index = ".." in args.arg or ":" in args.arg
-            if selects_by_index:
-                self.perror("No history items in range")
-                return None
+        if history is None:
+            return None
 
         if args.run:
             if not args.arg:
@@ -5559,10 +5550,11 @@ class Cmd:
             self.last_result = history
         return None
 
-    def _get_history(self, args: argparse.Namespace) -> dict[int, HistoryItem]:
+    def _get_history(self, args: argparse.Namespace) -> dict[int, HistoryItem] | None:
         """If an argument was supplied, then retrieve partial contents of the history; otherwise retrieve entire history.
 
-        This function returns a dictionary with history items keyed by their 1-based index in ascending order.
+        This function returns a dictionary with history items keyed by their 1-based index in ascending order,
+        or None after reporting an index or range which selects no items.
         """
         if args.arg:
             try:
@@ -5570,14 +5562,19 @@ class Cmd:
             except ValueError:
                 pass
             else:
-                # An index past either end selects nothing. Index 0 still raises its own error from get().
+                # Index 0 still raises its own error from get().
                 if abs(int_arg) > len(self.history):
-                    return {}
+                    self.perror("No history items in range")
+                    return None
                 return {int_arg: self.history.get(int_arg)}
 
             if ".." in args.arg or ":" in args.arg:
                 # Get a slice of history
-                history = self.history.span(args.arg, args.all)
+                try:
+                    history = self.history.span(args.arg, args.all)
+                except IndexError as ex:
+                    self.perror(str(ex))
+                    return None
             elif args.arg.startswith(r"/") and args.arg.endswith(r"/"):
                 history = self.history.regex_search(args.arg, args.all)
             else:

@@ -1,11 +1,20 @@
+## 4.4.0 (TBD)
+
+- Breaking Changes
+    - `History.span()` now raises `IndexError` when a range with an explicit start selects no
+      history items, rather than returning an empty dictionary. Open-start ranges can still return
+      an empty dictionary, and negative starts still clamp to the beginning of history.
+- Bug Fixes
+    - Fixed history ranges starting past the end selecting the last command. Invalid indices and
+      explicit-start ranges selecting no items report `No history items in range` before running,
+      editing, or saving commands. Open-start ranges in an empty session behave like plain
+      `history`.
+
 ## 4.3.1 (TBD)
 
 - Bug Fixes
     - Fixed `@with_annotated` command `--help` output bypassing the application's output stream,
       leaving redirected help files empty and preventing help from being captured by embedded apps.
-    - Fixed history ranges starting past the end selecting the last command. A `history` index or
-      range which selects no items now reports `No history items in range` instead of running,
-      editing, or saving nothing.
 
 ## 4.3.0 (October 13, 2026)
 
