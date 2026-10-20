@@ -1,7 +1,10 @@
 ## 4.3.1 (TBD)
 
-- Fixed history ranges starting past the end selecting the last command, including when using
-  `history --run`.
+- Bug Fixes
+    - Fixed `@with_annotated` command `--help` output bypassing the application's output stream,
+      leaving redirected help files empty and preventing help from being captured by embedded apps.
+    - Fixed history ranges starting past the end selecting the last command, including when using
+      `history --run`.
 
 ## 4.3.0 (October 13, 2026)
 
