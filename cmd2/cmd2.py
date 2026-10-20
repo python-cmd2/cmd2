@@ -5501,6 +5501,18 @@ class Cmd:
         # If an argument was supplied, then retrieve partial contents of the history, otherwise retrieve it all
         history = self._get_history(args)
 
+        # Fail fast on an index or range which selects nothing, before running, editing, or saving anything.
+        # A string or regex search which finds nothing is not an error.
+        if not history and args.arg:
+            try:
+                int(args.arg)
+                selects_by_index = True
+            except ValueError:
+                selects_by_index = ".." in args.arg or ":" in args.arg
+            if selects_by_index:
+                self.perror("No history items in range")
+                return None
+
         if args.run:
             if not args.arg:
                 self.perror("Cowardly refusing to run all previously entered commands.")
@@ -5555,9 +5567,13 @@ class Cmd:
         if args.arg:
             try:
                 int_arg = int(args.arg)
-                return {int_arg: self.history.get(int_arg)}
             except ValueError:
                 pass
+            else:
+                # An index past either end selects nothing. Index 0 still raises its own error from get().
+                if abs(int_arg) > len(self.history):
+                    return {}
+                return {int_arg: self.history.get(int_arg)}
 
             if ".." in args.arg or ":" in args.arg:
                 # Get a slice of history

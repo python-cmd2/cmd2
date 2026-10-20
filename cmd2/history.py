@@ -256,7 +256,7 @@ class History(list[HistoryItem]):
 
         start_token = results.group("start")
         if start_token:
-            start = min(self._zero_based_index(start_token), len(self))
+            start = self._zero_based_index(start_token)
             if start < 0:
                 start = max(0, len(self) + start)
         else:
