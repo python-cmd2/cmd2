@@ -154,6 +154,7 @@ from .exceptions import (
 )
 from .history import (
     History,
+    HistoryIndexError,
     HistoryItem,
 )
 from .parsing import (
@@ -5556,32 +5557,28 @@ class Cmd:
         This function returns a dictionary with history items keyed by their 1-based index in ascending order,
         or None after reporting an index or range which selects no items.
         """
-        if args.arg:
-            try:
-                int_arg = int(args.arg)
-            except ValueError:
-                pass
-            else:
-                # Index 0 still raises its own error from get().
-                if abs(int_arg) > len(self.history):
-                    self.perror("No history items in range")
-                    return None
-                return {int_arg: self.history.get(int_arg)}
-
-            if ".." in args.arg or ":" in args.arg:
-                # Get a slice of history
+        try:
+            if args.arg:
                 try:
+                    int_arg = int(args.arg)
+                except ValueError:
+                    pass
+                else:
+                    return {int_arg: self.history.get(int_arg)}
+
+                if ".." in args.arg or ":" in args.arg:
+                    # Get a slice of history
                     history = self.history.span(args.arg, args.all)
-                except IndexError as ex:
-                    self.perror(str(ex))
-                    return None
-            elif args.arg.startswith(r"/") and args.arg.endswith(r"/"):
-                history = self.history.regex_search(args.arg, args.all)
+                elif args.arg.startswith(r"/") and args.arg.endswith(r"/"):
+                    history = self.history.regex_search(args.arg, args.all)
+                else:
+                    history = self.history.str_search(args.arg, args.all)
             else:
-                history = self.history.str_search(args.arg, args.all)
-        else:
-            # Get a copy of the history so it doesn't get mutated while we are using it
-            history = self.history.span(":", args.all)
+                # Get a copy of the history so it doesn't get mutated while we are using it
+                history = self.history.span(":", args.all)
+        except HistoryIndexError as ex:
+            self.perror(str(ex))
+            return None
         return history
 
     def _initialize_history(self, hist_file: str) -> None:

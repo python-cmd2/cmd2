@@ -10,6 +10,7 @@ from unittest import (
 import pytest
 
 import cmd2
+from cmd2.history import HistoryIndexError
 
 from .conftest import (
     normalize,
@@ -230,7 +231,7 @@ def test_history_class_span(hist) -> None:
 
 @pytest.mark.parametrize("suffix", [":", ":999", ":-1", "..", "..999", "..-1"])
 def test_history_span_past_end(hist, suffix) -> None:
-    with pytest.raises(IndexError, match="No history items in range"):
+    with pytest.raises(HistoryIndexError, match="No history items in range"):
         hist.span(f"{len(hist) + 1}{suffix}")
 
 
@@ -244,24 +245,34 @@ def test_history_span_boundaries(hist, span, indices) -> None:
 
 @pytest.mark.parametrize("span", ["999:1", "3:1", "2:-4", "1:-999"])
 def test_history_span_explicit_start_without_matches(hist, span) -> None:
-    with pytest.raises(IndexError, match="No history items in range"):
+    with pytest.raises(HistoryIndexError, match="No history items in range"):
         hist.span(span)
 
 
 @pytest.mark.parametrize("span", ["1:", "-1:"])
 def test_history_span_explicit_start_on_empty_history(hist, span) -> None:
     hist.clear()
-    with pytest.raises(IndexError, match="No history items in range"):
+    with pytest.raises(HistoryIndexError, match="No history items in range"):
         hist.span(span)
 
 
-@pytest.mark.parametrize("span", [":", "..", ":2", ":-999"])
+@pytest.mark.parametrize("span", [":", ".."])
 @pytest.mark.parametrize("empty_history", [False, True])
-def test_history_span_open_start_without_matches(hist, span, empty_history) -> None:
+def test_history_span_unbounded_without_matches(hist, span, empty_history) -> None:
     if empty_history:
         hist.clear()
     hist.start_session()
     assert hist.span(span) == {}
+
+
+@pytest.mark.parametrize("span", [":2", "..2", "..-3", ":-999"])
+@pytest.mark.parametrize("empty_history", [False, True])
+def test_history_span_end_only_without_matches(hist, span, empty_history) -> None:
+    if empty_history:
+        hist.clear()
+    hist.start_session()
+    with pytest.raises(HistoryIndexError, match="No history items in range"):
+        hist.span(span)
 
 
 def test_persisted_history_span(persisted_hist) -> None:
@@ -320,12 +331,31 @@ def test_history_class_get(hist) -> None:
     assert hist.get(3).statement.raw == "third"
     assert hist.get(-2) == hist[-2]
     assert hist.get(-1).statement.raw == "fourth"
+    assert hist.get(len(hist)) == hist[-1]
+    assert hist.get(-len(hist)) == hist[0]
 
-    with pytest.raises(IndexError):
+    with pytest.raises(HistoryIndexError, match="No history items in range"):
         hist.get(0)
 
-    with pytest.raises(IndexError):
+    with pytest.raises(HistoryIndexError, match="No history items in range"):
         hist.get(5)
+
+
+@pytest.mark.parametrize("index", [0, 5, -5, 10**100, -(10**100)])
+@pytest.mark.parametrize("empty_history", [False, True])
+def test_history_get_invalid_index_has_clear_error(hist, index, empty_history) -> None:
+    if empty_history:
+        hist.clear()
+    with pytest.raises(HistoryIndexError, match="No history items in range") as error:
+        hist.get(index)
+    assert isinstance(error.value, IndexError)
+
+
+@pytest.mark.parametrize("index", [1, -1])
+def test_history_get_on_empty_history(hist, index) -> None:
+    hist.clear()
+    with pytest.raises(HistoryIndexError, match="No history items in range"):
+        hist.get(index)
 
 
 def test_history_str_search(hist) -> None:
@@ -681,12 +711,14 @@ def test_history_with_span_end(base_app) -> None:
 
 
 # Each of these selects nothing when history holds a single item
-EMPTY_HISTORY_SPANS = ["2", "5", "999", "-2", "2:", "2:3", "2..", "2..3", "2:1"]
+EMPTY_HISTORY_SPANS = ["0", "2", "5", "999", "-2", "2:", "2:3", "2..", "2..3", "2:1", ":-999"]
 
 
-@pytest.mark.parametrize("selector", ["", ":", "..", ":2"])
+@pytest.mark.parametrize(
+    ("selector", "empty_selection"), [("", False), (":", False), ("..", False), (":2", True), ("..-3", True)]
+)
 @pytest.mark.parametrize("empty_history", [False, True])
-def test_history_open_start_on_fresh_session(tmp_path, selector, empty_history) -> None:
+def test_history_selections_on_fresh_session(tmp_path, selector, empty_selection, empty_history) -> None:
     history_file = str(tmp_path / "history.dat")
     previous_app = cmd2.Cmd(persistent_history_file=history_file)
     if not empty_history:
@@ -699,13 +731,17 @@ def test_history_open_start_on_fresh_session(tmp_path, selector, empty_history) 
     out, err = run_cmd(app, f"history {selector}")
 
     assert out == []
-    assert err == []
-    assert app.last_result == {}
+    if empty_selection:
+        assert err == ["No history items in range"]
+        assert app.last_result is False
+    else:
+        assert err == []
+        assert app.last_result == {}
 
 
 @pytest.mark.parametrize("action", ["--run", "--edit", "--output-file"])
-@pytest.mark.parametrize("selector", [":", "..", ":2"])
-def test_history_open_start_empty_actions(base_app, hist, monkeypatch, tmp_path, action, selector) -> None:
+@pytest.mark.parametrize("selector", [":", ".."])
+def test_history_unbounded_empty_actions(base_app, hist, monkeypatch, tmp_path, action, selector) -> None:
     base_app.history = hist
     hist.start_session()
     output_file = tmp_path / "out.txt"
@@ -732,11 +768,29 @@ def test_history_open_start_empty_actions(base_app, hist, monkeypatch, tmp_path,
         assert base_app.last_result is True
 
 
-@pytest.mark.parametrize("span", ["3:1", "2:-4", "1:-999"])
+@pytest.mark.parametrize("span", [":2", "..2", "..-3"])
+def test_history_end_only_with_all_includes_persisted(base_app, hist, span) -> None:
+    base_app.history = hist
+    hist.start_session()
+
+    out, err = run_cmd(base_app, f"history --all {span}")
+
+    assert len(out) == 2
+    assert err == []
+    assert list(base_app.last_result) == [1, 2]
+
+
+@pytest.mark.parametrize(
+    ("span", "session_start"),
+    [("3:1", 0), ("2:-4", 0), ("1:-999", 0), (":1", 2), ("..2", 2), ("..-3", 2), (":2", 4), ("..2", 4), ("..-3", 4)],
+)
 @pytest.mark.parametrize("action", ["", "--run", "--edit", "--output-file"])
 @pytest.mark.parametrize("debug", [False, True])
-def test_history_reversed_span_has_no_side_effects(base_app, hist, monkeypatch, tmp_path, span, action, debug) -> None:
+def test_history_empty_bounded_span_has_no_side_effects(
+    base_app, hist, monkeypatch, tmp_path, span, session_start, action, debug
+) -> None:
     base_app.history = hist
+    hist.session_start_index = session_start
     base_app.debug = debug
     mkstemp_mock = mock.MagicMock(name="mkstemp")
     monkeypatch.setattr("cmd2.cmd2.tempfile.mkstemp", mkstemp_mock)
@@ -905,9 +959,29 @@ def test_history_search_without_match_is_not_an_error(debug_history_app, search)
     assert debug_history_app.last_result == {}
 
 
-def test_history_index_zero_error_unchanged(debug_history_app) -> None:
-    with pytest.raises(IndexError, match=r"The first command in history is command 1\."):
-        debug_history_app.onecmd("history 0")
+@pytest.mark.parametrize("debug", [False, True])
+def test_history_index_zero_has_clean_error(debug_history_app, debug) -> None:
+    debug_history_app.debug = debug
+    out, err = run_cmd(debug_history_app, "history 0")
+    assert out == []
+    assert err == ["No history items in range"]
+    assert debug_history_app.last_result is False
+
+
+@pytest.mark.parametrize("selector", ["1", "1:"])
+@pytest.mark.parametrize("debug", [False, True])
+def test_history_does_not_hide_unexpected_index_errors(base_app, hist, monkeypatch, selector, debug) -> None:
+    base_app.history = hist
+    base_app.debug = debug
+    monkeypatch.setattr(type(hist), "__getitem__", mock.Mock(side_effect=IndexError("unexpected lookup failure")))
+
+    with pytest.raises(IndexError, match="unexpected lookup failure"):
+        base_app.onecmd(f"history {selector}")
+
+    out, err = run_cmd(base_app, f"history {selector}")
+    assert out == []
+    assert err != ["No history items in range"]
+    assert any("unexpected lookup failure" in line for line in err)
 
 
 def test_history_with_span_index_error(base_app) -> None:

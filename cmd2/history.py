@@ -131,6 +131,10 @@ class HistoryItem:
         return HistoryItem(Statement.from_dict(statement_dict))
 
 
+class HistoryIndexError(IndexError):
+    """Raised when a history index is invalid or a bounded range selects no items."""
+
+
 class History(list[HistoryItem]):
     """A list of [HistoryItem][cmd2.history.HistoryItem] objects with additional methods for searching and managing the list.
 
@@ -190,9 +194,10 @@ class History(list[HistoryItem]):
 
         :param index: optional item to get
         :return: a single [cmd2.history.HistoryItem][]
+        :raises HistoryIndexError: if index is zero or outside the history
         """
-        if index == 0:
-            raise IndexError("The first command in history is command 1.")
+        if index == 0 or abs(index) > len(self):
+            raise HistoryIndexError("No history items in range")
         if index < 0:
             return self[index]
         return self[index - 1]
@@ -229,9 +234,9 @@ class History(list[HistoryItem]):
         :param span: string containing an index or a slice
         :param include_persisted: if True, then retrieve full results including from persisted history
         :return: a dictionary of history items keyed by their 1-based index in ascending order,
-                 or an empty dictionary if an open-start range has no results
+                 or an empty dictionary if an unbounded range (``:`` or ``..``) has no results
         :raises ValueError: if the range format is invalid or an index is zero
-        :raises IndexError: if a range with an explicit start selects no history items
+        :raises HistoryIndexError: if a range with an explicit start or end selects no history items
 
         This method can accommodate input in any of these forms:
 
@@ -272,8 +277,8 @@ class History(list[HistoryItem]):
         else:
             end = len(self)
 
-        if start_token and (start >= len(self) or end <= start):
-            raise IndexError("No history items in range")
+        if (start_token or end_token) and (start >= len(self) or end <= start):
+            raise HistoryIndexError("No history items in range")
 
         return self._build_result_dictionary(start, end)
 

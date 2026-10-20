@@ -1,14 +1,15 @@
 ## 4.4.0 (TBD)
 
 - Breaking Changes
-    - `History.span()` now raises `IndexError` when a range with an explicit start selects no
-      history items, rather than returning an empty dictionary. Open-start ranges can still return
-      an empty dictionary, and negative starts still clamp to the beginning of history.
+    - `History.get()` and `History.span()` now raise `HistoryIndexError`, an `IndexError` subclass,
+      for invalid indices and bounded ranges selecting no history items. This includes end-only
+      ranges. Unbounded ranges (`:` and `..`) can still return an empty dictionary, and negative
+      starts still clamp to the beginning of history. Invalid indices, including zero, now use the
+      message `No history items in range`.
 - Bug Fixes
     - Fixed history ranges starting past the end selecting the last command. Invalid indices and
-      explicit-start ranges selecting no items report `No history items in range` before running,
-      editing, or saving commands. Open-start ranges in an empty session behave like plain
-      `history`.
+      bounded ranges selecting no items report `No history items in range` before running, editing,
+      or saving commands. Unbounded ranges in an empty session behave like plain `history`.
 
 ## 4.3.1 (TBD)
 
