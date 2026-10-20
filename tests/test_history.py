@@ -753,7 +753,7 @@ def test_history_index_past_end_with_three_items(base_app, monkeypatch, tmp_path
 
 @pytest.mark.parametrize("span", ["1", "-1", "1:", "-1:"])
 def test_history_run_valid_span(debug_history_app, span) -> None:
-    _out, err = run_cmd(debug_history_app, f"history --run {span}")
+    _out, err = run_cmd(debug_history_app, f"history --run -- {span}")
 
     assert err == []
     assert debug_history_app.last_result is True
@@ -765,8 +765,9 @@ def test_history_output_file_valid_span(debug_history_app, tmp_path, span) -> No
     output_file = tmp_path / "out.txt"
     output_file.write_text("old contents\n")
 
-    run_cmd(debug_history_app, f'history --output-file "{output_file}" {span}')
+    _out, err = run_cmd(debug_history_app, f'history --output-file "{output_file}" -- {span}')
 
+    assert err == []
     assert debug_history_app.last_result is True
     assert output_file.read_text() == "set debug true\n"
 
