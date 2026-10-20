@@ -3,8 +3,9 @@
 - Bug Fixes
     - Fixed `@with_annotated` command `--help` output bypassing the application's output stream,
       leaving redirected help files empty and preventing help from being captured by embedded apps.
-    - Fixed history ranges starting past the end selecting the last command, including when using
-      `history --run`.
+    - Fixed history ranges starting past the end selecting the last command. A `history` index or
+      range which selects no items now reports `No history items in range` instead of running,
+      editing, or saving nothing.
 
 ## 4.3.0 (October 13, 2026)
 
