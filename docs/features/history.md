@@ -87,8 +87,10 @@ separated by `..` or `:`, and you will see all commands between, and including, 
         2  alias create two !echo two
         3  alias create three !echo three
 
-If you omit the first number, it will start at the beginning. If you omit the last number, it will
-continue to the end:
+Command numbers refer to the full history, including commands loaded from a persistent history file.
+A single number or a range with either endpoint can select those commands without `--all`. If you
+omit the first number, the range starts at command 1. If you omit the last number, it continues to
+the end of the full history:
 
     (Cmd) history :2
         1  alias create one !echo one
@@ -97,6 +99,11 @@ continue to the end:
         2  alias create two !echo two
         3  alias create three !echo three
         4  alias create four !echo four
+
+With both endpoints omitted (`:` or `..`), only the current session is selected, as with plain
+`history`. Use `--all` to include persisted commands in these unbounded selections or in searches.
+For example, after loading five persisted commands into a fresh session, `history :5` and
+`history 1:5` both display commands 1 through 5, while `history :` displays nothing.
 
 If you want to display the last three commands entered:
 
@@ -162,10 +169,18 @@ file are executed. To edit and then re-run commands 2-4 you would:
 
 If you want to save the commands to a text file, but not edit and re-run them, use the `-o` or
 `--output-file` option. This is a great way to create [Scripts](./scripting.md), which can be
-executed using the `run_script` command. To save the first 5 commands entered in this session to a
-text file:
+executed using the `run_script` command. To save commands 1 through 5 from the full history,
+including persisted commands, to a text file:
 
     (Cmd) history :5 -o history.txt
+
+To save only commands entered in the current session, use `history -o history.txt`. Running,
+editing, or saving an empty selection reports an error before executing commands, opening an editor,
+or creating or overwriting a file. Empty searches report `No matching history items` for these
+actions; displaying a search with no matches succeeds without output. The same display behavior
+applies to empty unbounded selections. Invalid indices and bounded ranges selecting no commands
+report `No history items in range`. Index zero also includes a reminder that the first command is
+command 1. Malformed ranges report a format error.
 
 The last action the history command can perform is to clear the command history using `-c` or
 `--clear`:

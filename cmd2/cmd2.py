@@ -153,7 +153,9 @@ from .exceptions import (
     SkipPostcommandHooks,
 )
 from .history import (
+    NO_MATCHING_HISTORY_ITEMS,
     History,
+    HistoryFormatError,
     HistoryIndexError,
     HistoryItem,
 )
@@ -5505,14 +5507,10 @@ class Cmd:
             return None
 
         # If an argument was supplied, then retrieve partial contents of the history, otherwise retrieve it all
-        history = self._get_history(args)
-
-        if history is None:
-            return None
-
-        # An empty display is harmless, but actions must have something to run, edit, or save.
-        if not history and (args.run or args.edit or args.output_file):
-            self.perror("No history items in range")
+        try:
+            history = self._get_history(args)
+        except (HistoryIndexError, HistoryFormatError) as ex:
+            self.perror(str(ex))
             return None
 
         if args.run:
@@ -5557,34 +5555,36 @@ class Cmd:
             self.last_result = history
         return None
 
-    def _get_history(self, args: argparse.Namespace) -> dict[int, HistoryItem] | None:
+    def _get_history(self, args: argparse.Namespace) -> dict[int, HistoryItem]:
         """If an argument was supplied, then retrieve partial contents of the history; otherwise retrieve entire history.
 
-        This function returns a dictionary with history items keyed by their 1-based index in ascending order,
-        or None after reporting an index or range which selects no items.
+        This function returns a dictionary with history items keyed by their positive 1-based index in ascending order.
+        Selection errors, including empty selections for actions, propagate to the caller.
         """
-        try:
-            if args.arg:
-                try:
-                    int_arg = int(args.arg)
-                except ValueError:
-                    pass
-                else:
-                    return {int_arg: self.history.get(int_arg)}
-
-                if ".." in args.arg or ":" in args.arg:
-                    # Get a slice of history
-                    history = self.history.span(args.arg, args.all)
-                elif args.arg.startswith(r"/") and args.arg.endswith(r"/"):
-                    history = self.history.regex_search(args.arg, args.all)
-                else:
-                    history = self.history.str_search(args.arg, args.all)
+        if args.arg:
+            try:
+                int_arg = int(args.arg)
+            except ValueError:
+                pass
             else:
-                # Get a copy of the history so it doesn't get mutated while we are using it
-                history = self.history.span(":", args.all)
-        except HistoryIndexError as ex:
-            self.perror(str(ex))
-            return None
+                item = self.history.get(int_arg)
+                index = len(self.history) + int_arg + 1 if int_arg < 0 else int_arg
+                return {index: item}
+
+            if ".." in args.arg or ":" in args.arg:
+                # Get a slice of history
+                history = self.history.span(args.arg, args.all)
+            elif args.arg.startswith(r"/") and args.arg.endswith(r"/"):
+                history = self.history.regex_search(args.arg, args.all)
+            else:
+                history = self.history.str_search(args.arg, args.all)
+        else:
+            # Get a copy of the history so it doesn't get mutated while we are using it
+            history = self.history.span(":", args.all)
+
+        # An empty display is harmless, but actions must have something to run, edit, or save.
+        if not history and (args.run or args.edit or args.output_file):
+            raise HistoryIndexError(NO_MATCHING_HISTORY_ITEMS)
         return history
 
     def _initialize_history(self, hist_file: str) -> None:

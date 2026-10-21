@@ -2,17 +2,25 @@
 
 - Breaking Changes
     - `History.get()` and `History.span()` now raise `HistoryIndexError`, an `IndexError` subclass,
-      for invalid indices and bounded ranges selecting no history items. This includes end-only
-      ranges. Unbounded ranges (`:` and `..`) can still return an empty dictionary, and negative
-      starts still clamp to the beginning of history. Invalid indices, including zero, now use the
-      message `No history items in range`.
+      for invalid indices and bounded ranges selecting no history items. Unbounded ranges (`:` and
+      `..`) can still return an empty dictionary, and negative starts still clamp to the beginning
+      of history. Malformed ranges, including zero endpoints, raise `HistoryFormatError`, a
+      `ValueError` subclass. The `history` command reports these selection errors without a
+      traceback hint, and index zero includes the reminder that the first command is command 1.
+    - End-only ranges now start at command 1 in the full history, including persisted commands, just
+      like explicit-start ranges and single indices. Bare `history` and unbounded ranges still
+      select only the current session unless `--all` is supplied.
+    - Running, editing, or saving an empty history selection now fails before replay, opening an
+      editor, or creating or overwriting a file. This includes `history -o FILE` and `history -e`
+      with no selector in an empty session, and actions on searches with no matches. Empty unbounded
+      selections and search misses report `No matching history items` for these actions; displaying
+      them still succeeds without output. The no-argument `history --run` safety refusal is
+      unchanged.
 - Bug Fixes
     - Fixed history ranges starting past the end selecting the last command. Invalid indices and
       bounded ranges selecting no items report `No history items in range` before running, editing,
-      or saving commands. Empty selections from unbounded ranges, omitted selectors, or searches
-      with no match also fail before replay, editing, or file output. Displaying an empty unbounded
-      selection or search still prints nothing without an error. The no-argument `history --run`
-      safety refusal is unchanged.
+      or saving commands.
+    - Negative single-index history selections now display and return the positive command number.
 
 ## 4.3.1 (TBD)
 

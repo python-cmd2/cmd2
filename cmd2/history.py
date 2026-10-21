@@ -18,6 +18,11 @@ from .parsing import (
     shlex_split,
 )
 
+NO_HISTORY_ITEMS = "No history items in range"
+NO_MATCHING_HISTORY_ITEMS = "No matching history items"
+FIRST_HISTORY_INDEX = "The first command in history is command 1."
+INVALID_HISTORY_RANGE = "History indices must be positive or negative integers, and may not be zero."
+
 
 def single_line_format(statement: Statement) -> str:
     """Format a command line to display on a single line.
@@ -135,6 +140,10 @@ class HistoryIndexError(IndexError):
     """Raised when a history index is invalid or a bounded range selects no items."""
 
 
+class HistoryFormatError(ValueError):
+    """Raised when a history range has invalid syntax or a zero endpoint."""
+
+
 class History(list[HistoryItem]):
     """A list of [HistoryItem][cmd2.history.HistoryItem] objects with additional methods for searching and managing the list.
 
@@ -196,8 +205,10 @@ class History(list[HistoryItem]):
         :return: a single [cmd2.history.HistoryItem][]
         :raises HistoryIndexError: if index is zero or outside the history
         """
-        if index == 0 or abs(index) > len(self):
-            raise HistoryIndexError("No history items in range")
+        if index == 0:
+            raise HistoryIndexError(f"{NO_HISTORY_ITEMS}. {FIRST_HISTORY_INDEX}")
+        if abs(index) > len(self):
+            raise HistoryIndexError(NO_HISTORY_ITEMS)
         if index < 0:
             return self[index]
         return self[index - 1]
@@ -232,10 +243,11 @@ class History(list[HistoryItem]):
         """Return a slice of the History list.
 
         :param span: string containing an index or a slice
-        :param include_persisted: if True, then retrieve full results including from persisted history
+        :param include_persisted: if True, include persisted history for unbounded ranges.
+                                  Ranges with either endpoint always use the full history.
         :return: a dictionary of history items keyed by their 1-based index in ascending order,
                  or an empty dictionary if an unbounded range (``:`` or ``..``) has no results
-        :raises ValueError: if the range format is invalid or an index is zero
+        :raises HistoryFormatError: if the range format is invalid or an index is zero
         :raises HistoryIndexError: if a range with an explicit start or end selects no history items
 
         This method can accommodate input in any of these forms:
@@ -259,17 +271,17 @@ class History(list[HistoryItem]):
         results = self.spanpattern.search(span)
         if not results:
             # our regex doesn't match the input, bail out
-            raise ValueError("History indices must be positive or negative integers, and may not be zero.")
+            raise HistoryFormatError(f"{INVALID_HISTORY_RANGE} {FIRST_HISTORY_INDEX}")
 
         start_token = results.group("start")
+        end_token = results.group("end")
         if start_token:
             start = self._zero_based_index(start_token)
             if start < 0:
                 start = max(0, len(self) + start)
         else:
-            start = 0 if include_persisted else self.session_start_index
+            start = 0 if include_persisted or end_token else self.session_start_index
 
-        end_token = results.group("end")
         if end_token:
             end = min(int(end_token), len(self))
             if end < 0:
@@ -278,7 +290,7 @@ class History(list[HistoryItem]):
             end = len(self)
 
         if (start_token or end_token) and (start >= len(self) or end <= start):
-            raise HistoryIndexError("No history items in range")
+            raise HistoryIndexError(NO_HISTORY_ITEMS)
 
         return self._build_result_dictionary(start, end)
 
