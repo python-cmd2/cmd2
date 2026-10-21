@@ -740,32 +740,127 @@ def test_history_selections_on_fresh_session(tmp_path, selector, empty_selection
 
 
 @pytest.mark.parametrize("action", ["--run", "--edit", "--output-file"])
-@pytest.mark.parametrize("selector", [":", ".."])
-def test_history_unbounded_empty_actions(base_app, hist, monkeypatch, tmp_path, action, selector) -> None:
+@pytest.mark.parametrize(
+    ("selector", "empty_history", "include_persisted"),
+    [
+        (selector, empty_history, include_persisted)
+        for selector in ("", '""', ":", "..", '" : "', '"   "', "no_such_command", "/no_such_regex/")
+        for empty_history in (False, True)
+        for include_persisted in (False, True)
+        if empty_history or not include_persisted or selector in ('"   "', "no_such_command", "/no_such_regex/")
+    ],
+)
+@pytest.mark.parametrize("debug", [False, True])
+def test_history_empty_actions_have_no_side_effects(
+    base_app, hist, monkeypatch, tmp_path, action, selector, empty_history, include_persisted, debug
+) -> None:
     base_app.history = hist
+    base_app.debug = debug
+    if empty_history:
+        hist.clear()
     hist.start_session()
+    initial_history = list(hist)
     output_file = tmp_path / "out.txt"
     output_file.write_text("old contents\n")
+    missing_file = tmp_path / "missing.txt"
+    mkstemp_mock = mock.MagicMock(name="mkstemp", wraps=tempfile.mkstemp)
+    monkeypatch.setattr("cmd2.cmd2.tempfile.mkstemp", mkstemp_mock)
     edit_mock = mock.MagicMock(name="run_editor")
     monkeypatch.setattr(base_app, "run_editor", edit_mock)
     run_script_mock = mock.MagicMock(name="do_run_script")
     monkeypatch.setattr(base_app, "do_run_script", run_script_mock)
     run_mock = mock.MagicMock(name="runcmds_plus_hooks")
     monkeypatch.setattr(base_app, "runcmds_plus_hooks", run_mock)
-    options = f'--output-file "{output_file}"' if action == "--output-file" else action
+    for target in (output_file, missing_file):
+        options = f'--output-file "{target}"' if action == "--output-file" else action
+        all_option = "--all" if include_persisted else ""
+        _out, err = run_cmd(base_app, f"history {all_option} {options} {selector}")
+        if action == "--run" and selector in ("", '""'):
+            assert err == [
+                "Cowardly refusing to run all previously entered commands.",
+                "If this is what you want to do, specify '1:' as the range of history.",
+            ]
+        else:
+            assert err == ["No history items in range"]
+        assert base_app.last_result is False
 
-    _out, err = run_cmd(base_app, f"history {options} {selector}")
+    mkstemp_mock.assert_not_called()
+    edit_mock.assert_not_called()
+    run_script_mock.assert_not_called()
+    run_mock.assert_not_called()
+    assert output_file.read_text() == "old contents\n"
+    assert not missing_file.exists()
+    assert list(hist) == initial_history
+
+
+@pytest.mark.parametrize("action", ["--run", "--edit", "--output-file"])
+@pytest.mark.parametrize("selector", [":", "..", '" : "', "first", "/first/"])
+@pytest.mark.parametrize("include_persisted", [False, True])
+def test_history_nonempty_actions_are_preserved(
+    base_app, hist, monkeypatch, tmp_path, action, selector, include_persisted
+) -> None:
+    base_app.history = hist
+    if include_persisted:
+        hist.start_session()
+    expected = list(hist[:1] if selector in ("first", "/first/") else hist)
+    expected_text = "".join(f"{item.raw}\n" for item in expected)
+    output_file = tmp_path / "out.txt"
+    output_file.write_text("old contents\n")
+    run_mock = mock.Mock(return_value=False)
+    monkeypatch.setattr(base_app, "runcmds_plus_hooks", run_mock)
+    edited = []
+
+    def fake_editor(fname) -> None:
+        with open(fname) as script:
+            edited.append(script.read())
+
+    monkeypatch.setattr(base_app, "run_editor", fake_editor)
+    run_script_mock = mock.Mock()
+    monkeypatch.setattr(base_app, "do_run_script", run_script_mock)
+    options = f'--output-file "{output_file}"' if action == "--output-file" else action
+    all_option = "--all" if include_persisted else ""
+
+    _out, err = run_cmd(base_app, f"history {all_option} {options} {selector}")
 
     assert err == []
     if action == "--run":
-        run_mock.assert_called_once_with([])
+        run_mock.assert_called_once_with(expected)
         assert base_app.last_result is True
     elif action == "--edit":
-        edit_mock.assert_called_once()
+        assert edited == [expected_text]
         run_script_mock.assert_called_once()
     else:
-        assert output_file.read_text() == ""
+        assert output_file.read_text() == expected_text
         assert base_app.last_result is True
+
+
+@pytest.mark.parametrize("action", ["--run", "--edit", "--output-file"])
+def test_history_unbounded_empty_action_after_reload(base_app, monkeypatch, tmp_path, action) -> None:
+    history_file = tmp_path / "history.dat"
+    base_app.persistent_history_file = str(history_file)
+    run_cmd(base_app, "help")
+    base_app._persist_history()
+    base_app._initialize_history(str(history_file))
+    assert len(base_app.history) == base_app.history.session_start_index == 1
+    output_file = tmp_path / "out.txt"
+    output_file.write_text("keep me\n")
+    mkstemp_mock = mock.Mock(wraps=tempfile.mkstemp)
+    monkeypatch.setattr("cmd2.cmd2.tempfile.mkstemp", mkstemp_mock)
+    editor = mock.Mock()
+    replay = mock.Mock()
+    monkeypatch.setattr(base_app, "run_editor", editor)
+    monkeypatch.setattr(base_app, "runcmds_plus_hooks", replay)
+    options = f'--output-file "{output_file}"' if action == "--output-file" else action
+
+    out, err = run_cmd(base_app, f"history {options} :")
+
+    assert out == []
+    assert err == ["No history items in range"]
+    assert base_app.last_result is False
+    assert output_file.read_text() == "keep me\n"
+    mkstemp_mock.assert_not_called()
+    editor.assert_not_called()
+    replay.assert_not_called()
 
 
 @pytest.mark.parametrize("span", [":2", "..2", "..-3"])

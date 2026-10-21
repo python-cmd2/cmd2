@@ -5499,21 +5499,27 @@ class Cmd:
 
             return None
 
+        if args.run and not args.arg:
+            self.perror("Cowardly refusing to run all previously entered commands.")
+            self.perror("If this is what you want to do, specify '1:' as the range of history.")
+            return None
+
         # If an argument was supplied, then retrieve partial contents of the history, otherwise retrieve it all
         history = self._get_history(args)
 
         if history is None:
             return None
 
+        # An empty display is harmless, but actions must have something to run, edit, or save.
+        if not history and (args.run or args.edit or args.output_file):
+            self.perror("No history items in range")
+            return None
+
         if args.run:
-            if not args.arg:
-                self.perror("Cowardly refusing to run all previously entered commands.")
-                self.perror("If this is what you want to do, specify '1:' as the range of history.")
-            else:
-                stop = self.runcmds_plus_hooks(list(history.values()))
-                self.last_result = True
-                return stop
-        elif args.edit:
+            stop = self.runcmds_plus_hooks(list(history.values()))
+            self.last_result = True
+            return stop
+        if args.edit:
             fd, fname = tempfile.mkstemp(suffix=".txt", text=True)
             fobj: TextIO
             with os.fdopen(fd, "w") as fobj:

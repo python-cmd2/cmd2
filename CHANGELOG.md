@@ -9,7 +9,10 @@
 - Bug Fixes
     - Fixed history ranges starting past the end selecting the last command. Invalid indices and
       bounded ranges selecting no items report `No history items in range` before running, editing,
-      or saving commands. Unbounded ranges in an empty session behave like plain `history`.
+      or saving commands. Empty selections from unbounded ranges, omitted selectors, or searches
+      with no match also fail before replay, editing, or file output. Displaying an empty unbounded
+      selection or search still prints nothing without an error. The no-argument `history --run`
+      safety refusal is unchanged.
 
 ## 4.3.1 (TBD)
 
