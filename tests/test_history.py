@@ -4,6 +4,7 @@ import argparse
 import contextlib
 import os
 import re
+import sys
 import tempfile
 from unittest import (
     mock,
@@ -1322,6 +1323,40 @@ def test_history_current_session_actions_do_not_require_all(base_app, persisted_
     else:
         assert edited == ["".join(f"{item.raw}\n" for item in expected)]
         run_script.assert_called_once()
+
+
+@pytest.mark.parametrize("sign", ["", "-"])
+@pytest.mark.parametrize("action", ["", "--run", "--edit", "--output-file"])
+@pytest.mark.parametrize("debug", [False, True])
+def test_history_integer_conversion_limit_has_no_side_effects(
+    base_app, hist, monkeypatch, tmp_path, sign, action, debug
+) -> None:
+    base_app.history = hist
+    base_app.debug = debug
+    effects = [mock.Mock() for _ in range(4)]
+    monkeypatch.setattr("cmd2.cmd2.tempfile.mkstemp", effects[0])
+    monkeypatch.setattr(base_app, "run_editor", effects[1])
+    monkeypatch.setattr(base_app, "do_run_script", effects[2])
+    monkeypatch.setattr(base_app, "runcmds_plus_hooks", effects[3])
+    output_file = tmp_path / "existing.txt"
+    output_file.write_text("keep me\n")
+    options = f'--output-file "{output_file}"' if action == "--output-file" else action
+    limit = sys.int_info.str_digits_check_threshold
+    selector = sign + "9" * (limit + 1)
+    original_limit = sys.get_int_max_str_digits()
+    try:
+        sys.set_int_max_str_digits(limit)
+        out, err = run_cmd(base_app, f"history {options} -- {selector}")
+    finally:
+        sys.set_int_max_str_digits(original_limit)
+
+    assert out == []
+    assert err == ["No history items in range"]
+    assert base_app.last_result is False
+    for effect in effects:
+        effect.assert_not_called()
+    assert output_file.read_text() == "keep me\n"
+    assert len(base_app.history) == 4
 
 
 def test_history_help_explains_selection_and_persisted_actions(base_app) -> None:
