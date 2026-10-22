@@ -1278,7 +1278,7 @@ def test_history_zero_endpoint_has_command_one_hint(hist, selector) -> None:
     assert "The first command in history is command 1." in str(error.value)
 
 
-@pytest.mark.parametrize("selector", ["1", "-6", ":2", "1:5", "2:", "-6:-1"])
+@pytest.mark.parametrize("selector", ["1", "-6", ":2", "1:5", "2:", "-6:-1", "4", "-3", "4:5"])
 @pytest.mark.parametrize("action", ["--run", "--edit"])
 def test_history_persisted_actions_require_all(base_app, persisted_hist, monkeypatch, selector, action) -> None:
     base_app.history = persisted_hist
