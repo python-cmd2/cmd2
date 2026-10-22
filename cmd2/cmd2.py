@@ -153,6 +153,7 @@ from .exceptions import (
     SkipPostcommandHooks,
 )
 from .history import (
+    NO_HISTORY_ITEMS,
     NO_MATCHING_HISTORY_ITEMS,
     History,
     HistoryFormatError,
@@ -5449,13 +5450,14 @@ class Cmd:
             "-a",
             "--all",
             action="store_true",
-            help="display all commands, including ones persisted from previous sessions",
+            help="include persisted commands; required to run or edit commands from previous sessions",
         )
 
         history_arg_help = (
-            "empty               all history items\n"
-            "a                   one history item by number\n"
-            "a..b, a:b, a:, ..b  items by indices (inclusive)\n"
+            "empty               current session (--all includes persisted commands)\n"
+            "a                   one item by number in the full history\n"
+            "a..b, a:b, a:, ..b  inclusive ranges in the full history\n"
+            ":, ..               current session (--all includes persisted commands)\n"
             "string              items containing string\n"
             "/regex/             items matching regular expression"
         )
@@ -5513,6 +5515,16 @@ class Cmd:
             self.perror(str(ex))
             return None
 
+        # Selection is independent of the requested action. Empty displays are harmless.
+        if not history and (args.run or args.edit or args.output_file):
+            is_search = args.arg and not self.history.spanpattern.fullmatch(args.arg)
+            self.perror(NO_MATCHING_HISTORY_ITEMS if is_search else NO_HISTORY_ITEMS)
+            return None
+
+        if (args.run or args.edit) and not args.all and any(index <= self.history.session_start_index for index in history):
+            self.perror("Use --all to run or edit commands from previous sessions.")
+            return None
+
         if args.run:
             stop = self.runcmds_plus_hooks(list(history.values()))
             self.last_result = True
@@ -5559,33 +5571,27 @@ class Cmd:
         """If an argument was supplied, then retrieve partial contents of the history; otherwise retrieve entire history.
 
         This function returns a dictionary with history items keyed by their positive 1-based index in ascending order.
-        Selection errors, including empty selections for actions, propagate to the caller.
+        Index and range errors propagate to the caller. Empty selections return an empty dictionary.
         """
         if args.arg:
-            try:
-                int_arg = int(args.arg)
-            except ValueError:
-                pass
-            else:
-                item = self.history.get(int_arg)
-                index = len(self.history) + int_arg + 1 if int_arg < 0 else int_arg
-                return {index: item}
+            if args.arg.startswith(r"/") and args.arg.endswith(r"/"):
+                return self.history.regex_search(args.arg, args.all)
+            if re.fullmatch(r"-?[0-9]+", args.arg):
+                try:
+                    index = int(args.arg)
+                except ValueError:
+                    # Python may reject integer strings exceeding its conversion limit.
+                    raise HistoryIndexError(NO_HISTORY_ITEMS) from None
+                if index == 0:
+                    # Preserve the dedicated index-zero error and command-one reminder.
+                    self.history.get(index)
+                return self.history.span(f"{index}:{index}")
+            if self.history.spanpattern.fullmatch(args.arg):
+                return self.history.span(args.arg, args.all)
+            return self.history.str_search(args.arg, args.all)
 
-            if ".." in args.arg or ":" in args.arg:
-                # Get a slice of history
-                history = self.history.span(args.arg, args.all)
-            elif args.arg.startswith(r"/") and args.arg.endswith(r"/"):
-                history = self.history.regex_search(args.arg, args.all)
-            else:
-                history = self.history.str_search(args.arg, args.all)
-        else:
-            # Get a copy of the history so it doesn't get mutated while we are using it
-            history = self.history.span(":", args.all)
-
-        # An empty display is harmless, but actions must have something to run, edit, or save.
-        if not history and (args.run or args.edit or args.output_file):
-            raise HistoryIndexError(NO_MATCHING_HISTORY_ITEMS)
-        return history
+        # Get a copy of the history so it doesn't get mutated while we are using it.
+        return self.history.span(":", args.all)
 
     def _initialize_history(self, hist_file: str) -> None:
         """Initialize history using history related attributes.

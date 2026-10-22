@@ -213,31 +213,9 @@ class History(list[HistoryItem]):
             return self[index]
         return self[index - 1]
 
-    # This regular expression parses input for the span() method. There are five parts:
-    #
-    #    ^\s*                          matches any whitespace at the beginning of the
-    #                                  input. This is here so you don't have to trim the input
-    #
-    #    (?P<start>-?[1-9]{1}\d*)?     create a capture group named 'start' which matches an
-    #                                  optional minus sign, followed by exactly one non-zero
-    #                                  digit, and as many other digits as you want. This group
-    #                                  is optional so that we can match an input string like '..2'.
-    #                                  This regex will match 1, -1, 10, -10, but not 0 or -0.
-    #
-    #    (?P<separator>:|(\.{2,}))?    create a capture group named 'separator' which matches either
-    #                                  a colon or two periods.
-    #
-    #    (?P<end>-?[1-9]{1}\d*)?       create a capture group named 'end' which matches an
-    #                                  optional minus sign, followed by exactly one non-zero
-    #                                  digit, and as many other digits as you want. This group is
-    #                                  optional so that we can match an input string like ':'
-    #                                  or '5:'. This regex will match 1, -1, 10, -10, but not
-    #                                  0 or -0.
-    #
-    #    \s*$                          match any whitespace at the end of the input. This is here so
-    #                                  you don't have to trim the input
-    #
-    spanpattern = re.compile(r"^\s*(?P<start>-?[1-9]\d*)?(?P<separator>:|(\.{2,}))(?P<end>-?[1-9]\d*)?\s*$")
+    # Recognize ranges with optional signed ASCII integer endpoints. Zero is parsed so that
+    # span() can report its specific error; it is never a valid history index.
+    spanpattern = re.compile(r"\s*(?P<start>-?[0-9]+)?(?P<separator>:|\.{2,})(?P<end>-?[0-9]+)?\s*")
 
     def span(self, span: str, include_persisted: bool = False) -> dict[int, "HistoryItem"]:
         """Return a slice of the History list.
@@ -248,7 +226,7 @@ class History(list[HistoryItem]):
         :return: a dictionary of history items keyed by their 1-based index in ascending order,
                  or an empty dictionary if an unbounded range (``:`` or ``..``) has no results
         :raises HistoryFormatError: if the range format is invalid or an index is zero
-        :raises HistoryIndexError: if a range with an explicit start or end selects no history items
+        :raises HistoryIndexError: if the start is out of bounds or a bounded range selects no history items
 
         This method can accommodate input in any of these forms:
 
@@ -268,17 +246,21 @@ class History(list[HistoryItem]):
         - off by one errors
 
         """
-        results = self.spanpattern.search(span)
+        results = self.spanpattern.fullmatch(span)
         if not results:
             # our regex doesn't match the input, bail out
-            raise HistoryFormatError(f"{INVALID_HISTORY_RANGE} {FIRST_HISTORY_INDEX}")
+            raise HistoryFormatError(INVALID_HISTORY_RANGE)
 
         start_token = results.group("start")
         end_token = results.group("end")
+        if any(token is not None and int(token) == 0 for token in (start_token, end_token)):
+            raise HistoryFormatError(f"{INVALID_HISTORY_RANGE} {FIRST_HISTORY_INDEX}")
         if start_token:
             start = self._zero_based_index(start_token)
             if start < 0:
-                start = max(0, len(self) + start)
+                start += len(self)
+                if start < 0:
+                    raise HistoryIndexError(NO_HISTORY_ITEMS)
         else:
             start = 0 if include_persisted or end_token else self.session_start_index
 

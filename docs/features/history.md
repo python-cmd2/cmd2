@@ -59,7 +59,8 @@ that saved input. The examples to follow all assume that you have entered the fo
     Alias 'four' created
 
 In its simplest form, the `history` command displays previously entered commands. With no additional
-arguments, it displays all previously entered commands:
+arguments, it displays commands entered in the current session. Use `history --all` to also display
+commands loaded from a persistent history file:
 
     (Cmd) history
         1  alias create one !echo one
@@ -123,7 +124,9 @@ an argument:
 
 There is no zeroth command, so don't ask for it. If you are a Python programmer, you've probably
 noticed this looks a lot like the slice syntax for lists and arrays. It is, with the exception that
-the first history command is 1, where the first element in a Python array is 0.
+the first history command is 1, where the first element in a Python array is 0. A start before the
+first command or after the last command is an error. An end after the last command stops at the end
+of history.
 
 Besides selecting previous commands by number, you can also search for them. You can use a simple
 string search:
@@ -138,6 +141,10 @@ Or a regular expression search by enclosing your regex in slashes:
 
 If your regular expression contains any characters that `argparse` finds interesting, like dash or
 plus, you also need to enclose your regular expression in quotation marks.
+
+Regular expressions are recognized before ranges, so `/a..b/` and `/one:/` are regex searches.
+Numbers use ASCII digits with an optional leading minus sign. Other arguments, such as `http://x`,
+`a:b`, `+1`, and `1_0`, are literal searches rather than command numbers or ranges.
 
 This all sounds great, but doesn't it seem like a bit of overkill to have all these ways to select
 commands if all we can do is display them? Turns out, displaying history commands is just the
@@ -167,6 +174,12 @@ file are executed. To edit and then re-run commands 2-4 you would:
 
     (Cmd) history --edit 2:4
 
+Running or editing a selection that includes commands from previous sessions requires `--all`, even
+when selecting a single command or a bounded range. For example, use `history --all --run 1` to
+replay a persisted command 1. Without `--all`, the entire action is refused if any selected command
+is persisted; commands are not silently filtered out or renumbered. Current-session-only selections
+do not require `--all`.
+
 If you want to save the commands to a text file, but not edit and re-run them, use the `-o` or
 `--output-file` option. This is a great way to create [Scripts](./scripting.md), which can be
 executed using the `run_script` command. To save commands 1 through 5 from the full history,
@@ -177,10 +190,12 @@ including persisted commands, to a text file:
 To save only commands entered in the current session, use `history -o history.txt`. Running,
 editing, or saving an empty selection reports an error before executing commands, opening an editor,
 or creating or overwriting a file. Empty searches report `No matching history items` for these
-actions; displaying a search with no matches succeeds without output. The same display behavior
-applies to empty unbounded selections. Invalid indices and bounded ranges selecting no commands
-report `No history items in range`. Index zero also includes a reminder that the first command is
-command 1. Malformed ranges report a format error.
+actions, while empty selections with no selector or an unbounded range report
+`No history items in range`. Displaying these empty selections succeeds without output. Invalid
+indices and bounded ranges selecting no commands also report `No history items in range`. Index zero
+and zero range endpoints include a reminder that the first command is command 1. The
+`History.span()` API reports malformed ranges as format errors; the command treats arguments that do
+not match range syntax as literal searches.
 
 The last action the history command can perform is to clear the command history using `-c` or
 `--clear`:

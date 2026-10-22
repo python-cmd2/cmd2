@@ -1,5 +1,6 @@
 """Test history functions of cmd2"""
 
+import argparse
 import contextlib
 import os
 import re
@@ -238,7 +239,7 @@ def test_history_span_past_end(hist, suffix) -> None:
 
 @pytest.mark.parametrize(
     ("span", "indices"),
-    [("4:", [4]), ("1:999", [1, 2, 3, 4]), ("-999:-1", [1, 2, 3, 4])],
+    [("4:", [4]), ("1:999", [1, 2, 3, 4]), ("-4:-1", [1, 2, 3, 4])],
 )
 def test_history_span_boundaries(hist, span, indices) -> None:
     assert list(hist.span(span)) == indices
@@ -782,7 +783,10 @@ def test_history_empty_actions_have_no_side_effects(
                 "If this is what you want to do, specify '1:' as the range of history.",
             ]
         else:
-            assert err == ["No matching history items"]
+            message = (
+                "No history items in range" if selector in ("", '""', ":", "..", '" : "') else "No matching history items"
+            )
+            assert err == [message]
         assert base_app.last_result is False
 
     mkstemp_mock.assert_not_called()
@@ -856,7 +860,7 @@ def test_history_unbounded_empty_action_after_reload(base_app, monkeypatch, tmp_
     out, err = run_cmd(base_app, f"history {options} :")
 
     assert out == []
-    assert err == ["No matching history items"]
+    assert err == ["No history items in range"]
     assert base_app.last_result is False
     assert output_file.read_text() == "keep me\n"
     mkstemp_mock.assert_not_called()
@@ -878,7 +882,7 @@ def test_history_end_only_with_all_includes_persisted(base_app, hist, span) -> N
 
 @pytest.mark.parametrize(
     ("span", "session_start"),
-    [(span, start) for span in ("3:1", "2:-4", "1:-999", ":-999", "..-999") for start in (0, 2, 4)],
+    [(span, start) for span in ("3:1", "2:-4", "1:-999", ":-999", "..-999", "-5:", "-5..4", "-999:") for start in (0, 2, 4)],
 )
 @pytest.mark.parametrize("action", ["", "--run", "--edit", "--output-file"])
 @pytest.mark.parametrize("debug", [False, True])
@@ -902,7 +906,7 @@ def test_history_empty_bounded_span_has_no_side_effects(
 
     for output_file in (existing_file, missing_file):
         options = f'--output-file "{output_file}"' if action == "--output-file" else action
-        out, err = run_cmd(base_app, f"history {options} {span}")
+        out, err = run_cmd(base_app, f"history {options} -- {span}")
         assert out == []
         assert err == ["No history items in range"]
         assert base_app.last_result is False
@@ -1006,7 +1010,7 @@ def test_history_index_past_end_with_three_items(base_app, monkeypatch, tmp_path
     assert output_file.read_text() == "keep me\n"
 
 
-@pytest.mark.parametrize("span", ["1", "-1", "1:", "-1:", "-999:"])
+@pytest.mark.parametrize("span", ["1", "-1", "1:", "-1:"])
 def test_history_run_valid_span(debug_history_app, span) -> None:
     _out, err = run_cmd(debug_history_app, f"history --run -- {span}")
 
@@ -1015,7 +1019,7 @@ def test_history_run_valid_span(debug_history_app, span) -> None:
     assert debug_history_app.debug is True
 
 
-@pytest.mark.parametrize("span", ["1", "-1", "1:", "-1:", "-999:"])
+@pytest.mark.parametrize("span", ["1", "-1", "1:", "-1:"])
 def test_history_output_file_valid_span(debug_history_app, tmp_path, span) -> None:
     output_file = tmp_path / "out.txt"
     output_file.write_text("old contents\n")
@@ -1027,7 +1031,7 @@ def test_history_output_file_valid_span(debug_history_app, tmp_path, span) -> No
     assert output_file.read_text() == "set debug true\n"
 
 
-@pytest.mark.parametrize("span", ["1", "-1", "1:", "-999:"])
+@pytest.mark.parametrize("span", ["1", "-1", "1:"])
 def test_history_edit_valid_span(debug_history_app, monkeypatch, span) -> None:
     edited = []
 
@@ -1081,15 +1085,14 @@ def test_history_does_not_hide_unexpected_index_errors(base_app, hist, monkeypat
     assert any("unexpected lookup failure" in line for line in err)
 
 
-def test_history_with_span_index_error(base_app) -> None:
+def test_history_literal_search_containing_colon(base_app) -> None:
     run_cmd(base_app, "help")
     run_cmd(base_app, "help history")
     run_cmd(base_app, "!ls -hal :")
-    expected_err = "History indices must be positive or negative integers, and may not be zero."
     out, err = run_cmd(base_app, 'history "hal :"')
-    assert out == []
-    assert " ".join(err) == f"{expected_err} The first command in history is command 1."
-    assert base_app.last_result is False
+    assert err == []
+    assert out == ["    3  !ls -hal :"]
+    assert list(base_app.last_result) == [3]
 
 
 @pytest.mark.parametrize("separator", [":", ".."])
@@ -1100,7 +1103,7 @@ def test_history_bounded_ranges_use_absolute_indices(hist, separator, session_st
     hist.session_start_index = session_start
     assert list(hist.span(f"{separator}{end}", include_persisted)) == expected
     assert list(hist.span(f"1{separator}{end}", include_persisted)) == expected
-    assert list(hist.span(f"-999{separator}{end}", include_persisted)) == expected
+    assert list(hist.span(f"-4{separator}{end}", include_persisted)) == expected
     assert list(hist.span(separator, include_persisted)) == list(range(1 if include_persisted else session_start + 1, 5))
 
 
@@ -1131,6 +1134,15 @@ def test_history_bounded_actions_after_reload(base_app, monkeypatch, tmp_path, s
     options = f'--output-file "{output_file}"' if action == "--output-file" else action
     all_option = "--all" if include_persisted else ""
     out, err = run_cmd(base_app, f"history {all_option} {options} -- {selector}")
+    if action in ("--run", "--edit") and not include_persisted:
+        assert out == []
+        assert err == ["Use --all to run or edit commands from previous sessions."]
+        assert base_app.last_result is False
+        replay.assert_not_called()
+        run_script.assert_not_called()
+        assert edited == []
+        assert not output_file.exists()
+        return
     assert err == []
     if action == "--run":
         replay.assert_called_once_with(expected)
@@ -1146,7 +1158,7 @@ def test_history_bounded_actions_after_reload(base_app, monkeypatch, tmp_path, s
         assert base_app.last_result == {1: expected[0], 2: expected[1]}
 
 
-@pytest.mark.parametrize("selector", ["0", "-0", "0:2", "0:", "1:0", ":0", "-0..2", "..0", "1:2:3", "1..2:3", "a:b"])
+@pytest.mark.parametrize("selector", ["0", "-0", "0:2", "0:", "1:0", ":0", "-0..2", "..0"])
 @pytest.mark.parametrize("action", ["", "--run", "--edit", "--output-file"])
 @pytest.mark.parametrize("debug", [False, True])
 def test_history_invalid_selection_has_no_side_effects(base_app, monkeypatch, tmp_path, selector, action, debug) -> None:
@@ -1207,6 +1219,118 @@ def test_history_does_not_hide_search_errors(base_app, monkeypatch, selector) ->
     with pytest.raises(error):
         base_app.onecmd(f"history -r {selector}")
     assert base_app.last_result is False
+
+
+@pytest.mark.parametrize("selector", ["-5:", "-5:-1", "-5:3", "-5..", "-5..-1", "-999:"])
+def test_history_span_rejects_overly_negative_starts(hist, selector) -> None:
+    with pytest.raises(HistoryIndexError, match="No history items in range"):
+        hist.span(selector)
+
+
+@pytest.mark.parametrize(
+    ("selector", "needle"),
+    [
+        ("/a..b/", "axxb"),
+        ("/one:/", "one:"),
+        ("http://x", "http://x"),
+        ("a:b", "a:b"),
+        ("1:2:3", "1:2:3"),
+        ("abc:", "abc:"),
+        ("1_0", "1_0"),
+        ("+1", "+1"),
+        ('" 1 "', " 1 "),
+        ("\u0661", "\u0661"),
+        ("1\u0661", "1\u0661"),
+        ("-\u0661", "-\u0661"),
+    ],
+)
+def test_history_search_dispatch_is_not_numeric_or_range(base_app, hist, selector, needle) -> None:
+    hist.clear()
+    for index in range(10):
+        text = f"help before{needle}after" if index == 2 else "help control"
+        hist.append(base_app.statement_parser.parse(text))
+    base_app.history = hist
+
+    out, err = run_cmd(base_app, f"history -- {selector}")
+
+    assert err == []
+    assert out == [f"    3  help before{needle}after"]
+    assert base_app.last_result == {3: hist[2]}
+
+
+@pytest.mark.parametrize("selector", ["", ":", "no_such_command", "/no_such_regex/"])
+def test_get_history_returns_empty_dictionary_for_actions(base_app, selector) -> None:
+    args = argparse.Namespace(arg=selector, all=False, run=False, edit=True, output_file=None)
+    assert base_app._get_history(args) == {}
+
+
+@pytest.mark.parametrize("selector", ["1:2:3", "abc:", "a:b", "\u0661:2", "1\u0661:2", "+1:2", "1_0:2"])
+def test_history_format_error_does_not_suggest_command_one(hist, selector) -> None:
+    with pytest.raises(HistoryFormatError) as error:
+        hist.span(selector)
+    assert "The first command" not in str(error.value)
+
+
+@pytest.mark.parametrize("selector", ["0:2", "1:0", "-0..2", "..-0"])
+def test_history_zero_endpoint_has_command_one_hint(hist, selector) -> None:
+    with pytest.raises(HistoryFormatError) as error:
+        hist.span(selector)
+    assert "The first command in history is command 1." in str(error.value)
+
+
+@pytest.mark.parametrize("selector", ["1", "-6", ":2", "1:5", "2:", "-6:-1"])
+@pytest.mark.parametrize("action", ["--run", "--edit"])
+def test_history_persisted_actions_require_all(base_app, persisted_hist, monkeypatch, selector, action) -> None:
+    base_app.history = persisted_hist
+    effects = [mock.Mock() for _ in range(4)]
+    monkeypatch.setattr("cmd2.cmd2.tempfile.mkstemp", effects[0])
+    monkeypatch.setattr(base_app, "run_editor", effects[1])
+    monkeypatch.setattr(base_app, "do_run_script", effects[2])
+    monkeypatch.setattr(base_app, "runcmds_plus_hooks", effects[3])
+
+    out, err = run_cmd(base_app, f"history {action} -- {selector}")
+
+    assert out == []
+    assert err == ["Use --all to run or edit commands from previous sessions."]
+    assert base_app.last_result is False
+    for effect in effects:
+        effect.assert_not_called()
+
+
+@pytest.mark.parametrize("selector", ["5", "-2", "5:", "-2:"])
+@pytest.mark.parametrize("action", ["--run", "--edit"])
+def test_history_current_session_actions_do_not_require_all(base_app, persisted_hist, monkeypatch, selector, action) -> None:
+    base_app.history = persisted_hist
+    expected = list(persisted_hist[4:5] if selector in ("5", "-2") else persisted_hist[4:])
+    replay = mock.Mock(return_value=False)
+    monkeypatch.setattr(base_app, "runcmds_plus_hooks", replay)
+    edited = []
+
+    def fake_editor(fname) -> None:
+        with open(fname) as script:
+            edited.append(script.read())
+
+    monkeypatch.setattr(base_app, "run_editor", fake_editor)
+    run_script = mock.Mock()
+    monkeypatch.setattr(base_app, "do_run_script", run_script)
+
+    _out, err = run_cmd(base_app, f"history {action} -- {selector}")
+
+    assert err == []
+    if action == "--run":
+        replay.assert_called_once_with(expected)
+    else:
+        assert edited == ["".join(f"{item.raw}\n" for item in expected)]
+        run_script.assert_called_once()
+
+
+def test_history_help_explains_selection_and_persisted_actions(base_app) -> None:
+    out, err = run_cmd(base_app, "help history")
+    text = " ".join(out)
+    assert err == []
+    assert "current session" in text
+    assert "full history" in text
+    assert "required to run or edit" in text
 
 
 def test_history_output_file() -> None:
