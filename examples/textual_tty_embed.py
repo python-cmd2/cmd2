@@ -16,11 +16,12 @@ How it works:
     into a ``Terminal.TitleChanged`` message which the Textual application uses to update the status panel.
     This uses only the pseudo-terminal, so there are no sockets, files, or threads to manage.
 
-Neither textual nor textual-tty are dependencies of cmd2. To run this example from a cmd2 checkout use:
+Neither textual nor textual-tty are dependencies of cmd2. In a cmd2 checkout, textual-tty is part of the
+development environment on POSIX systems, so run this example with:
 
-    uv run --with textual-tty examples/textual_tty_embed.py
+    uv run examples/textual_tty_embed.py
 
-or install the extra packages into your own environment with ``pip install textual-tty`` and then run
+Otherwise, install textual-tty into your own environment with ``pip install textual-tty`` and then run
 ``python examples/textual_tty_embed.py``. The Textual application requires a POSIX system such as Linux or
 macOS, because on Windows textual-tty can only start a program by name and can't pass it arguments.
 
