@@ -1,6 +1,8 @@
 """Cmd2 unit/functional testing"""
 
+import asyncio
 import contextlib
+import contextvars
 import io
 import os
 import signal
@@ -17,11 +19,14 @@ from typing import (
 from unittest import mock
 
 import pytest
-from prompt_toolkit.application import create_app_session, get_app
+from prompt_toolkit.application import Application, create_app_session, get_app
+from prompt_toolkit.application.current import set_app
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import DummyCompleter
+from prompt_toolkit.data_structures import Size
 from prompt_toolkit.input import DummyInput, create_pipe_input
 from prompt_toolkit.output import DummyOutput
+from prompt_toolkit.output.vt100 import Vt100_Output
 from prompt_toolkit.shortcuts import CompleteStyle, PromptSession
 from rich.style import Style
 from rich.text import Text
@@ -4963,6 +4968,153 @@ def test_rprompt_is_not_drawn_into_the_committed_line() -> None:
 
     assert drawn_while_done, "the right prompt was never rendered at all"
     assert True not in drawn_while_done, "the right prompt was drawn into the committed final frame"
+
+
+def test_set_window_title_is_flushed_during_a_command() -> None:
+    stream = io.StringIO()
+    output = Vt100_Output(stream, lambda: Size(rows=24, columns=80), enable_cpr=False)
+    observed = []
+
+    class TitleApp(cmd2.Cmd):
+        def do_work(self, _statement):
+            self.set_window_title("Working…")
+            observed.append(stream.getvalue())
+
+    with create_app_session(input=DummyInput(), output=output):
+        app = TitleApp(allow_cli_args=False)
+        app.onecmd_plus_hooks("work")
+
+    assert observed == ["\x1b]2;Working…\x07"]
+
+
+@pytest.mark.parametrize("from_worker", [False, True])
+def test_set_window_title_while_a_prompt_is_running(from_worker) -> None:
+    stream = io.StringIO()
+    title_threads = []
+    observed = []
+    workers = []
+    loop_thread = threading.get_ident()
+
+    class TitleOutput(Vt100_Output):
+        def set_title(self, title):
+            title_threads.append(threading.get_ident())
+            super().set_title(title)
+
+    output = TitleOutput(stream, lambda: Size(rows=24, columns=80), enable_cpr=False)
+    with create_pipe_input() as pipe_input, create_app_session(input=pipe_input, output=output):
+        app = Application(input=pipe_input, output=output)
+        sent = False
+
+        def check_title():
+            # Observe before exiting, because the final render also flushes output.
+            observed.append("\x1b]2;Working…\x07" in stream.getvalue())
+            app.exit()
+
+        def update_title():
+            cmd2.Cmd.set_window_title("Working…")
+            app.loop.call_soon_threadsafe(check_title)
+
+        def after_render(_sender):
+            nonlocal sent
+            if sent:
+                return
+            sent = True
+            # Start after the first frame, so its flush cannot hide a buffered title.
+            if from_worker:
+                context = contextvars.copy_context()
+                worker = threading.Thread(target=context.run, args=(update_title,), daemon=True)
+                workers.append(worker)
+                worker.start()
+            else:
+                update_title()
+
+        app.after_render += after_render
+        app.run(pre_run=lambda: app.loop.call_later(5, app.exit), set_exception_handler=False)
+
+    for worker in workers:
+        worker.join(timeout=5)
+        assert not worker.is_alive()
+
+    assert observed == [True]
+    assert title_threads == [loop_thread]
+
+
+def test_set_window_title_without_a_terminal() -> None:
+    with create_app_session(input=DummyInput(), output=DummyOutput()):
+        cmd2.Cmd.set_window_title("Working…")
+
+
+def test_set_window_title_after_the_application_loop_has_closed() -> None:
+    stream = io.StringIO()
+    output = Vt100_Output(stream, lambda: Size(rows=24, columns=80), enable_cpr=False)
+    app = Application(input=DummyInput(), output=output)
+    output.flush()
+    stream.seek(0)
+    stream.truncate()
+    loop = asyncio.new_event_loop()
+    loop.close()
+    app.loop = loop
+
+    with (
+        create_app_session(input=DummyInput(), output=output),
+        set_app(app),
+        mock.patch.object(output, "flush", wraps=output.flush) as flush,
+    ):
+        cmd2.Cmd.set_window_title("Finished")
+        flush.assert_called_once_with()
+
+    assert stream.getvalue() == "\x1b]2;Finished\x07"
+
+
+@pytest.mark.parametrize("close_during_scheduling", [True, False])
+def test_set_window_title_when_scheduling_fails(monkeypatch, close_during_scheduling) -> None:
+    stream = io.StringIO()
+    output = Vt100_Output(stream, lambda: Size(rows=24, columns=80), enable_cpr=False)
+    app = Application(input=DummyInput(), output=output)
+    output.flush()
+    stream.seek(0)
+    stream.truncate()
+    loop = asyncio.new_event_loop()
+    app.loop = loop
+    schedule = loop.call_soon_threadsafe
+    ready = threading.Event()
+    loop.call_soon(ready.set)
+    worker = threading.Thread(target=loop.run_forever, daemon=True)
+
+    def fail_to_schedule(callback):
+        if not close_during_scheduling:
+            raise RuntimeError("scheduling failed")
+        # Close the real loop after set_window_title has observed it running.
+        schedule(loop.stop)
+        worker.join(timeout=5)
+        assert not worker.is_alive()
+        loop.close()
+        schedule(callback)
+
+    worker.start()
+    try:
+        assert ready.wait(timeout=5)
+        monkeypatch.setattr(loop, "call_soon_threadsafe", fail_to_schedule)
+        with (
+            create_app_session(input=DummyInput(), output=output),
+            set_app(app),
+            mock.patch.object(output, "flush", wraps=output.flush) as flush,
+        ):
+            if close_during_scheduling:
+                cmd2.Cmd.set_window_title("Finished")
+                flush.assert_called_once_with()
+                assert stream.getvalue() == "\x1b]2;Finished\x07"
+            else:
+                with pytest.raises(RuntimeError, match="scheduling failed"):
+                    cmd2.Cmd.set_window_title("Finished")
+                flush.assert_not_called()
+                assert stream.getvalue() == ""
+    finally:
+        if loop.is_running():
+            schedule(loop.stop)
+        worker.join(timeout=5)
+        assert not worker.is_alive()
+        loop.close()
 
 
 def test_get_bottom_toolbar(base_app: cmd2.Cmd) -> None:

@@ -3,6 +3,9 @@
 - Bug Fixes
     - Fixed `@with_annotated` command `--help` output bypassing the application's output stream,
       leaving redirected help files empty and preventing help from being captured by embedded apps.
+    - Fixed `set_window_title()` leaving title changes buffered until the next prompt render.
+      Updates during a running prompt are sent through its event loop to avoid concurrent writes
+      from background threads.
 
 ## 4.3.0 (October 13, 2026)
 

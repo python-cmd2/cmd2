@@ -71,7 +71,7 @@ from prompt_toolkit import (
     filters,
     print_formatted_text,
 )
-from prompt_toolkit.application import create_app_session, get_app
+from prompt_toolkit.application import create_app_session, get_app, get_app_or_none, get_app_session
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import Completer, DummyCompleter
 from prompt_toolkit.formatted_text import ANSI, AnyFormattedText
@@ -84,7 +84,7 @@ from prompt_toolkit.layout import Window, walk
 from prompt_toolkit.layout.containers import ConditionalContainer, FloatContainer
 from prompt_toolkit.output import DummyOutput, create_output
 from prompt_toolkit.patch_stdout import patch_stdout
-from prompt_toolkit.shortcuts import CompleteStyle, PromptSession, choice, set_title
+from prompt_toolkit.shortcuts import CompleteStyle, PromptSession, choice
 from prompt_toolkit.styles import DynamicStyle
 from rich.console import (
     Group,
@@ -5862,12 +5862,35 @@ class Cmd:
             self._alert_condition.notify_all()
 
     @staticmethod
-    def set_window_title(title: str) -> None:  # pragma: no cover
+    def set_window_title(title: str) -> None:
         """Set the terminal window title.
+
+        When a prompt-toolkit application is running, update the title on its event loop
+        to avoid writing to its output buffer from a background thread.
+        Calls use the current prompt-toolkit app session. Worker threads serving a custom
+        app session must inherit that session's context.
 
         :param title: the new window title
         """
-        set_title(title)
+        output = get_app_session().output
+
+        def set_title_and_flush() -> None:
+            output.set_title(title)
+            output.flush()
+
+        app = get_app_or_none()
+        loop = app.loop if app is not None else None
+        if loop is not None and loop.is_running():
+            try:
+                loop.call_soon_threadsafe(set_title_and_flush)
+            except RuntimeError:
+                # The application can finish and close its loop between the check and scheduling.
+                if not loop.is_closed():
+                    raise
+            else:
+                return
+
+        set_title_and_flush()
 
     def enable_command(self, command: str) -> None:
         """Enable a command by restoring its functions.

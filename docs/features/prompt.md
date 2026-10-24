@@ -54,6 +54,13 @@ Alerts can interact with the CLI in two ways:
 
 - [cmd2.Cmd.set_window_title][]
 
+Title changes are flushed without waiting for the next prompt. When a prompt-toolkit application is
+running, the update is scheduled on its event loop so background threads can change the title
+without writing to the prompt's output buffer directly.
+
+Calls use the current prompt-toolkit app session. If you create a custom session, pass its context
+to worker threads, for example with `contextvars.copy_context().run`.
+
 The easiest way to understand these functions is to see the
 [async_printing.py](https://github.com/python-cmd2/cmd2/blob/main/examples/async_printing.py)
 example for a demonstration.
