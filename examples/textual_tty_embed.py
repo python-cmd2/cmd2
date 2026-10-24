@@ -64,6 +64,7 @@ class StatusApp(cmd2.Cmd):
 
         self._report_status_enabled = report_status
         self._commands_run = 0
+        self._running_command = ""
         self._last_command = ""
         self._last_duration = 0.0
         self._command_started = 0.0
@@ -82,13 +83,17 @@ class StatusApp(cmd2.Cmd):
             return
         status = {
             "state": state,
+            "running_command": self._running_command,
             "commands_run": self._commands_run,
             "last_command": self._last_command,
             "last_duration": self._last_duration,
         }
-        self.set_window_title(STATUS_PREFIX + json.dumps(status))
-        # prompt-toolkit buffers its output, so flush it or the "running" state would only appear after the command ends
-        get_app_session().output.flush()
+        # If the Textual application exits while a command is running, the terminal is closed before the finalization
+        # hook reports the end of the command. Writing to it then fails, which doesn't matter because nobody can see it.
+        with contextlib.suppress(OSError):
+            self.set_window_title(STATUS_PREFIX + json.dumps(status))
+            # prompt-toolkit buffers its output, so flush it or the "running" state would only appear after the command ends
+            get_app_session().output.flush()
 
     def preloop(self) -> None:
         """Report the initial status before the first prompt."""
@@ -102,7 +107,7 @@ class StatusApp(cmd2.Cmd):
         """
         self._command_depth += 1
         if self._command_depth == 1:
-            self._last_command = data.statement.command
+            self._running_command = data.statement.command
             self._command_started = time.monotonic()
             self._report_status("running")
         return data
@@ -116,8 +121,12 @@ class StatusApp(cmd2.Cmd):
             return data
         self._command_depth -= 1
         if self._command_depth == 0:
+            # Only now does the running command become the last command, so it's never shown next to the duration
+            # of the command before it
             self._commands_run += 1
+            self._last_command = self._running_command
             self._last_duration = time.monotonic() - self._command_started
+            self._running_command = ""
             self._report_status("idle")
         return data
 
@@ -174,6 +183,7 @@ def run_textual_app() -> int:
         """The state of the embedded cmd2 application as last reported through its window title."""
 
         state: reactive[str] = reactive("starting")
+        running_command: reactive[str] = reactive("")
         commands_run: reactive[int] = reactive(0)
         last_command: reactive[str] = reactive("")
         last_duration: reactive[float] = reactive(0.0)
@@ -181,10 +191,11 @@ def run_textual_app() -> int:
         def render(self) -> str:
             """Render the panel from the reactive attributes. Textual refreshes it when any of them change."""
             color = "green" if self.state == "idle" else "yellow"
+            state = f"{self.state} {self.running_command}" if self.state == "running" else self.state
             # The strings come from the terminal, so escape them or something like "[/b]" would be read as markup
             return (
                 "[b]cmd2 status[/b]\n"
-                f"State: [{color}]{escape(self.state)}[/{color}]\n"
+                f"State: [{color}]{escape(state)}[/{color}]\n"
                 f"Commands run: {self.commands_run}\n"
                 f"Last command: {escape(self.last_command) or '-'}\n"
                 f"Last duration: {self.last_duration:.2f}s"
@@ -197,11 +208,13 @@ def run_textual_app() -> int:
             """
             # Convert every value before setting any of them, so a bad document doesn't half update the panel
             state = str(status.get("state", "unknown"))
+            running_command = str(status.get("running_command", ""))
             commands_run = int(status.get("commands_run", 0))
             last_command = str(status.get("last_command", ""))
             last_duration = float(status.get("last_duration", 0.0))
 
             self.state = state
+            self.running_command = running_command
             self.commands_run = commands_run
             self.last_command = last_command
             self.last_duration = last_duration
@@ -241,12 +254,13 @@ def run_textual_app() -> int:
 
         def compose(self) -> ComposeResult:
             """Create the layout: the terminal running cmd2 on the left and the status panels on the right."""
+            cmd2_command = [sys.executable, __file__, "--cmd2-only", "--report-status"]
             yield Header()
             with Horizontal():
                 # The border is on a container because a Terminal sizes its pseudo-terminal from its outer size, so a
                 # border on the Terminal itself makes the cmd2 app draw more rows than are visible and hides its prompt
                 with Vertical(id="cmd2-pane"):
-                    yield Terminal(command=[sys.executable, __file__, "--cmd2-only", "--report-status"], id="cmd2")
+                    yield Terminal(command=cmd2_command, id="cmd2")
                 with Vertical(id="sidebar"):
                     yield StatusPanel(id="status")
                     yield ClockPanel(id="clock")

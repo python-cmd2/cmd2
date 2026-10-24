@@ -48,10 +48,11 @@ child process is the example script itself, run with `--cmd2-only --report-statu
 
 ```py
 def compose(self) -> ComposeResult:
+    cmd2_command = [sys.executable, __file__, "--cmd2-only", "--report-status"]
     yield Header()
     with Horizontal():
         with Vertical(id="cmd2-pane"):
-            yield Terminal(command=[sys.executable, __file__, "--cmd2-only", "--report-status"], id="cmd2")
+            yield Terminal(command=cmd2_command, id="cmd2")
         with Vertical(id="sidebar"):
             yield StatusPanel(id="status")
             yield ClockPanel(id="clock")
@@ -105,6 +106,9 @@ The example handles several details which are easy to miss when building somethi
   Textual markup.
 - Only report status through the window title when running inside the Textual application. In a
   normal terminal, it would overwrite the title of the user's window.
+- If the Textual application exits while a command is running, the pseudo-terminal is closed before
+  the finalization hook reports the end of that command, so setting the window title raises
+  `OSError`. The example ignores that error.
 - When the child process exits, `Terminal.ProcessExited.exit_code` holds its exit code, which is the
   negated signal number if a signal killed it. The example passes the exit code back to the shell,
   using 128 plus the signal number like a shell does, and when it isn't 0 the example keeps the
