@@ -113,3 +113,10 @@ class App(cmd2.Cmd):
 See the
 [getting_started.py](https://github.com/python-cmd2/cmd2/blob/main/examples/getting_started.py)
 example for a demonstration of this technique.
+
+!!! tip
+
+    If you want to show more realtime status information than fits in a toolbar, you can run your
+    `cmd2` application inside a [Textual](https://textual.textualize.io/) application, next to
+    widgets which display that information. See
+    [Embedding in Textual](../examples/embedding_in_textual.md).
