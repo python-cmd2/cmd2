@@ -1,4 +1,4 @@
-## 4.3.1 (TBD)
+## 4.3.1 (October 24, 2026)
 
 - Bug Fixes
     - Fixed `@with_annotated` command `--help` output bypassing the application's output stream,

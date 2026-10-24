@@ -1314,11 +1314,20 @@ def test_command_reads_the_terminal_after_a_subprocess_wrote_to_a_slow_pipe(tmp_
     producer = tmp_path / "producer.py"
     producer.write_text("import sys\nsys.stdout.write('x' * 262144)\n", encoding="utf-8")
     slow = tmp_path / "slow.py"
-    slow.write_text("import sys, time\nwhile sys.stdin.buffer.read(16384):\n    time.sleep(0.15)\n", encoding="utf-8")
+    slow_pid = tmp_path / "slow.pid"
+    slow.write_text(
+        "import os, pathlib, sys, time\n"
+        f"pathlib.Path({str(slow_pid)!r}).write_text(str(os.getpid()))\n"
+        "while sys.stdin.buffer.read(16384):\n"
+        "    time.sleep(0.15)\n",
+        encoding="utf-8",
+    )
     application = tmp_path / "application.py"
+    application_pid = tmp_path / "application.pid"
     application.write_text(
-        "import os, subprocess, sys\n"
+        "import os, pathlib, subprocess, sys\n"
         "from cmd2 import Cmd\n"
+        f"pathlib.Path({str(application_pid)!r}).write_text(str(os.getpid()))\n"
         "class App(Cmd):\n"
         "    def do_produce(self, _):\n"
         f"        subprocess.run([sys.executable, {str(producer)!r}], stdout=self.stdout, check=True)\n"
@@ -1376,6 +1385,12 @@ def test_command_reads_the_terminal_after_a_subprocess_wrote_to_a_slow_pipe(tmp_
         )
         assert "ANSWER=answer" in transcript[start:]
     finally:
+        # Killing the session leader leaves cmd2 and the slow consumer running past the end of the test. Coverage would then
+        # write their data files after pytest-cov has combined them.
+        for pid_file in (application_pid, slow_pid):
+            if pid_file.exists():
+                with contextlib.suppress(ProcessLookupError):
+                    os.kill(int(pid_file.read_text()), signal.SIGKILL)
         os.close(master)
         process.kill()
         process.wait(timeout=5)
