@@ -29,11 +29,19 @@
       Other selectors are treated as numbers or ranges only when they match the supported syntax;
       strings such as URLs, `a:b`, `+1`, and `1_0` remain literal searches.
 
-## 4.3.1 (TBD)
+## 4.3.1 (October 24, 2026)
 
 - Bug Fixes
     - Fixed `@with_annotated` command `--help` output bypassing the application's output stream,
       leaving redirected help files empty and preventing help from being captured by embedded apps.
+- Enhancements
+    - Added the
+      [textual_tty_embed.py](https://github.com/python-cmd2/cmd2/blob/main/examples/textual_tty_embed.py)
+      example, which embeds a `cmd2` application in a [Textual](https://textual.textualize.io/)
+      application using [textual-tty](https://github.com/ttygroup/textual-tty). The Textual
+      application shows a realtime status panel beside the `cmd2` application, which can display
+      much richer information than a bottom toolbar. See the
+      [Embedding in Textual](docs/examples/embedding_in_textual.md) documentation for details.
 
 ## 4.3.0 (October 13, 2026)
 

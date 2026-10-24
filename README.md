@@ -26,6 +26,12 @@ completion, command history, scripting, output styling, and much more.
 You can use `cmd2` for a small internal tool and grow the same application into an extensible,
 scriptable interface without replacing the framework or writing the usual CLI boilerplate.
 
+Want a richer visual display than a prompt and toolbar can offer? Your `cmd2` application can run
+inside a terminal pane of a [Textual](https://textual.textualize.io/) application, right next to
+dashboards and panels that show realtime status and other information. See
+[Embedding in Textual](https://cmd2.readthedocs.io/en/latest/examples/embedding_in_textual/) for an
+example.
+
 ## Quick start
 
 Install `cmd2`:

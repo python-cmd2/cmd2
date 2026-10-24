@@ -188,6 +188,7 @@ nav:
       - examples/index.md
       - examples/getting_started.md
       - examples/alternate_event_loops.md
+      - examples/embedding_in_textual.md
       - examples/examples.md
   - Mixins:
       - mixins/index.md
