@@ -11,8 +11,6 @@
       application shows a realtime status panel beside the `cmd2` application, which can display
       much richer information than a bottom toolbar. See the
       [Embedding in Textual](docs/examples/embedding_in_textual.md) documentation for details.
-    - Added `textual-tty` to the `dev` dependency group on POSIX systems so the example runs out of
-      the box in a development environment. It is not a runtime dependency of `cmd2`.
 
 ## 4.3.0 (October 13, 2026)
 
