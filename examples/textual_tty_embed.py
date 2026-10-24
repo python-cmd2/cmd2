@@ -33,6 +33,7 @@ Use the ``quit`` command in the embedded cmd2 application, or press Ctrl-Q, to e
 """
 
 import argparse
+import contextlib
 import json
 import sys
 import time
@@ -70,6 +71,8 @@ class StatusApp(cmd2.Cmd):
         # the commands which are running so that only the outermost one is reported.
         self._command_depth = 0
 
+        # Register the postparsing hook before any others. The postparsing hooks stop running when one of them sets
+        # stop or raises an exception, but the finalization hooks still run, which would leave the depth unbalanced.
         self.register_postparsing_hook(self._on_command_start)
         self.register_cmdfinalization_hook(self._on_command_end)
 
@@ -107,8 +110,9 @@ class StatusApp(cmd2.Cmd):
     def _on_command_end(self, data: cmd2.plugin.CommandFinalizationData) -> cmd2.plugin.CommandFinalizationData:
         """Report that the command is done, even when it failed."""
         # Finalization hooks also run for blank lines, comments, Ctrl-C at the prompt, and syntax errors. Those
-        # never became a statement, so the postparsing hook didn't run for them and there is nothing to report.
-        if data.statement is None:
+        # never became a statement, so the postparsing hook didn't run for them and there is nothing to report. Also
+        # never let the depth go negative, in case a postparsing hook which ran first stopped this hook from running.
+        if data.statement is None or self._command_depth == 0:
             return data
         self._command_depth -= 1
         if self._command_depth == 0:
@@ -257,27 +261,29 @@ def run_textual_app() -> int:
             if not event.title.startswith(STATUS_PREFIX):
                 return
             # Any program run in the terminal, for example by the cmd2 shell command, can set the title. So ignore
-            # anything which isn't a valid status document rather than letting it crash the application.
-            try:
+            # anything which isn't a valid status document rather than letting it crash the application. Besides
+            # json.JSONDecodeError, json.loads raises ValueError for integers with too many digits and RecursionError
+            # for documents which are nested too deeply.
+            with contextlib.suppress(TypeError, ValueError, OverflowError, RecursionError):
                 status = json.loads(event.title.removeprefix(STATUS_PREFIX))
-            except json.JSONDecodeError:
-                return
-            if not isinstance(status, dict):
-                return
-            try:
-                self.query_one(StatusPanel).apply(status)
-            except (TypeError, ValueError, OverflowError):
-                return
+                if isinstance(status, dict):
+                    self.query_one(StatusPanel).apply(status)
 
         def on_terminal_process_exited(self, event: Terminal.ProcessExited) -> None:
             """Exit when the cmd2 application exits, for example due to the quit command."""
-            self.cmd2_exit_code = event.exit_code
             if event.exit_code == 0:
                 self.exit()
                 return
+            if event.exit_code < 0:
+                # The exit code of a process killed by a signal is the negated signal number. Shells report 128 + signal.
+                outcome = f"was killed by signal {-event.exit_code}"
+                self.cmd2_exit_code = 128 - event.exit_code
+            else:
+                outcome = f"exited with code {event.exit_code}"
+                self.cmd2_exit_code = event.exit_code
             # Keep the terminal on the screen so the cmd2 application's error output, like a traceback, can be read
-            self.query_one(StatusPanel).state = f"exited with code {event.exit_code}"
-            self.notify(f"The cmd2 application exited with code {event.exit_code}", severity="error")
+            self.query_one(StatusPanel).state = outcome
+            self.notify(f"The cmd2 application {outcome}", severity="error")
 
         async def action_quit(self) -> None:
             """Exit with the cmd2 application's exit code, so the shell can tell whether it failed."""
@@ -298,6 +304,8 @@ def main() -> int:
         help="with --cmd2-only, report the status through the window title, which the Textual application reads",
     )
     cli_args = parser.parse_args()
+    if cli_args.report_status and not cli_args.cmd2_only:
+        parser.error("--report-status can only be used with --cmd2-only")
 
     if cli_args.cmd2_only:
         return StatusApp(report_status=cli_args.report_status).cmdloop()

@@ -48,12 +48,14 @@ child process is the example script itself, run with `--cmd2-only --report-statu
 
 ```py
 def compose(self) -> ComposeResult:
+    yield Header()
     with Horizontal():
         with Vertical(id="cmd2-pane"):
-            yield Terminal(command=[sys.executable, __file__, "--cmd2-only", "--report-status"])
+            yield Terminal(command=[sys.executable, __file__, "--cmd2-only", "--report-status"], id="cmd2")
         with Vertical(id="sidebar"):
-            yield StatusPanel()
-            yield ClockPanel()
+            yield StatusPanel(id="status")
+            yield ClockPanel(id="clock")
+    yield Footer()
 ```
 
 Because it is attached to a pseudo-terminal, the `cmd2` application is a completely normal `cmd2`
@@ -72,16 +74,10 @@ application handles to update the status panel:
 def on_terminal_title_changed(self, event: Terminal.TitleChanged) -> None:
     if not event.title.startswith(STATUS_PREFIX):
         return
-    try:
+    with contextlib.suppress(TypeError, ValueError, OverflowError, RecursionError):
         status = json.loads(event.title.removeprefix(STATUS_PREFIX))
-    except json.JSONDecodeError:
-        return
-    if not isinstance(status, dict):
-        return
-    try:
-        self.query_one(StatusPanel).apply(status)
-    except (TypeError, ValueError, OverflowError):
-        return
+        if isinstance(status, dict):
+            self.query_one(StatusPanel).apply(status)
 ```
 
 Since the status travels through the pseudo-terminal, there are no sockets, files, or threads to
@@ -96,17 +92,23 @@ The example handles several details which are easy to miss when building somethi
   were parsed into a statement, so check whether `data.statement` is `None` in a finalization hook.
 - Commands run by other commands, like `run_script`, `history -r`, and `run_pyscript`, go through
   the hooks too. The example counts the running commands so that only the outermost one is reported.
+- The postparsing hooks stop running as soon as one of them sets `stop` or raises an exception, but
+  the finalization hooks still run. If your application has other postparsing hooks, register the
+  one which counts commands first so that it is never skipped.
 - `prompt-toolkit` buffers its output, so flush it after setting the window title when a command
   starts. Otherwise the "running" state only reaches the Textual application after the command is
   done.
 - Any program run in the terminal, for example by the `shell` command, can set the window title.
-  Validate a status document before using it, and escape its strings with `textual.markup.escape`
-  before putting them in Textual markup.
+  Validate a status document before using it. Besides `json.JSONDecodeError`, `json.loads` raises
+  `ValueError` for integers with too many digits and `RecursionError` for documents which are nested
+  too deeply. Also escape the document's strings with `textual.markup.escape` before putting them in
+  Textual markup.
 - Only report status through the window title when running inside the Textual application. In a
   normal terminal, it would overwrite the title of the user's window.
-- When the child process exits, `Terminal.ProcessExited.exit_code` holds its exit code. The example
-  passes it back to the shell, and when it isn't 0 the example keeps the terminal on the screen so
-  that any traceback can still be read.
+- When the child process exits, `Terminal.ProcessExited.exit_code` holds its exit code, which is the
+  negated signal number if a signal killed it. The example passes the exit code back to the shell,
+  using 128 plus the signal number like a shell does, and when it isn't 0 the example keeps the
+  terminal on the screen so that any traceback can still be read.
 - A `Terminal` sizes its pseudo-terminal from its outer size, so put a border on a container around
   the `Terminal` rather than on the `Terminal` itself. Otherwise the `cmd2` application draws more
   rows than are visible and its prompt can end up hidden.
