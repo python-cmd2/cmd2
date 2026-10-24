@@ -38,3 +38,9 @@ If you are seeking a visually richer end-user experience and don't mind investin
 time, we would recommend checking out [Textual](https://github.com/Textualize/textual) as this can
 be used to build very sophisticated user interfaces in a terminal that are more akin to feature-rich
 web GUIs.
+
+You don't have to choose between `cmd2` and Textual, though. The
+[textual-tty](https://github.com/ttygroup/textual-tty) package provides a terminal emulator widget
+for Textual, so a `cmd2` application can run inside a Textual application, next to widgets which
+display realtime information about it. See
+[Embedding in Textual](../examples/embedding_in_textual.md) for an example of how to do this.
