@@ -9,10 +9,10 @@ is idle or running a command, how many commands it has run, and what the last on
 How it works:
   - [textual-tty](https://github.com/ttygroup/textual-tty) provides the ``Terminal`` widget, a terminal
     emulator (built on bittty) which runs a child process attached to a pseudo-terminal.
-  - The child process is simply this script run with ``--cmd2-only``, so the cmd2 application is completely
-    unaware that it is being embedded. It is a normal cmd2 application which uses prompt-toolkit.
+  - The child process is simply this script run with ``--cmd2-only --report-status``, so the cmd2 application
+    is completely unaware that it is being embedded. It is a normal cmd2 application which uses prompt-toolkit.
   - To report its state to the host, the cmd2 application calls ``cmd2.Cmd.set_window_title()`` with a JSON
-    document from precmd and command finalization hooks. The ``Terminal`` widget turns the title change
+    document from postparsing and command finalization hooks. The ``Terminal`` widget turns the title change
     into a ``Terminal.TitleChanged`` message which the Textual application uses to update the status panel.
     This uses only the pseudo-terminal, so there are no sockets, files, or threads to manage.
 
@@ -21,10 +21,10 @@ Neither textual nor textual-tty are dependencies of cmd2. To run this example fr
     uv run --with textual-tty examples/textual_tty_embed.py
 
 or install the extra packages into your own environment with ``pip install textual-tty`` and then run
-``python examples/textual_tty_embed.py``. This requires a POSIX terminal or Windows with pywinpty
-(which textual-tty installs for you).
+``python examples/textual_tty_embed.py``. The Textual application requires a POSIX system such as Linux or
+macOS, because on Windows textual-tty can only start a program by name and can't pass it arguments.
 
-The cmd2 application can also be run on its own, without Textual:
+The cmd2 application can also be run on its own, without Textual, on any platform:
 
     python examples/textual_tty_embed.py --cmd2-only
 
@@ -39,12 +39,6 @@ from datetime import datetime
 from typing import Any, ClassVar
 
 from prompt_toolkit.application import get_app_session
-from textual.app import App, ComposeResult
-from textual.binding import Binding, BindingType
-from textual.containers import Horizontal, Vertical
-from textual.reactive import reactive
-from textual.widgets import Footer, Header, Static
-from textual_tty import Terminal
 
 import cmd2
 
@@ -53,24 +47,35 @@ STATUS_PREFIX = "cmd2-status:"
 
 
 class StatusApp(cmd2.Cmd):
-    """A small cmd2 application which reports its state to whatever terminal it is running in."""
+    """A small cmd2 application which can report its state to whatever terminal it is running in."""
 
-    def __init__(self) -> None:
-        """Initialize the cmd2 application and register the hooks which report its status."""
+    def __init__(self, report_status: bool) -> None:
+        """Initialize the cmd2 application and register the hooks which track its status.
+
+        :param report_status: if True, report the status through the terminal's window title. Only the Textual
+                              application wants this. In a normal terminal it would overwrite the window title.
+        """
         super().__init__(allow_cli_args=False)
         self.prompt = "status-demo> "
-        self.intro = "Run a few commands and watch the status panel next to this terminal."
+        if report_status:
+            self.intro = "Run a few commands and watch the status panel next to this terminal."
 
+        self._report_status_enabled = report_status
         self._commands_run = 0
         self._last_command = ""
         self._last_duration = 0.0
         self._command_started = 0.0
+        # Commands run by other commands, like run_script and history -r, go through the hooks too. This counts
+        # the commands which are running so that only the outermost one is reported.
+        self._command_depth = 0
 
-        self.register_precmd_hook(self._on_command_start)
+        self.register_postparsing_hook(self._on_command_start)
         self.register_cmdfinalization_hook(self._on_command_end)
 
     def _report_status(self, state: str) -> None:
         """Send the application's current state to the terminal as a window title."""
+        if not self._report_status_enabled:
+            return
         status = {
             "state": state,
             "commands_run": self._commands_run,
@@ -85,18 +90,30 @@ class StatusApp(cmd2.Cmd):
         """Report the initial status before the first prompt."""
         self._report_status("idle")
 
-    def _on_command_start(self, data: cmd2.plugin.PrecommandData) -> cmd2.plugin.PrecommandData:
-        """Report that a command is about to run."""
-        self._last_command = data.statement.command or ""
-        self._command_started = time.monotonic()
-        self._report_status("running")
+    def _on_command_start(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
+        """Report that a command is about to run.
+
+        This is a postparsing hook rather than a precmd hook because the finalization hook runs for every statement
+        which reaches the postparsing hooks, while precmd hooks are skipped when, for example, redirection fails.
+        """
+        self._command_depth += 1
+        if self._command_depth == 1:
+            self._last_command = data.statement.command
+            self._command_started = time.monotonic()
+            self._report_status("running")
         return data
 
     def _on_command_end(self, data: cmd2.plugin.CommandFinalizationData) -> cmd2.plugin.CommandFinalizationData:
         """Report that the command is done, even when it failed."""
-        self._commands_run += 1
-        self._last_duration = time.monotonic() - self._command_started
-        self._report_status("idle")
+        # Finalization hooks also run for blank lines, comments, Ctrl-C at the prompt, and syntax errors. Those
+        # never became a statement, so the postparsing hook didn't run for them and there is nothing to report.
+        if data.statement is None:
+            return data
+        self._command_depth -= 1
+        if self._command_depth == 0:
+            self._commands_run += 1
+            self._last_duration = time.monotonic() - self._command_started
+            self._report_status("idle")
         return data
 
     @cmd2.with_argument_list
@@ -112,116 +129,181 @@ class StatusApp(cmd2.Cmd):
         except ValueError:
             self.perror(f"Not a number: {args[0]}")
             return
+        # NaN fails every comparison, so this rejects it along with negative, infinite, and huge values
+        if not 0 <= seconds <= 60:
+            self.perror(f"Seconds must be from 0 to 60: {args[0]}")
+            return
         self.poutput(f"Working for {seconds:g} seconds...")
         time.sleep(seconds)
         self.poutput("Done.")
 
 
-class ClockPanel(Static):
-    """The time of day, which is updated by Textual and has nothing to do with the cmd2 application."""
+def run_textual_app() -> int:
+    """Run the Textual application with the cmd2 application in a terminal pane and a status panel beside it.
 
-    def on_mount(self) -> None:
-        """Start updating the clock every second."""
-        self.update_clock()
-        self.set_interval(1, self.update_clock)
+    Textual is imported here rather than at the top of the module so the cmd2 application can run without it.
 
-    def update_clock(self) -> None:
-        """Show the current time."""
-        self.update(f"[b]Clock[/b]\n{datetime.now().astimezone():%H:%M:%S %Z}")
-
-
-class StatusPanel(Static):
-    """The state of the embedded cmd2 application as last reported through its window title."""
-
-    state: reactive[str] = reactive("starting")
-    commands_run: reactive[int] = reactive(0)
-    last_command: reactive[str] = reactive("")
-    last_duration: reactive[float] = reactive(0.0)
-
-    def render(self) -> str:
-        """Render the panel from the reactive attributes. Textual refreshes it when any of them change."""
-        color = "green" if self.state == "idle" else "yellow"
-        return (
-            "[b]cmd2 status[/b]\n"
-            f"State: [{color}]{self.state}[/{color}]\n"
-            f"Commands run: {self.commands_run}\n"
-            f"Last command: {self.last_command or '-'}\n"
-            f"Last duration: {self.last_duration:.2f}s"
-        )
-
-    def apply(self, status: dict[str, Any]) -> None:
-        """Update the panel from a status document sent by the cmd2 application."""
-        self.state = str(status.get("state", "unknown"))
-        self.commands_run = int(status.get("commands_run", 0))
-        self.last_command = str(status.get("last_command", ""))
-        self.last_duration = float(status.get("last_duration", 0.0))
-
-
-class Cmd2InTextual(App[None]):
-    """A Textual application with a cmd2 application in a terminal pane and a status panel beside it."""
-
-    TITLE = "cmd2 inside Textual"
-
-    CSS = """
-    #cmd2-pane {
-        width: 2fr;
-        border: round $primary;
-    }
-    #cmd2 {
-        width: 1fr;
-        height: 1fr;
-    }
-    #sidebar {
-        width: 1fr;
-    }
-    #sidebar Static {
-        border: round $secondary;
-        padding: 0 1;
-        margin-bottom: 1;
-    }
+    :return: the exit code of the cmd2 application, or 0 if the Textual application was quit while it was running
     """
+    from textual.app import App, ComposeResult
+    from textual.binding import Binding, BindingType
+    from textual.containers import Horizontal, Vertical
+    from textual.markup import escape
+    from textual.reactive import reactive
+    from textual.widgets import Footer, Header, Static
+    from textual_tty import Terminal
 
-    # Priority bindings are needed because the focused Terminal sends every key press to the cmd2 application
-    BINDINGS: ClassVar[list[BindingType]] = [Binding("ctrl+q", "quit", "Quit", priority=True)]
+    class ClockPanel(Static):
+        """The time of day, which is updated by Textual and has nothing to do with the cmd2 application."""
 
-    def compose(self) -> ComposeResult:
-        """Create the layout: the terminal running cmd2 on the left and the status panels on the right."""
-        yield Header()
-        with Horizontal():
-            # The border is on a container because a Terminal sizes its pseudo-terminal from its outer size, so a
-            # border on the Terminal itself makes the cmd2 app draw more rows than are visible and hides its prompt
-            with Vertical(id="cmd2-pane"):
-                yield Terminal(command=[sys.executable, __file__, "--cmd2-only"], id="cmd2")
-            with Vertical(id="sidebar"):
-                yield StatusPanel(id="status")
-                yield ClockPanel(id="clock")
-        yield Footer()
+        def on_mount(self) -> None:
+            """Start updating the clock every second."""
+            self.update_clock()
+            self.set_interval(1, self.update_clock)
 
-    def on_mount(self) -> None:
-        """Give the keyboard focus to the terminal so typing goes to the cmd2 application."""
-        self.query_one(Terminal).focus()
+        def update_clock(self) -> None:
+            """Show the current time."""
+            self.update(f"[b]Clock[/b]\n{datetime.now().astimezone():%H:%M:%S %Z}")
 
-    def on_terminal_title_changed(self, event: Terminal.TitleChanged) -> None:
-        """Update the status panel when the cmd2 application reports its status."""
-        if not event.title.startswith(STATUS_PREFIX):
-            return
-        try:
-            status = json.loads(event.title.removeprefix(STATUS_PREFIX))
-        except json.JSONDecodeError:
-            return
-        self.query_one(StatusPanel).apply(status)
+    class StatusPanel(Static):
+        """The state of the embedded cmd2 application as last reported through its window title."""
 
-    def on_terminal_process_exited(self, _event: Terminal.ProcessExited) -> None:
-        """Exit when the cmd2 application exits, for example due to the quit command."""
-        self.exit()
+        state: reactive[str] = reactive("starting")
+        commands_run: reactive[int] = reactive(0)
+        last_command: reactive[str] = reactive("")
+        last_duration: reactive[float] = reactive(0.0)
+
+        def render(self) -> str:
+            """Render the panel from the reactive attributes. Textual refreshes it when any of them change."""
+            color = "green" if self.state == "idle" else "yellow"
+            # The strings come from the terminal, so escape them or something like "[/b]" would be read as markup
+            return (
+                "[b]cmd2 status[/b]\n"
+                f"State: [{color}]{escape(self.state)}[/{color}]\n"
+                f"Commands run: {self.commands_run}\n"
+                f"Last command: {escape(self.last_command) or '-'}\n"
+                f"Last duration: {self.last_duration:.2f}s"
+            )
+
+        def apply(self, status: dict[str, Any]) -> None:
+            """Update the panel from a status document sent by the cmd2 application.
+
+            :raises TypeError, ValueError, OverflowError: if a value can't be converted to the type it should have
+            """
+            # Convert every value before setting any of them, so a bad document doesn't half update the panel
+            state = str(status.get("state", "unknown"))
+            commands_run = int(status.get("commands_run", 0))
+            last_command = str(status.get("last_command", ""))
+            last_duration = float(status.get("last_duration", 0.0))
+
+            self.state = state
+            self.commands_run = commands_run
+            self.last_command = last_command
+            self.last_duration = last_duration
+
+    class Cmd2InTextual(App[None]):
+        """A Textual application with a cmd2 application in a terminal pane and a status panel beside it."""
+
+        TITLE = "cmd2 inside Textual"
+
+        CSS = """
+        #cmd2-pane {
+            width: 2fr;
+            border: round $primary;
+        }
+        #cmd2 {
+            width: 1fr;
+            height: 1fr;
+        }
+        #sidebar {
+            width: 1fr;
+        }
+        #sidebar Static {
+            border: round $secondary;
+            padding: 0 1;
+            margin-bottom: 1;
+        }
+        """
+
+        # Textual already has a priority binding which makes Ctrl-Q quit even though the focused Terminal sends every
+        # other key press to the cmd2 application. It is hidden, so this repeats it only to show Quit in the footer.
+        BINDINGS: ClassVar[list[BindingType]] = [Binding("ctrl+q", "quit", "Quit", priority=True)]
+
+        def __init__(self) -> None:
+            """Initialize the Textual application."""
+            super().__init__()
+            self.cmd2_exit_code = 0
+
+        def compose(self) -> ComposeResult:
+            """Create the layout: the terminal running cmd2 on the left and the status panels on the right."""
+            yield Header()
+            with Horizontal():
+                # The border is on a container because a Terminal sizes its pseudo-terminal from its outer size, so a
+                # border on the Terminal itself makes the cmd2 app draw more rows than are visible and hides its prompt
+                with Vertical(id="cmd2-pane"):
+                    yield Terminal(command=[sys.executable, __file__, "--cmd2-only", "--report-status"], id="cmd2")
+                with Vertical(id="sidebar"):
+                    yield StatusPanel(id="status")
+                    yield ClockPanel(id="clock")
+            yield Footer()
+
+        def on_mount(self) -> None:
+            """Give the keyboard focus to the terminal so typing goes to the cmd2 application."""
+            self.query_one(Terminal).focus()
+
+        def on_terminal_title_changed(self, event: Terminal.TitleChanged) -> None:
+            """Update the status panel when the cmd2 application reports its status."""
+            if not event.title.startswith(STATUS_PREFIX):
+                return
+            # Any program run in the terminal, for example by the cmd2 shell command, can set the title. So ignore
+            # anything which isn't a valid status document rather than letting it crash the application.
+            try:
+                status = json.loads(event.title.removeprefix(STATUS_PREFIX))
+            except json.JSONDecodeError:
+                return
+            if not isinstance(status, dict):
+                return
+            try:
+                self.query_one(StatusPanel).apply(status)
+            except (TypeError, ValueError, OverflowError):
+                return
+
+        def on_terminal_process_exited(self, event: Terminal.ProcessExited) -> None:
+            """Exit when the cmd2 application exits, for example due to the quit command."""
+            self.cmd2_exit_code = event.exit_code
+            if event.exit_code == 0:
+                self.exit()
+                return
+            # Keep the terminal on the screen so the cmd2 application's error output, like a traceback, can be read
+            self.query_one(StatusPanel).state = f"exited with code {event.exit_code}"
+            self.notify(f"The cmd2 application exited with code {event.exit_code}", severity="error")
+
+        async def action_quit(self) -> None:
+            """Exit with the cmd2 application's exit code, so the shell can tell whether it failed."""
+            self.exit(return_code=self.cmd2_exit_code)
+
+    app = Cmd2InTextual()
+    app.run()
+    return app.return_code or 0
 
 
-if __name__ == "__main__":
+def main() -> int:
+    """Run the Textual application, or just the cmd2 application if --cmd2-only is given."""
     parser = argparse.ArgumentParser(description="Run a cmd2 application embedded in a Textual application.")
     parser.add_argument("--cmd2-only", action="store_true", help="run just the cmd2 application, without Textual")
+    parser.add_argument(
+        "--report-status",
+        action="store_true",
+        help="with --cmd2-only, report the status through the window title, which the Textual application reads",
+    )
     cli_args = parser.parse_args()
 
     if cli_args.cmd2_only:
-        sys.exit(StatusApp().cmdloop())
-    else:
-        Cmd2InTextual().run()
+        return StatusApp(report_status=cli_args.report_status).cmdloop()
+    if sys.platform == "win32":
+        parser.error("the Textual application requires a POSIX system, use --cmd2-only to run just the cmd2 application")
+    return run_textual_app()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

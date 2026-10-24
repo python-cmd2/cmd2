@@ -95,7 +95,8 @@ each:
 - [textual_tty_embed.py](https://github.com/python-cmd2/cmd2/blob/main/examples/textual_tty_embed.py)
     - Shows how to embed a `cmd2` application in a [Textual](https://textual.textualize.io/)
       application using [textual-tty](https://github.com/ttygroup/textual-tty), with a realtime
-      status panel next to the terminal. Requires `textual-tty`, which is not a `cmd2` dependency
+      status panel next to the terminal. Requires `textual-tty`, which is not a `cmd2` dependency,
+      and a POSIX system such as Linux or macOS
 - [tmux_launch.sh](https://github.com/python-cmd2/cmd2/blob/main/examples/tmux_launch.sh)
     - Shell script that launches two applications using tmux in different windows/tabs
 - [tmux_split.sh](https://github.com/python-cmd2/cmd2/blob/main/examples/tmux_split.sh)
