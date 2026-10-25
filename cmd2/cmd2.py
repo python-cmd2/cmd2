@@ -5890,6 +5890,9 @@ class Cmd:
         """
         session = get_app_session()
         with _select_app_sessions_lock:
+            # Workers may still see the parent session instead of select()'s temporary one.
+            # Follow registered children to the innermost active select() session.
+            # [-1] chooses the most recently registered active child when menus share a parent.
             while session in _select_app_sessions:
                 session = _select_app_sessions[session][-1]
         app = session.app
