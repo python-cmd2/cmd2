@@ -19,7 +19,7 @@ from typing import (
 from unittest import mock
 
 import pytest
-from prompt_toolkit.application import Application, create_app_session, get_app
+from prompt_toolkit.application import Application, create_app_session, get_app, get_app_session
 from prompt_toolkit.application.current import set_app
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import DummyCompleter
@@ -4990,6 +4990,7 @@ def test_set_window_title_is_flushed_during_a_command() -> None:
 @pytest.mark.parametrize("from_worker", [False, True])
 def test_set_window_title_while_a_prompt_is_running(from_worker) -> None:
     stream = io.StringIO()
+    session_stream = io.StringIO()
     title_threads = []
     observed = []
     workers = []
@@ -5001,7 +5002,8 @@ def test_set_window_title_while_a_prompt_is_running(from_worker) -> None:
             super().set_title(title)
 
     output = TitleOutput(stream, lambda: Size(rows=24, columns=80), enable_cpr=False)
-    with create_pipe_input() as pipe_input, create_app_session(input=pipe_input, output=output):
+    session_output = Vt100_Output(session_stream, lambda: Size(rows=24, columns=80), enable_cpr=False)
+    with create_pipe_input() as pipe_input, create_app_session(input=pipe_input, output=session_output):
         app = Application(input=pipe_input, output=output)
         sent = False
 
@@ -5037,6 +5039,190 @@ def test_set_window_title_while_a_prompt_is_running(from_worker) -> None:
 
     assert observed == [True]
     assert title_threads == [loop_thread]
+    assert "\x1b]2;Working…\x07" not in session_stream.getvalue()
+
+
+@pytest.mark.parametrize("interrupt", [False, True])
+def test_set_window_title_from_a_worker_while_select_is_running(monkeypatch, interrupt) -> None:
+    stream = io.StringIO()
+    parent_stream = io.StringIO()
+    title_threads = []
+    worker_sessions = []
+    observed = []
+    rendered = threading.Event()
+    loop_thread = threading.get_ident()
+    parent = get_app_session()
+    run = Application.run
+
+    class TitleOutput(Vt100_Output):
+        def set_title(self, title):
+            title_threads.append(threading.get_ident())
+            super().set_title(title)
+
+    output = TitleOutput(stream, lambda: Size(rows=24, columns=80), enable_cpr=False)
+    parent_output = Vt100_Output(parent_stream, lambda: Size(rows=24, columns=80), enable_cpr=False)
+
+    def run_menu(menu, *args, **kwargs):
+        def check_title():
+            # Check before the menu's final render can flush a buffered title.
+            observed.append("\x1b]2;Working…\x07" in stream.getvalue())
+            if interrupt:
+                menu.exit(exception=KeyboardInterrupt)
+            else:
+                menu.exit(result="sweet")
+
+        def update_title():
+            worker_sessions.append(get_app_session())
+            if rendered.wait(timeout=5):
+                cmd2.Cmd.set_window_title("Working…")
+                menu.loop.call_soon_threadsafe(check_title)
+
+        # A plain worker sees the default session, not select's temporary one.
+        # An empty context keeps this true on Python builds that inherit context by default.
+        worker = threading.Thread(target=contextvars.Context().run, args=(update_title,), daemon=True)
+        menu.after_render += lambda _sender: rendered.set()
+        worker.start()
+        try:
+            return run(menu, *args, pre_run=lambda: menu.loop.call_later(5, lambda: menu.exit(result="timeout")), **kwargs)
+        finally:
+            worker.join(timeout=5)
+            assert not worker.is_alive()
+
+    with create_pipe_input() as pipe_input:
+        # Give the default session a safe output distinct from the menu's terminal.
+        monkeypatch.setattr(parent, "_input", pipe_input)
+        monkeypatch.setattr(parent, "_output", parent_output)
+        app = cmd2.Cmd(allow_cli_args=False, stdout=io.StringIO())
+        app.main_session = PromptSession(input=pipe_input, output=output)
+        monkeypatch.setattr(Application, "run", run_menu)
+
+        if interrupt:
+            with pytest.raises(KeyboardInterrupt):
+                app.select(["sweet", "salty"])
+        else:
+            assert app.select(["sweet", "salty"]) == "sweet"
+
+        assert observed == [True]
+        assert title_threads == [loop_thread]
+        assert worker_sessions == [parent]
+        assert "\x1b]2;Working…\x07" not in parent_stream.getvalue()
+
+        # Both normal return and interruption must restore the parent's routing.
+        cmd2.Cmd.set_window_title("Finished")
+        assert "\x1b]2;Finished\x07" in parent_stream.getvalue()
+        assert "\x1b]2;Finished\x07" not in stream.getvalue()
+
+
+@pytest.mark.parametrize("same_parent", [False, True])
+def test_set_window_title_during_nested_select_setup(monkeypatch, same_parent) -> None:
+    streams = [io.StringIO() for _ in range(4)]
+    outputs = [Vt100_Output(stream, lambda: Size(rows=24, columns=80), enable_cpr=False) for stream in streams]
+    parent = get_app_session()
+    calls = 0
+
+    def update_title(title):
+        contextvars.Context().run(cmd2.Cmd.set_window_title, title)
+
+    def choose(**_kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            update_title("Outer before")
+            outer_session = app.main_session
+            app.main_session = PromptSession(input=pipe_input, output=outputs[2])
+            try:
+                if same_parent:
+                    # Re-enter the original session, temporarily replacing its existing mapping.
+                    contextvars.Context().run(app.select, ["inner"])
+                else:
+                    app.select(["inner"])
+            finally:
+                app.main_session = outer_session
+            update_title("Outer after")
+        else:
+            # choice has not constructed an Application yet: use the innermost session output.
+            update_title("Inner")
+            with create_app_session(input=DummyInput(), output=outputs[3]):
+                cmd2.Cmd.set_window_title("Unrelated")
+        return "selected"
+
+    with create_pipe_input() as pipe_input:
+        monkeypatch.setattr(parent, "_input", pipe_input)
+        monkeypatch.setattr(parent, "_output", outputs[0])
+        app = cmd2.Cmd(allow_cli_args=False)
+        app.main_session = PromptSession(input=pipe_input, output=outputs[1])
+        monkeypatch.setattr("cmd2.cmd2.choice", choose)
+        assert app.select(["outer"]) == "selected"
+        update_title("Finished")
+
+    assert calls == 2
+    assert streams[0].getvalue() == "\x1b]2;Finished\x07"
+    assert streams[1].getvalue().endswith("\x1b]2;Outer before\x07\x1b]2;Outer after\x07")
+    assert streams[2].getvalue().endswith("\x1b]2;Inner\x07")
+    assert streams[3].getvalue() == "\x1b]2;Unrelated\x07"
+
+
+def test_set_window_title_after_select_menus_finish_out_of_order(monkeypatch) -> None:
+    streams = [io.StringIO() for _ in range(3)]
+    outputs = [Vt100_Output(stream, lambda: Size(rows=24, columns=80), enable_cpr=False) for stream in streams]
+    entered = [threading.Event(), threading.Event()]
+    released = [threading.Event(), threading.Event()]
+    results = []
+    errors = []
+
+    def choose(*, options, **_kwargs):
+        index = options[0][0]
+        entered[index].set()
+        assert released[index].wait(timeout=5)
+        return index
+
+    def select(app, index):
+        try:
+            results.append(app.select([(index, str(index))]))
+        # Preserve worker failures for the main test thread instead of relying on pytest's warning hook.
+        except BaseException as ex:  # noqa: BLE001
+            errors.append(ex)
+
+    with create_pipe_input() as pipe_input:
+        parent = get_app_session()
+        monkeypatch.setattr(parent, "_input", pipe_input)
+        monkeypatch.setattr(parent, "_output", outputs[0])
+        monkeypatch.setattr("cmd2.cmd2.choice", choose)
+        apps = [cmd2.Cmd(allow_cli_args=False) for _ in range(2)]
+        for index, app in enumerate(apps):
+            app.main_session = PromptSession(input=pipe_input, output=outputs[index + 1])
+        for output, stream in zip(outputs, streams, strict=True):
+            output.flush()
+            stream.seek(0)
+            stream.truncate()
+        workers = [
+            threading.Thread(target=contextvars.Context().run, args=(select, app, index), daemon=True)
+            for index, app in enumerate(apps)
+        ]
+        try:
+            workers[0].start()
+            assert entered[0].wait(timeout=5)
+            workers[1].start()
+            assert entered[1].wait(timeout=5)
+            cmd2.Cmd.set_window_title("Both active")
+            released[0].set()
+            workers[0].join(timeout=5)
+            assert not workers[0].is_alive()
+            cmd2.Cmd.set_window_title("Second active")
+        finally:
+            for event in released:
+                event.set()
+            for worker in workers:
+                if worker.ident is not None:
+                    worker.join(timeout=5)
+                    assert not worker.is_alive()
+        cmd2.Cmd.set_window_title("Finished")
+
+    assert not errors
+    assert results == [0, 1]
+    assert streams[0].getvalue() == "\x1b]2;Finished\x07"
+    assert streams[1].getvalue() == ""
+    assert streams[2].getvalue() == "\x1b]2;Both active\x07\x1b]2;Second active\x07"
 
 
 def test_set_window_title_without_a_terminal() -> None:

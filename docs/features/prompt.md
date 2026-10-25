@@ -56,7 +56,8 @@ Alerts can interact with the CLI in two ways:
 
 Title changes are flushed without waiting for the next prompt. When a prompt-toolkit application is
 running, the update is scheduled on its event loop so background threads can change the title
-without writing to the prompt's output buffer directly.
+without writing to the prompt's output buffer directly. The title is sent to that application's
+output, including while a `select()` menu is active.
 
 Calls use the current prompt-toolkit app session. If you create a custom session, pass its context
 to worker threads, for example with `contextvars.copy_context().run`.

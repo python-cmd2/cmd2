@@ -71,7 +71,8 @@ from prompt_toolkit import (
     filters,
     print_formatted_text,
 )
-from prompt_toolkit.application import create_app_session, get_app, get_app_or_none, get_app_session
+from prompt_toolkit.application import create_app_session, get_app, get_app_session
+from prompt_toolkit.application.current import AppSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import Completer, DummyCompleter
 from prompt_toolkit.formatted_text import ANSI, AnyFormattedText
@@ -214,6 +215,11 @@ from .utils import (
 
 if TYPE_CHECKING:  # pragma: no cover
     from prompt_toolkit.buffer import Buffer
+
+
+# select() creates a child session that ordinary background threads cannot see through contextvars.
+_select_app_sessions: dict[AppSession, list[AppSession]] = {}
+_select_app_sessions_lock = threading.Lock()
 
 
 class _SavedCmd2Env:
@@ -4788,10 +4794,20 @@ class Cmd:
                     fulloptions.append((opt[0], str(opt[0])))
 
         if self._is_tty_session(self.main_session):
+            parent_session = get_app_session()
             try:
                 while True:
-                    with create_app_session(input=self.main_session.input, output=self.main_session.output):
-                        result = choice(message=prompt, options=fulloptions)
+                    with create_app_session(input=self.main_session.input, output=self.main_session.output) as session:
+                        with _select_app_sessions_lock:
+                            sessions = _select_app_sessions.setdefault(parent_session, [])
+                            sessions.append(session)
+                        try:
+                            result = choice(message=prompt, options=fulloptions)
+                        finally:
+                            with _select_app_sessions_lock:
+                                sessions.remove(session)
+                                if not sessions:
+                                    del _select_app_sessions[parent_session]
                     if result is not None:
                         return result
             except KeyboardInterrupt:
@@ -5867,18 +5883,22 @@ class Cmd:
 
         When a prompt-toolkit application is running, update the title on its event loop
         to avoid writing to its output buffer from a background thread.
-        Calls use the current prompt-toolkit app session. Worker threads serving a custom
-        app session must inherit that session's context.
+        Calls use the current prompt-toolkit app session, including any active select() menu.
+        Worker threads serving a custom app session must inherit that session's context.
 
         :param title: the new window title
         """
-        output = get_app_session().output
+        session = get_app_session()
+        with _select_app_sessions_lock:
+            while session in _select_app_sessions:
+                session = _select_app_sessions[session][-1]
+        app = session.app
+        output = app.output if app is not None else session.output
 
         def set_title_and_flush() -> None:
             output.set_title(title)
             output.flush()
 
-        app = get_app_or_none()
         loop = app.loop if app is not None else None
         if loop is not None and loop.is_running():
             try:
