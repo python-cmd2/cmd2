@@ -54,13 +54,14 @@ Alerts can interact with the CLI in two ways:
 
 - [cmd2.Cmd.set_window_title][]
 
-Title changes are flushed without waiting for the next prompt. When a prompt-toolkit application is
-running, the update is scheduled on its event loop so background threads can change the title
-without writing to the prompt's output buffer directly. The title is sent to that application's
-output, including while a `select()` menu is active.
+Call this method on your application instance, for example `app.set_window_title("Working…")`. The
+title is sent to the same terminal as that instance's main prompt, custom input prompts, and
+`select()` menus, including while a command is running.
 
-Calls use the current prompt-toolkit app session. If you create a custom session, pass its context
-to worker threads, for example with `contextvars.copy_context().run`.
+Title changes are flushed before the method returns. The output driver serializes title writes with
+prompt rendering, so background threads can call the method without inheriting a prompt-toolkit
+session context. Output errors, such as a closed terminal, propagate to the caller. Non-interactive
+sessions with a dummy output do not emit a title.
 
 The easiest way to understand these functions is to see the
 [async_printing.py](https://github.com/python-cmd2/cmd2/blob/main/examples/async_printing.py)

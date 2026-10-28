@@ -1,6 +1,8 @@
 ## 4.4.0 (TBD)
 
 - Breaking Changes
+    - `set_window_title()` is now an instance method. Call `app.set_window_title(title)` or
+      `self.set_window_title(title)` so title changes use that application's terminal.
     - `History.get()` and `History.span()` now raise `HistoryIndexError`, an `IndexError` subclass,
       for invalid indices and bounded ranges selecting no history items. Unbounded ranges (`:` and
       `..`) can still return an empty dictionary. Starts before the beginning of history are
@@ -28,9 +30,9 @@
     - History regular expressions containing range separators are now handled as regex searches.
       Other selectors are treated as numbers or ranges only when they match the supported syntax;
       strings such as URLs, `a:b`, `+1`, and `1_0` remain literal searches.
-    - Fixed `set_window_title()` leaving title changes buffered until the next prompt render.
-      Updates during a running prompt are sent through its event loop to avoid concurrent writes
-      from background threads.
+    - Fixed `set_window_title()` leaving title changes buffered until the next prompt render. Title
+      writes and flushes are serialized with rendering on the application's output driver, including
+      during prompt setup and teardown. Output errors propagate to the calling thread.
 
 ## 4.3.1 (October 24, 2026)
 
