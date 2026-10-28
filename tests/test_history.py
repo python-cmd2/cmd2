@@ -14,6 +14,7 @@ import pytest
 
 import cmd2
 from cmd2.history import HistoryFormatError, HistoryIndexError
+from cmd2.parsing import Statement
 
 from .conftest import (
     normalize,
@@ -400,8 +401,6 @@ def test_history_max_length(hist) -> None:
 
 
 def test_history_truncate_shifts_session_start(hist) -> None:
-    from cmd2.parsing import Statement
-
     hist.start_session()
     hist.append(Statement("", raw="new-1"))
     hist.append(Statement("", raw="new-2"))
@@ -425,8 +424,6 @@ def test_history_truncate_shifts_session_start(hist) -> None:
     ],
 )
 def test_history_truncate_at_or_into_current_session(hist, max_length, expected) -> None:
-    from cmd2.parsing import Statement
-
     hist.start_session()
     hist.append(Statement("", raw="new-1"))
     hist.append(Statement("", raw="new-2"))
@@ -434,12 +431,12 @@ def test_history_truncate_at_or_into_current_session(hist, max_length, expected)
     hist.truncate(max_length)
     assert hist.session_start_index == 0
     assert [item.raw for item in hist.span(":").values()] == expected
+    assert [item.raw for item in hist.str_search("new").values()] == expected
+    assert [item.raw for item in hist.regex_search("/new/").values()] == expected
 
 
 @pytest.mark.parametrize("max_length", [0, -1])
 def test_history_truncate_all_resets_session_start(hist, max_length) -> None:
-    from cmd2.parsing import Statement
-
     hist.start_session()
     hist.truncate(max_length)
     assert hist.session_start_index == 0
@@ -447,6 +444,7 @@ def test_history_truncate_all_resets_session_start(hist, max_length) -> None:
     hist.append(Statement("", raw="new-1"))
     assert [item.raw for item in hist.span(":").values()] == ["new-1"]
     assert [item.raw for item in hist.str_search("new").values()] == ["new-1"]
+    assert [item.raw for item in hist.regex_search("/new/").values()] == ["new-1"]
 
 
 def test_history_to_json(hist) -> None:
