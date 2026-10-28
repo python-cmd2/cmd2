@@ -18,6 +18,11 @@ from .parsing import (
     shlex_split,
 )
 
+NO_HISTORY_ITEMS = "No history items in range"
+NO_MATCHING_HISTORY_ITEMS = "No matching history items"
+FIRST_HISTORY_INDEX = "The first command in history is command 1."
+INVALID_HISTORY_RANGE = "History indices must be positive or negative integers, and may not be zero."
+
 
 def single_line_format(statement: Statement) -> str:
     """Format a command line to display on a single line.
@@ -131,6 +136,14 @@ class HistoryItem:
         return HistoryItem(Statement.from_dict(statement_dict))
 
 
+class HistoryIndexError(IndexError):
+    """Raised when a history index is invalid or a bounded range selects no items."""
+
+
+class HistoryFormatError(ValueError):
+    """Raised when a history range has invalid syntax or a zero endpoint."""
+
+
 class History(list[HistoryItem]):
     """A list of [HistoryItem][cmd2.history.HistoryItem] objects with additional methods for searching and managing the list.
 
@@ -190,46 +203,30 @@ class History(list[HistoryItem]):
 
         :param index: optional item to get
         :return: a single [cmd2.history.HistoryItem][]
+        :raises HistoryIndexError: if index is zero or outside the history
         """
         if index == 0:
-            raise IndexError("The first command in history is command 1.")
+            raise HistoryIndexError(f"{NO_HISTORY_ITEMS}. {FIRST_HISTORY_INDEX}")
+        if abs(index) > len(self):
+            raise HistoryIndexError(NO_HISTORY_ITEMS)
         if index < 0:
             return self[index]
         return self[index - 1]
 
-    # This regular expression parses input for the span() method. There are five parts:
-    #
-    #    ^\s*                          matches any whitespace at the beginning of the
-    #                                  input. This is here so you don't have to trim the input
-    #
-    #    (?P<start>-?[1-9]{1}\d*)?     create a capture group named 'start' which matches an
-    #                                  optional minus sign, followed by exactly one non-zero
-    #                                  digit, and as many other digits as you want. This group
-    #                                  is optional so that we can match an input string like '..2'.
-    #                                  This regex will match 1, -1, 10, -10, but not 0 or -0.
-    #
-    #    (?P<separator>:|(\.{2,}))?    create a capture group named 'separator' which matches either
-    #                                  a colon or two periods.
-    #
-    #    (?P<end>-?[1-9]{1}\d*)?       create a capture group named 'end' which matches an
-    #                                  optional minus sign, followed by exactly one non-zero
-    #                                  digit, and as many other digits as you want. This group is
-    #                                  optional so that we can match an input string like ':'
-    #                                  or '5:'. This regex will match 1, -1, 10, -10, but not
-    #                                  0 or -0.
-    #
-    #    \s*$                          match any whitespace at the end of the input. This is here so
-    #                                  you don't have to trim the input
-    #
-    spanpattern = re.compile(r"^\s*(?P<start>-?[1-9]\d*)?(?P<separator>:|(\.{2,}))(?P<end>-?[1-9]\d*)?\s*$")
+    # Recognize ranges with optional signed ASCII integer endpoints. Zero is parsed so that
+    # span() can report its specific error; it is never a valid history index.
+    spanpattern = re.compile(r"\s*(?P<start>-?[0-9]+)?(?P<separator>:|\.{2,})(?P<end>-?[0-9]+)?\s*")
 
     def span(self, span: str, include_persisted: bool = False) -> dict[int, "HistoryItem"]:
         """Return a slice of the History list.
 
         :param span: string containing an index or a slice
-        :param include_persisted: if True, then retrieve full results including from persisted history
+        :param include_persisted: if True, include persisted history for unbounded ranges.
+                                  Ranges with either endpoint always use the full history.
         :return: a dictionary of history items keyed by their 1-based index in ascending order,
-                 or an empty dictionary if no results were found
+                 or an empty dictionary if an unbounded range (``:`` or ``..``) has no results
+        :raises HistoryFormatError: if the range format is invalid or an index is zero
+        :raises HistoryIndexError: if the start is out of bounds or a bounded range selects no history items
 
         This method can accommodate input in any of these forms:
 
@@ -249,26 +246,33 @@ class History(list[HistoryItem]):
         - off by one errors
 
         """
-        results = self.spanpattern.search(span)
+        results = self.spanpattern.fullmatch(span)
         if not results:
             # our regex doesn't match the input, bail out
-            raise ValueError("History indices must be positive or negative integers, and may not be zero.")
+            raise HistoryFormatError(INVALID_HISTORY_RANGE)
 
         start_token = results.group("start")
-        if start_token:
-            start = min(self._zero_based_index(start_token), len(self) - 1)
-            if start < 0:
-                start = max(0, len(self) + start)
-        else:
-            start = 0 if include_persisted else self.session_start_index
-
         end_token = results.group("end")
+        if any(token is not None and int(token) == 0 for token in (start_token, end_token)):
+            raise HistoryFormatError(f"{INVALID_HISTORY_RANGE} {FIRST_HISTORY_INDEX}")
+        if start_token:
+            start = self._zero_based_index(start_token)
+            if start < 0:
+                start += len(self)
+                if start < 0:
+                    raise HistoryIndexError(NO_HISTORY_ITEMS)
+        else:
+            start = 0 if include_persisted or end_token else self.session_start_index
+
         if end_token:
             end = min(int(end_token), len(self))
             if end < 0:
                 end = max(0, len(self) + end + 1)
         else:
             end = len(self)
+
+        if (start_token or end_token) and (start >= len(self) or end <= start):
+            raise HistoryIndexError(NO_HISTORY_ITEMS)
 
         return self._build_result_dictionary(start, end)
 
