@@ -318,16 +318,21 @@ class History(list[HistoryItem]):
     def truncate(self, max_length: int) -> None:
         """Truncate the length of the history, dropping the oldest items if necessary.
 
-        :param max_length: the maximum length of the history, if negative, all history
+        The current session's start index is shifted so it still marks the first retained
+        current-session item. If any current-session items are dropped, all retained items
+        belong to the current session.
+
+        :param max_length: the maximum length of the history, if zero or negative, all history
                            items will be deleted
         :return: nothing
         """
         if max_length <= 0:
-            # remove all history
-            del self[:]
+            self.clear()
         elif len(self) > max_length:
             last_element = len(self) - max_length
             del self[0:last_element]
+            # keep the session boundary pointing at the same retained items
+            self.session_start_index = max(0, self.session_start_index - last_element)
 
     def _build_result_dictionary(
         self, start: int, end: int, filter_func: Callable[[HistoryItem], bool] | None = None

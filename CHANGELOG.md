@@ -28,6 +28,10 @@
     - History regular expressions containing range separators are now handled as regex searches.
       Other selectors are treated as numbers or ranges only when they match the supported syntax;
       strings such as URLs, `a:b`, `+1`, and `1_0` remain literal searches.
+    - Fixed `History.truncate()` leaving the current session's start index unchanged. Code calling
+      it directly would then have retained current-session entries hidden from unbounded ranges and
+      searches. Interactive `history` use was unaffected, since `cmd2` only truncates when
+      persisting history at exit.
 
 ## 4.3.1 (October 24, 2026)
 
