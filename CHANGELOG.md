@@ -35,8 +35,10 @@
       searches. Interactive `history` use was unaffected, since `cmd2` only truncates when
       persisting history at exit.
     - Fixed `set_window_title()` leaving title changes buffered until the next prompt render. The
-      title is now flushed right away. When another thread sets it while a prompt or `select()` menu
-      is running, it is written on that prompt's event loop so it doesn't interleave with rendering.
+      title is now flushed before the method returns when no prompt is running. When another thread
+      sets it while a prompt or `select()` menu is running, it is written on that prompt's event
+      loop so it doesn't interleave with rendering, and output errors are ignored so they can't
+      disrupt the prompt. Titles are still written when stdin isn't a terminal but stdout is.
 
 ## 4.3.1 (October 24, 2026)
 

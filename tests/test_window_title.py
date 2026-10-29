@@ -346,19 +346,21 @@ def test_title_output_errors_during_a_prompt(monkeypatch, operation, from_worker
             worker.join(timeout=5)
             assert not worker.is_alive()
 
+    # The loop's exception handler never hears of the error, so it can't disrupt the prompt.
+    assert not loop_errors
     if from_worker:
-        # The title was written by an event loop callback, so the loop's exception handler reports the error.
+        # The title was written by an event loop callback, which ignores output errors.
         assert not caught
-        assert len(loop_errors) == 1
-        assert str(loop_errors[0]["exception"]) == "terminal closed"
+        assert app._pending_window_title is None
     else:
         assert caught == ["terminal closed"]
-        assert not loop_errors
 
 
-def test_title_is_written_when_the_prompt_finishes_before_running_the_callback(monkeypatch):
+@pytest.mark.parametrize("failing", [False, True])
+def test_title_is_written_when_the_prompt_finishes_before_running_the_callback(monkeypatch, failing):
     stream = TtyStream()
-    output = title_output(stream)
+    output = FailingOutput(stream, "flush") if failing else title_output(stream)
+    title = "Fail" if failing else "Finished"
     dropped = []
     workers = []
     with create_pipe_input() as pipe_input, create_app_session(input=DummyInput(), output=output):
@@ -372,13 +374,13 @@ def test_title_is_written_when_the_prompt_finishes_before_running_the_callback(m
 
             # Simulate the event loop stopping before it runs the title callback.
             def drop_title_callback(callback, *args, **kwargs):
-                if getattr(callback, "__func__", None) is cmd2.Cmd._flush_pending_window_title:
+                if getattr(callback, "__func__", None) is cmd2.Cmd._flush_pending_window_title_quietly:
                     dropped.append(callback)
                     return None
                 return schedule(callback, *args, **kwargs)
 
             monkeypatch.setattr(loop, "call_soon_threadsafe", drop_title_callback)
-            app.set_window_title("Finished")
+            app.set_window_title(title)
             schedule(lambda: prompt_app.exit(result="done"))
 
         def after_render(_sender):
@@ -397,9 +399,96 @@ def test_title_is_written_when_the_prompt_finishes_before_running_the_callback(m
 
     assert len(dropped) == 1
     assert app._pending_window_title is None
-    # The prompt's cleanup wrote the title after the prompt finished rendering.
-    assert stream.getvalue().endswith("\x1b]2;Finished\x07")
-    assert output.title_loops["Finished"] is None
+    assert output.title_loops[title] is None
+    if not failing:
+        # The prompt's cleanup wrote the title after the prompt finished rendering.
+        assert stream.getvalue().endswith("\x1b]2;Finished\x07")
+    # Otherwise the cleanup's output error didn't replace the prompt's result, which the assertion on "done" checked.
+
+
+def test_title_error_during_select_cleanup_keeps_the_interrupt(monkeypatch):
+    output = FailingOutput(TtyStream(), "flush")
+
+    def interrupt_with_pending_title(**_kwargs):
+        # Leave a title for the cleanup, as if the menu's loop stopped before running the title callback.
+        app._pending_window_title = "Fail"
+        raise KeyboardInterrupt
+
+    with create_pipe_input() as pipe_input:
+        app = make_app(monkeypatch, pipe_input, output)
+        monkeypatch.setattr("cmd2.cmd2.choice", interrupt_with_pending_title)
+        with pytest.raises(KeyboardInterrupt):
+            app.select(["choice"])
+
+    assert app._pending_window_title is None
+    assert app._select_app_session is None
+
+
+def test_prompt_loop_ignores_a_select_session_without_an_app(monkeypatch):
+    with create_pipe_input() as pipe_input:
+        app = make_app(monkeypatch, pipe_input, title_output(TtyStream()))
+        with create_app_session(input=DummyInput(), output=DummyOutput()) as app_session:
+            app._select_app_session = app_session
+            assert app_session.app is None
+            assert app._get_prompt_loop() is None
+
+
+def test_title_set_while_writing_a_title_does_not_deadlock(monkeypatch):
+    stream = TtyStream()
+    errors = []
+
+    class ReentrantOutput(TitleOutput):
+        def set_title(self, title):
+            if title == "Outer":
+                # Like a signal handler which sets the title while the main thread is writing one.
+                app.set_window_title("Inner")
+            super().set_title(title)
+
+    with create_pipe_input() as pipe_input:
+        app = make_app(monkeypatch, pipe_input, ReentrantOutput(stream))
+
+        def set_outer_title():
+            try:
+                app.set_window_title("Outer")
+            except BaseException as error:  # noqa: BLE001
+                errors.append(error)
+
+        worker = threading.Thread(target=set_outer_title, daemon=True)
+        worker.start()
+        worker.join(timeout=5)
+        assert not worker.is_alive()
+
+    assert not errors
+    assert stream.getvalue() == "\x1b]2;Inner\x07\x1b]2;Outer\x07"
+
+
+def test_title_falls_back_to_a_terminal_stdout_when_stdin_is_not_a_terminal(monkeypatch):
+    stream = TtyStream()
+    output = title_output(stream)
+    monkeypatch.setattr("cmd2.cmd2.create_output", lambda **_kwargs: output)
+    app = cmd2.Cmd(stdin=io.StringIO(), stdout=stream, allow_cli_args=False)
+    assert isinstance(app.main_session.output, DummyOutput)
+    app.set_window_title("Piped input")
+    assert stream.getvalue() == "\x1b]2;Piped input\x07"
+
+    # A replacement session with a real output takes precedence over the fallback.
+    replacement = TtyStream()
+    with create_pipe_input() as pipe_input:
+        app.main_session = PromptSession(input=pipe_input, output=title_output(replacement))
+        app.set_window_title("Replacement")
+    assert replacement.getvalue().endswith("\x1b]2;Replacement\x07")
+    assert "Replacement" not in stream.getvalue()
+
+
+def test_title_fallback_is_skipped_when_the_terminal_output_cannot_be_created(monkeypatch):
+    def no_console(**_kwargs):
+        raise ValueError("no console")
+
+    monkeypatch.setattr("cmd2.cmd2.create_output", no_console)
+    app = cmd2.Cmd(stdin=io.StringIO(), stdout=TtyStream(), allow_cli_args=False)
+    assert app._window_title_fallback_output is None
+    app.set_window_title("Nowhere")
+    assert app.stdout.getvalue() == ""
 
 
 def test_title_is_written_directly_when_the_prompt_loop_is_closed(monkeypatch):
