@@ -134,8 +134,11 @@ def test_title_before_during_and_after_a_real_prompt(monkeypatch, from_worker, c
 
     assert result == "done"
     assert not errors
-    # A worker's title is written asynchronously on the prompt's event loop, so only the loop thread sees it immediately.
-    assert observed == [not from_worker]
+    # A worker's title is written asynchronously on the prompt's event loop, so it may or may not be in the stream when
+    # set_window_title() returns. Only a call on the loop thread is guaranteed to have written it by then.
+    assert len(observed) == 1
+    if not from_worker:
+        assert observed == [True]
     assert output.title_loops["During"] is prompt_loops[0]
     assert output.title_loops["Before"] is None
     assert output.title_loops["After"] is None
