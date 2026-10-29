@@ -29,6 +29,7 @@ Documentation: https://cmd2.readthedocs.io/
 # import this module, many of these imports are lazy-loaded
 # i.e. we only import the module when we use it.
 import argparse
+import asyncio
 import contextlib
 import copy
 import dataclasses
@@ -71,7 +72,7 @@ from prompt_toolkit import (
     filters,
     print_formatted_text,
 )
-from prompt_toolkit.application import create_app_session, get_app
+from prompt_toolkit.application import AppSession, create_app_session, get_app
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import Completer, DummyCompleter
 from prompt_toolkit.formatted_text import ANSI, AnyFormattedText
@@ -82,7 +83,7 @@ from prompt_toolkit.key_binding.key_processor import KeyPress, KeyPressEvent
 from prompt_toolkit.keys import Keys
 from prompt_toolkit.layout import Window, walk
 from prompt_toolkit.layout.containers import ConditionalContainer, FloatContainer
-from prompt_toolkit.output import DummyOutput, Output, create_output
+from prompt_toolkit.output import DummyOutput, create_output
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.shortcuts import CompleteStyle, PromptSession, choice
 from prompt_toolkit.styles import DynamicStyle
@@ -218,37 +219,6 @@ from .utils import (
 
 if TYPE_CHECKING:  # pragma: no cover
     from prompt_toolkit.buffer import Buffer
-
-
-class _LockedOutput:
-    """Serialize prompt rendering and synchronous title changes on one output driver."""
-
-    def __init__(self, output: Output) -> None:
-        """Wrap the output without changing its terminal or rendering behavior."""
-        self._output = output
-        self._lock = threading.RLock()
-
-    def __getattr__(self, name: str) -> Any:
-        """Forward output properties and serialize every output method."""
-        attribute = getattr(self._output, name)
-        if not callable(attribute):
-            return attribute
-
-        def locked_call(*args: Any, **kwargs: Any) -> Any:
-            with self._lock:
-                return attribute(*args, **kwargs)
-
-        return locked_call
-
-    def set_title_and_flush(self, title: str) -> None:
-        """Keep the title write and flush together, including during prompt setup and teardown."""
-        with self._lock:
-            self._output.set_title(title)
-            self._output.flush()
-
-
-# Like prompt-toolkit's Windows10_Output, this proxy implements Output by delegation.
-Output.register(_LockedOutput)
 
 
 class _SavedCmd2Env:
@@ -720,6 +690,13 @@ class Cmd:
         self._alert_thread: threading.Thread | None = None
         self._alert_prompt_timestamp: float = 0.0  # Uses time.monotonic()
 
+        # Members related to setting the window title
+        self._window_title_lock = threading.Lock()
+        self._pending_window_title: str | None = None
+
+        # The AppSession of a select() menu while it is displayed, so window titles can find its event loop.
+        self._select_app_session: AppSession | None = None
+
         # Add functions decorated to be subcommands
         self._register_subcommands(self)
 
@@ -825,20 +802,6 @@ class Cmd:
 
         return key_bindings
 
-    @property
-    def main_session(self) -> PromptSession[str]:
-        """The application's main prompt session."""
-        return self._main_session
-
-    @main_session.setter
-    def main_session(self, session: PromptSession[str]) -> None:
-        output = session.output
-        if isinstance(output, Output) and type(output) is not DummyOutput and not isinstance(output, _LockedOutput):
-            locked_output = cast(Output, _LockedOutput(output))
-            session.app.output = locked_output
-            session.app.renderer.output = locked_output
-        self._main_session = session
-
     def _create_main_session(
         self,
         *,
@@ -879,8 +842,8 @@ class Cmd:
             try:
                 if self.stdin != sys.stdin:
                     kwargs["input"] = create_input(stdin=self.stdin)
-                # Each Cmd owns its driver, so another app session cannot share its render buffer.
-                kwargs["output"] = create_output(stdout=self.stdout)
+                if self.stdout != sys.stdout:
+                    kwargs["output"] = create_output(stdout=self.stdout)
                 return PromptSession(**kwargs)
 
             except (NoConsoleScreenBufferError, AttributeError, ValueError):
@@ -3712,6 +3675,7 @@ class Cmd:
                 finally:
                     # Revert back to the main session.
                     self.active_session = self.main_session
+                    self._flush_pending_window_title()
 
         # We're not at a terminal, so we're likely reading from a file or a pipe.
         prompt_obj = prompt if isinstance(prompt, (ANSI, str)) else prompt()
@@ -4839,8 +4803,13 @@ class Cmd:
         if self._is_tty_session(self.main_session):
             try:
                 while True:
-                    with create_app_session(input=self.main_session.input, output=self.main_session.output):
-                        result = choice(message=prompt, options=fulloptions)
+                    with create_app_session(input=self.main_session.input, output=self.main_session.output) as app_session:
+                        self._select_app_session = app_session
+                        try:
+                            result = choice(message=prompt, options=fulloptions)
+                        finally:
+                            self._select_app_session = None
+                            self._flush_pending_window_title()
                     if result is not None:
                         return result
             except KeyboardInterrupt:
@@ -5929,20 +5898,57 @@ class Cmd:
             self._alert_condition.notify_all()
 
     def set_window_title(self, title: str) -> None:
-        """Set and immediately flush the title of this application's terminal.
+        """Set the title of this application's terminal and flush it right away.
 
-        Calls from worker threads use the same output as the main prompt, custom input prompts,
-        and select() menus, without requiring an inherited prompt-toolkit context.
-        The output driver serializes title changes with rendering, including while a prompt starts
-        or finishes. Output errors propagate to the caller instead of an event-loop callback.
+        The title is written to the same output as the main prompt, custom input prompts, and
+        select() menus. It is safe to call from any thread. While one of those prompts is running,
+        the title is written on the prompt's event loop so it doesn't interleave with rendering.
 
         :param title: the new window title
         """
-        output = self.main_session.output
-        if isinstance(output, _LockedOutput):
-            output.set_title_and_flush(title)
-        else:
-            # Non-interactive sessions use a DummyOutput, which needs no synchronization.
+        with self._window_title_lock:
+            self._pending_window_title = title
+            loop = self._get_prompt_loop()
+            if loop is not None:
+                try:
+                    on_loop = asyncio.get_running_loop() is loop
+                except RuntimeError:
+                    on_loop = False
+
+                if not on_loop:
+                    try:
+                        loop.call_soon_threadsafe(self._flush_pending_window_title)
+                    except RuntimeError:
+                        # The loop closed after we found it, so the prompt is no longer rendering.
+                        pass
+                    else:
+                        # If the prompt finishes before the loop runs the callback, then the
+                        # prompt's cleanup writes the pending title.
+                        return
+
+        self._flush_pending_window_title()
+
+    def _get_prompt_loop(self) -> asyncio.AbstractEventLoop | None:
+        """Return the event loop of the prompt-toolkit application drawing on this terminal, if one is running."""
+        apps = [self.active_session.app]
+        if self._select_app_session is not None and self._select_app_session.app is not None:
+            apps.append(self._select_app_session.app)
+
+        for app in apps:
+            loop = app.loop
+            if app.is_running and loop is not None:
+                return loop
+        return None
+
+    def _flush_pending_window_title(self) -> None:
+        """Write and flush the most recent title passed to set_window_title(), if it hasn't been written yet."""
+        with self._window_title_lock:
+            title = self._pending_window_title
+            if title is None:
+                return
+            self._pending_window_title = None
+
+            output = self.main_session.output
             output.set_title(title)
             output.flush()
 

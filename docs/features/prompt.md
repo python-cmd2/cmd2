@@ -58,10 +58,11 @@ Call this method on your application instance, for example `app.set_window_title
 title is sent to the same terminal as that instance's main prompt, custom input prompts, and
 `select()` menus, including while a command is running.
 
-Title changes are flushed before the method returns. The output driver serializes title writes with
-prompt rendering, so background threads can call the method without inheriting a prompt-toolkit
-session context. Output errors, such as a closed terminal, propagate to the caller. Non-interactive
-sessions with a dummy output do not emit a title.
+The method is safe to call from any thread, and the title is flushed right away. When another thread
+calls it while a prompt or `select()` menu is running, the title is written on that prompt's event
+loop so it doesn't interleave with rendering. In that case, output errors are reported by the
+prompt's event loop. Otherwise, errors such as a closed terminal propagate to the caller.
+Non-interactive sessions with a dummy output do not emit a title.
 
 The easiest way to understand these functions is to see the
 [async_printing.py](https://github.com/python-cmd2/cmd2/blob/main/examples/async_printing.py)

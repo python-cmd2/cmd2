@@ -34,9 +34,9 @@
       it directly would then have retained current-session entries hidden from unbounded ranges and
       searches. Interactive `history` use was unaffected, since `cmd2` only truncates when
       persisting history at exit.
-    - Fixed `set_window_title()` leaving title changes buffered until the next prompt render. Title
-      writes and flushes are serialized with rendering on the application's output driver, including
-      during prompt setup and teardown. Output errors propagate to the calling thread.
+    - Fixed `set_window_title()` leaving title changes buffered until the next prompt render. The
+      title is now flushed right away. When another thread sets it while a prompt or `select()` menu
+      is running, it is written on that prompt's event loop so it doesn't interleave with rendering.
 
 ## 4.3.1 (October 24, 2026)
 
