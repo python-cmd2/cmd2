@@ -702,10 +702,10 @@ class Cmd:
         self._pending_window_title: str | None = None
         self._writing_window_title = False
 
-        # When stdin isn't a terminal, the main session uses a DummyOutput. If stdout was a terminal when this app was
-        # created, then window titles are still written to it, including while a command's output is redirected.
-        # Its output is created the first time a title needs it.
-        self._window_title_fallback_stream: TextIO | None = self.stdout if self.stdout.isatty() else None
+        # When stdin isn't a terminal, the main session uses a DummyOutput. If the stdout this app was created with is
+        # a terminal, then window titles are still written to it, including while a command's output is redirected.
+        # Whether it's a terminal is checked, and its output created, the first time a title needs it.
+        self._window_title_fallback_stream: TextIO | None = self.stdout
         self._window_title_fallback_output: Output | None = None
 
         # The AppSession of a select() menu while it is displayed, so window titles can find its event loop.
@@ -5919,14 +5919,16 @@ class Cmd:
         """Set the title of this application's terminal.
 
         The title is written to the same output as the main prompt, custom input prompts, and
-        select() menus. It is safe to call from any thread.
+        select() menus. When stdin isn't a terminal, those use a dummy output, so the title is
+        written to the stdout this app was created with instead, if that is a terminal. This method
+        is safe to call from any thread.
 
-        If no prompt is running, or this is called on the prompt's event loop, then the title is
-        written and flushed before this returns, and output errors propagate to the caller.
+        If no prompt is running, then the title is written and flushed before this returns, and
+        output errors propagate to the caller.
 
-        If another thread calls this while a prompt is running, then the title is written on the
-        prompt's event loop so it doesn't interleave with rendering. It appears once the loop runs
-        its next callback, which can be delayed while the loop is busy, such as in a slow completer.
+        While a prompt is running, the title is written on the prompt's event loop, even when this is
+        called on that loop, so it never interleaves with rendering. It appears once the loop runs its
+        next callback, which can be delayed while the loop is busy, such as in a slow completer.
         Output errors are ignored so they can't disrupt the prompt.
 
         :param title: the new window title
@@ -5936,25 +5938,23 @@ class Cmd:
             loop = self._get_prompt_loop()
             if loop is not None:
                 try:
-                    on_loop = asyncio.get_running_loop() is loop
+                    loop.call_soon_threadsafe(self._flush_pending_window_title_quietly)
                 except RuntimeError:
-                    on_loop = False
-
-                if not on_loop:
-                    try:
-                        loop.call_soon_threadsafe(self._flush_pending_window_title_quietly)
-                    except RuntimeError:
-                        # The loop closed after we found it, so the prompt is no longer rendering.
-                        pass
-                    else:
-                        # If the prompt finishes before the loop runs the callback, then the
-                        # prompt's cleanup writes the pending title.
-                        return
+                    # The loop closed after we found it, so the prompt is no longer rendering.
+                    pass
+                else:
+                    # If the prompt finishes before the loop runs the callback, then the prompt's
+                    # cleanup writes the pending title.
+                    return
 
         self._flush_pending_window_title()
 
     def _get_prompt_loop(self) -> asyncio.AbstractEventLoop | None:
-        """Return the event loop of the prompt-toolkit application drawing on this terminal, if one is running."""
+        """Return the event loop of the prompt-toolkit application drawing on this terminal, if one is running.
+
+        An application's loop is set for its whole run, including startup and teardown, when its is_running flag
+        is already cleared but the loop can still write to the terminal.
+        """
         apps: list[Application[Any]] = [self.active_session.app]
 
         # The main thread clears these when select() finishes, so read each one only once.
@@ -5966,7 +5966,7 @@ class Cmd:
 
         for app in apps:
             loop = app.loop
-            if app.is_running and loop is not None:
+            if loop is not None:
                 return loop
         return None
 
@@ -5976,12 +5976,15 @@ class Cmd:
         if not isinstance(output, DummyOutput):
             return output
 
-        if self._window_title_fallback_output is None and self._window_title_fallback_stream is not None:
-            try:
-                self._window_title_fallback_output = create_output(stdout=self._window_title_fallback_stream)
-            except _TERMINAL_INIT_ERRORS:
-                # Don't try again for every title.
-                self._window_title_fallback_stream = None
+        stream = self._window_title_fallback_stream
+        if self._window_title_fallback_output is None and stream is not None:
+            # A stream without isatty(), or a closed one, raises AttributeError or ValueError here.
+            with contextlib.suppress(*_TERMINAL_INIT_ERRORS):
+                if stream.isatty():
+                    self._window_title_fallback_output = create_output(stdout=stream)
+
+            # Whatever the outcome, don't check again for every title.
+            self._window_title_fallback_stream = None
 
         return self._window_title_fallback_output or output
 

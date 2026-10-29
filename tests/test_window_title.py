@@ -56,6 +56,18 @@ def title_output(stream):
     return TitleOutput(stream)
 
 
+def start_worker(target, *args):
+    """Run target on a new thread with an empty context.
+
+    The returned future's result() re-raises any exception from target, so tests don't need a blind except.
+    """
+    executor = ThreadPoolExecutor(max_workers=1)
+    try:
+        return executor.submit(contextvars.Context().run, target, *args)
+    finally:
+        executor.shutdown(wait=False)
+
+
 def test_title_during_a_command_uses_the_instance_terminal(monkeypatch):
     stream = TtyStream()
     foreign = TtyStream()
@@ -87,7 +99,6 @@ def test_title_before_during_and_after_a_real_prompt(monkeypatch, from_worker, c
     foreign = TtyStream()
     output = title_output(stream)
     observed = []
-    errors = []
     workers = []
     prompt_loops = []
     run = Application.run
@@ -100,8 +111,6 @@ def test_title_before_during_and_after_a_real_prompt(monkeypatch, from_worker, c
             try:
                 app.set_window_title("During")
                 observed.append("\x1b]2;During\x07" in stream.getvalue())
-            except BaseException as error:  # noqa: BLE001
-                errors.append(error)
             finally:
                 prompt_app.loop.call_soon_threadsafe(lambda: prompt_app.exit(result="done"))
 
@@ -112,9 +121,7 @@ def test_title_before_during_and_after_a_real_prompt(monkeypatch, from_worker, c
             sent = True
             prompt_loops.append(prompt_app.loop)
             if from_worker:
-                worker = threading.Thread(target=contextvars.Context().run, args=(update_title, prompt_app), daemon=True)
-                workers.append(worker)
-                worker.start()
+                workers.append(start_worker(update_title, prompt_app))
             else:
                 update_title(prompt_app)
 
@@ -129,17 +136,15 @@ def test_title_before_during_and_after_a_real_prompt(monkeypatch, from_worker, c
         else:
             result = app._read_raw_input("prompt> ", app.main_session, set_exception_handler=False)
         for worker in workers:
-            worker.join(timeout=5)
-            assert not worker.is_alive()
+            worker.result(timeout=5)
         app.set_window_title("After")
 
     assert result == "done"
-    assert not errors
-    # A worker's title is written asynchronously on the prompt's event loop, so it may or may not be in the stream when
-    # set_window_title() returns. Only a call on the loop thread is guaranteed to have written it by then.
+    # While the prompt runs, the title is written by a callback on its event loop. A worker's title may already be in the
+    # stream when set_window_title() returns. A call on the loop itself returns before the loop can run the callback.
     assert len(observed) == 1
     if not from_worker:
-        assert observed == [True]
+        assert observed == [False]
     assert output.title_loops["During"] is prompt_loops[0]
     assert output.title_loops["Before"] is None
     assert output.title_loops["After"] is None
@@ -154,7 +159,6 @@ def test_worker_titles_during_a_real_select_and_after_cleanup(monkeypatch, inter
     stream = TtyStream()
     foreign = TtyStream()
     output = title_output(stream)
-    errors = []
     menu_loops = []
     run = Application.run
 
@@ -165,8 +169,6 @@ def test_worker_titles_during_a_real_select_and_after_cleanup(monkeypatch, inter
         def update_title():
             try:
                 app.set_window_title("Menu")
-            except BaseException as error:  # noqa: BLE001
-                errors.append(error)
             finally:
                 if interrupt:
                     menu.loop.call_soon_threadsafe(lambda: menu.exit(exception=KeyboardInterrupt))
@@ -178,17 +180,14 @@ def test_worker_titles_during_a_real_select_and_after_cleanup(monkeypatch, inter
             if not sent:
                 sent = True
                 menu_loops.append(menu.loop)
-                worker = threading.Thread(target=contextvars.Context().run, args=(update_title,), daemon=True)
-                workers.append(worker)
-                worker.start()
+                workers.append(start_worker(update_title))
 
         menu.after_render += after_render
         try:
             return run(menu, *args, set_exception_handler=False, **kwargs)
         finally:
             for worker in workers:
-                worker.join(timeout=5)
-                assert not worker.is_alive()
+                worker.result(timeout=5)
 
     with create_pipe_input() as pipe_input, create_app_session(input=DummyInput(), output=title_output(foreign)):
         app = make_app(monkeypatch, pipe_input, output)
@@ -201,7 +200,6 @@ def test_worker_titles_during_a_real_select_and_after_cleanup(monkeypatch, inter
         assert app._select_app_session is None
         app.set_window_title("Finished")
 
-    assert not errors
     assert output.title_loops["Menu"] is menu_loops[0]
     assert output.title_loops["Finished"] is None
     assert "\x1b]2;Menu\x07" in stream.getvalue()
@@ -335,26 +333,20 @@ def test_title_output_errors_during_a_prompt(monkeypatch, operation, from_worker
             sent = True
             app.main_session.app.loop.set_exception_handler(lambda _loop, context: loop_errors.append(context))
             if from_worker:
-                worker = threading.Thread(target=contextvars.copy_context().run, args=(update_title,), daemon=True)
-                workers.append(worker)
-                worker.start()
+                workers.append(start_worker(update_title))
             else:
                 update_title()
 
         app.main_session.app.after_render += after_render
         assert app._read_raw_input("prompt> ", app.main_session, set_exception_handler=False) == "done"
         for worker in workers:
-            worker.join(timeout=5)
-            assert not worker.is_alive()
+            worker.result(timeout=5)
 
-    # The loop's exception handler never hears of the error, so it can't disrupt the prompt.
+    # The title was written by an event loop callback, even when set on the loop itself. The callback ignores output
+    # errors, so neither the caller nor the loop's exception handler sees them, and they can't disrupt the prompt.
+    assert not caught
     assert not loop_errors
-    if from_worker:
-        # The title was written by an event loop callback, which ignores output errors.
-        assert not caught
-        assert app._pending_window_title is None
-    else:
-        assert caught == ["terminal closed"]
+    assert app._pending_window_title is None
 
 
 @pytest.mark.parametrize("failing", [False, True])
@@ -388,15 +380,12 @@ def test_title_is_written_when_the_prompt_finishes_before_running_the_callback(m
             nonlocal sent
             if not sent:
                 sent = True
-                worker = threading.Thread(target=contextvars.Context().run, args=(update_title,), daemon=True)
-                workers.append(worker)
-                worker.start()
+                workers.append(start_worker(update_title))
 
         prompt_app.after_render += after_render
         assert app._read_raw_input("prompt> ", app.main_session, set_exception_handler=False) == "done"
         for worker in workers:
-            worker.join(timeout=5)
-            assert not worker.is_alive()
+            worker.result(timeout=5)
 
     assert len(dropped) == 1
     assert app._pending_window_title is None
@@ -436,7 +425,6 @@ def test_prompt_loop_ignores_a_select_session_without_an_app(monkeypatch):
 
 def test_title_set_while_writing_a_title_is_written_next(monkeypatch):
     stream = TtyStream()
-    errors = []
 
     class ReentrantOutput(TitleOutput):
         flushing = False
@@ -462,19 +450,9 @@ def test_title_set_while_writing_a_title_is_written_next(monkeypatch):
     with create_pipe_input() as pipe_input:
         app = make_app(monkeypatch, pipe_input, ReentrantOutput(stream))
 
-        def set_outer_title():
-            try:
-                app.set_window_title("Outer")
-            except BaseException as error:  # noqa: BLE001
-                errors.append(error)
-
         # Run in a thread so a deadlock fails the test instead of hanging it.
-        worker = threading.Thread(target=set_outer_title, daemon=True)
-        worker.start()
-        worker.join(timeout=5)
-        assert not worker.is_alive()
+        start_worker(app.set_window_title, "Outer").result(timeout=5)
 
-    assert not errors
     # The nested calls didn't write inside the outer write. "During flush" replaced "Inner" before it was written, so
     # only the latest title was written after "Outer".
     assert not app.main_session.output.nested_flush
@@ -599,13 +577,67 @@ def test_title_is_written_directly_when_the_prompt_loop_is_closed(monkeypatch):
     loop.close()
     with create_pipe_input() as pipe_input:
         app = make_app(monkeypatch, pipe_input, output)
-        prompt_app = app.main_session.app
-        monkeypatch.setattr(prompt_app, "_is_running", True)
-        monkeypatch.setattr(prompt_app, "loop", loop)
+        monkeypatch.setattr(app.main_session.app, "loop", loop)
         app.set_window_title("Closed loop")
 
     assert stream.getvalue() == "\x1b]2;Closed loop\x07"
     assert app._pending_window_title is None
+
+
+def test_title_is_scheduled_while_a_finishing_prompt_still_has_its_loop(monkeypatch):
+    stream = TtyStream()
+    output = title_output(stream)
+    loop = asyncio.new_event_loop()
+    try:
+        with create_pipe_input() as pipe_input:
+            app = make_app(monkeypatch, pipe_input, output)
+            prompt_app = app.main_session.app
+            # Like prompt-toolkit's teardown, which clears is_running before its loop stops writing to the terminal.
+            assert not prompt_app.is_running
+            monkeypatch.setattr(prompt_app, "loop", loop)
+            app.set_window_title("Teardown")
+            assert stream.getvalue() == ""
+
+            loop.call_soon(loop.stop)
+            loop.run_forever()
+    finally:
+        loop.close()
+
+    assert stream.getvalue() == "\x1b]2;Teardown\x07"
+    assert output.title_loops["Teardown"] is loop
+
+
+class NoIsattyStream:
+    """A minimal file-like stdout without isatty()."""
+
+    def __init__(self):
+        self.written = []
+
+    def write(self, text):
+        self.written.append(text)
+        return len(text)
+
+    def flush(self):
+        pass
+
+
+@pytest.mark.parametrize("closed", [False, True])
+def test_stdout_which_cannot_report_a_terminal_does_not_break_titles(closed):
+    if closed:
+        # isatty() on a closed stream raises ValueError.
+        stdout = io.StringIO()
+        app = cmd2.Cmd(stdin=io.StringIO(), stdout=stdout, allow_cli_args=False)
+        stdout.close()
+    else:
+        stdout = NoIsattyStream()
+        app = cmd2.Cmd(stdin=io.StringIO(), stdout=stdout, allow_cli_args=False)
+
+    app.set_window_title("Nowhere")
+    app.set_window_title("Still nowhere")
+    assert app._window_title_fallback_output is None
+    assert app._window_title_fallback_stream is None
+    if not closed:
+        assert stdout.written == []
 
 
 def test_title_without_terminal_output_is_a_noop():
@@ -636,7 +668,6 @@ def test_replacing_main_session_keeps_titles_on_the_new_output():
     stream = TtyStream()
     foreign = TtyStream()
     output = title_output(stream)
-    errors = []
     workers = []
     prompt_loops = []
     with create_pipe_input() as pipe_input, create_app_session(input=DummyInput(), output=title_output(foreign)):
@@ -649,8 +680,6 @@ def test_replacing_main_session_keeps_titles_on_the_new_output():
         def update_title():
             try:
                 app.set_window_title("Replacement prompt")
-            except BaseException as error:  # noqa: BLE001
-                errors.append(error)
             finally:
                 app.main_session.app.loop.call_soon_threadsafe(lambda: app.main_session.app.exit(result="done"))
 
@@ -659,18 +688,14 @@ def test_replacing_main_session_keeps_titles_on_the_new_output():
             if not sent:
                 sent = True
                 prompt_loops.append(app.main_session.app.loop)
-                worker = threading.Thread(target=contextvars.Context().run, args=(update_title,), daemon=True)
-                workers.append(worker)
-                worker.start()
+                workers.append(start_worker(update_title))
 
         app.main_session.app.after_render += after_render
         assert app._read_raw_input("replacement> ", app.main_session, set_exception_handler=False) == "done"
         for worker in workers:
-            worker.join(timeout=5)
-            assert not worker.is_alive()
+            worker.result(timeout=5)
         app.set_window_title("After")
 
-    assert not errors
     assert output.title_loops["Replacement prompt"] is prompt_loops[0]
     assert "\x1b]2;Replacement prompt\x07" in stream.getvalue()
     assert "\x1b]2;After\x07" in stream.getvalue()

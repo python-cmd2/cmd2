@@ -58,17 +58,17 @@ Call this method on your application instance, for example `app.set_window_title
 title is sent to the same terminal as that instance's main prompt, custom input prompts, and
 `select()` menus, including while a command is running.
 
-The method is safe to call from any thread. If no prompt is running, or it is called on the prompt's
-event loop, then the title is flushed before the method returns, and output errors such as a closed
-terminal propagate to the caller.
+The method is safe to call from any thread. If no prompt is running, then the title is flushed
+before the method returns, and output errors such as a closed terminal propagate to the caller.
 
-When another thread calls it while a prompt or `select()` menu is running, the title is written on
-that prompt's event loop so it doesn't interleave with rendering. The title appears once the loop
-runs its next callback, which can be delayed while the loop is busy, for example in a slow
-completer. Output errors are ignored in that case so they can't disrupt the prompt.
+While a prompt or `select()` menu is running, the title is written on that prompt's event loop, even
+when the method is called on that loop, so it never interleaves with rendering. The title appears
+once the loop runs its next callback, which can be delayed while the loop is busy, for example in a
+slow completer. Output errors are ignored in that case so they can't disrupt the prompt.
 
-When stdin isn't a terminal but stdout is, titles are still written to stdout. When stdout isn't a
-terminal, no title is emitted.
+When stdin isn't a terminal, prompts use a dummy output, so titles are written to the stdout the
+application was created with instead, if that is a terminal. They still go there while a command's
+output is redirected. When that stdout isn't a terminal, no title is emitted.
 
 The easiest way to understand these functions is to see the
 [async_printing.py](https://github.com/python-cmd2/cmd2/blob/main/examples/async_printing.py)
