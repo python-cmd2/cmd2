@@ -307,6 +307,66 @@ def test_title_output_errors_reach_the_caller_without_a_prompt(monkeypatch, oper
         assert app._pending_window_title is None
 
 
+@pytest.mark.parametrize("closed_loop", [False, True])
+@pytest.mark.parametrize("error_type", [OSError, ValueError])
+@pytest.mark.parametrize("operation", ["set_title", "flush"])
+def test_prompt_cleanup_cannot_swallow_a_direct_title_error(monkeypatch, closed_loop, error_type, operation):
+    output = title_output(TtyStream())
+    flush_entered = threading.Event()
+    release_flush = threading.Event()
+    caller_threads = []
+    failed_threads = []
+
+    with create_pipe_input() as pipe_input:
+        app = make_app(monkeypatch, pipe_input, output)
+        if closed_loop:
+            loop = asyncio.new_event_loop()
+            loop.close()
+            monkeypatch.setattr(app.main_session.app, "loop", loop)
+        flush = app._flush_pending_window_title
+
+        def pause_direct_flush():
+            if threading.get_ident() == caller_threads[0]:
+                flush_entered.set()
+                assert release_flush.wait(timeout=5)
+            flush()
+
+        def fail_output(*_args):
+            failed_threads.append(threading.get_ident())
+            raise error_type("terminal closed")
+
+        def update_title():
+            caller_threads.append(threading.get_ident())
+            app.set_window_title("Fail")
+
+        monkeypatch.setattr(app, "_flush_pending_window_title", pause_direct_flush)
+        monkeypatch.setattr(output, operation, fail_output)
+        caller = start_worker(update_title)
+        cleanup = None
+        try:
+            assert flush_entered.wait(timeout=5)
+            cleanup = start_worker(app._flush_pending_window_title_quietly)
+            # If the caller released ownership before flushing, let cleanup consume the title first.
+            # Otherwise cleanup must wait for the caller; release it without waiting for a timeout.
+            if app._window_title_lock.acquire(blocking=False):
+                app._window_title_lock.release()
+                cleanup.result(timeout=5)
+        finally:
+            release_flush.set()
+
+        try:
+            with pytest.raises(error_type, match="terminal closed"):
+                caller.result(timeout=5)
+        finally:
+            if cleanup is not None:
+                cleanup.result(timeout=5)
+        app._flush_pending_window_title_quietly()
+
+    assert failed_threads == caller_threads
+    assert app._pending_window_title is None
+    assert not app._writing_window_title
+
+
 @pytest.mark.parametrize("operation", ["set_title", "flush"])
 @pytest.mark.parametrize("from_worker", [False, True])
 def test_title_output_errors_during_a_prompt(monkeypatch, operation, from_worker):
