@@ -82,9 +82,9 @@ from prompt_toolkit.key_binding.key_processor import KeyPress, KeyPressEvent
 from prompt_toolkit.keys import Keys
 from prompt_toolkit.layout import Window, walk
 from prompt_toolkit.layout.containers import ConditionalContainer, FloatContainer
-from prompt_toolkit.output import DummyOutput, create_output
+from prompt_toolkit.output import DummyOutput, Output, create_output
 from prompt_toolkit.patch_stdout import patch_stdout
-from prompt_toolkit.shortcuts import CompleteStyle, PromptSession, choice, set_title
+from prompt_toolkit.shortcuts import CompleteStyle, PromptSession, choice
 from prompt_toolkit.styles import DynamicStyle
 from rich.console import (
     Group,
@@ -218,6 +218,37 @@ from .utils import (
 
 if TYPE_CHECKING:  # pragma: no cover
     from prompt_toolkit.buffer import Buffer
+
+
+class _LockedOutput:
+    """Serialize prompt rendering and synchronous title changes on one output driver."""
+
+    def __init__(self, output: Output) -> None:
+        """Wrap the output without changing its terminal or rendering behavior."""
+        self._output = output
+        self._lock = threading.RLock()
+
+    def __getattr__(self, name: str) -> Any:
+        """Forward output properties and serialize every output method."""
+        attribute = getattr(self._output, name)
+        if not callable(attribute):
+            return attribute
+
+        def locked_call(*args: Any, **kwargs: Any) -> Any:
+            with self._lock:
+                return attribute(*args, **kwargs)
+
+        return locked_call
+
+    def set_title_and_flush(self, title: str) -> None:
+        """Keep the title write and flush together, including during prompt setup and teardown."""
+        with self._lock:
+            self._output.set_title(title)
+            self._output.flush()
+
+
+# Like prompt-toolkit's Windows10_Output, this proxy implements Output by delegation.
+Output.register(_LockedOutput)
 
 
 class _SavedCmd2Env:
@@ -794,6 +825,20 @@ class Cmd:
 
         return key_bindings
 
+    @property
+    def main_session(self) -> PromptSession[str]:
+        """The application's main prompt session."""
+        return self._main_session
+
+    @main_session.setter
+    def main_session(self, session: PromptSession[str]) -> None:
+        output = session.output
+        if isinstance(output, Output) and type(output) is not DummyOutput and not isinstance(output, _LockedOutput):
+            locked_output = cast(Output, _LockedOutput(output))
+            session.app.output = locked_output
+            session.app.renderer.output = locked_output
+        self._main_session = session
+
     def _create_main_session(
         self,
         *,
@@ -834,8 +879,8 @@ class Cmd:
             try:
                 if self.stdin != sys.stdin:
                     kwargs["input"] = create_input(stdin=self.stdin)
-                if self.stdout != sys.stdout:
-                    kwargs["output"] = create_output(stdout=self.stdout)
+                # Each Cmd owns its driver, so another app session cannot share its render buffer.
+                kwargs["output"] = create_output(stdout=self.stdout)
                 return PromptSession(**kwargs)
 
             except (NoConsoleScreenBufferError, AttributeError, ValueError):
@@ -5883,13 +5928,23 @@ class Cmd:
             self._alert_queue.append(alert)
             self._alert_condition.notify_all()
 
-    @staticmethod
-    def set_window_title(title: str) -> None:  # pragma: no cover
-        """Set the terminal window title.
+    def set_window_title(self, title: str) -> None:
+        """Set and immediately flush the title of this application's terminal.
+
+        Calls from worker threads use the same output as the main prompt, custom input prompts,
+        and select() menus, without requiring an inherited prompt-toolkit context.
+        The output driver serializes title changes with rendering, including while a prompt starts
+        or finishes. Output errors propagate to the caller instead of an event-loop callback.
 
         :param title: the new window title
         """
-        set_title(title)
+        output = self.main_session.output
+        if isinstance(output, _LockedOutput):
+            output.set_title_and_flush(title)
+        else:
+            # Non-interactive sessions use a DummyOutput, which needs no synchronization.
+            output.set_title(title)
+            output.flush()
 
     def enable_command(self, command: str) -> None:
         """Enable a command by restoring its functions.

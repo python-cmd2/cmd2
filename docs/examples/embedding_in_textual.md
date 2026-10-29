@@ -96,9 +96,6 @@ The example handles several details which are easy to miss when building somethi
 - The postparsing hooks stop running as soon as one of them sets `stop` or raises an exception, but
   the finalization hooks still run. If your application has other postparsing hooks, register the
   one which counts commands first so that it is never skipped.
-- `prompt-toolkit` buffers its output, so flush it after setting the window title when a command
-  starts. Otherwise the "running" state only reaches the Textual application after the command is
-  done.
 - Any program run in the terminal, for example by the `shell` command, can set the window title.
   Validate a status document before using it. Besides `json.JSONDecodeError`, `json.loads` raises
   `ValueError` for integers with too many digits and `RecursionError` for documents which are nested

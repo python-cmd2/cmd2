@@ -4842,6 +4842,8 @@ def test_create_main_session_exception(monkeypatch):
     valid_session_mock = mock.MagicMock(spec=PromptSession)
     mock_session = mock.MagicMock(side_effect=[ValueError, valid_session_mock])
     monkeypatch.setattr("cmd2.cmd2.PromptSession", mock_session)
+    # Avoid requiring a physical console when isatty is mocked.
+    monkeypatch.setattr("cmd2.cmd2.create_output", lambda **_kwargs: DummyOutput())
 
     # Mock isatty to ensure we enter the try block
     with (
@@ -4995,6 +4997,8 @@ def test_create_main_session_no_console_error(monkeypatch):
     valid_session_mock = mock.MagicMock(spec=PromptSession)
     mock_session = mock.MagicMock(side_effect=[NoConsoleScreenBufferError, valid_session_mock])
     monkeypatch.setattr("cmd2.cmd2.PromptSession", mock_session)
+    # Avoid requiring a physical console when isatty is mocked.
+    monkeypatch.setattr("cmd2.cmd2.create_output", lambda **_kwargs: DummyOutput())
 
     # Mock isatty to ensure we enter the try block
     with (
