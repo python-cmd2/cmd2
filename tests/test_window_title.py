@@ -543,7 +543,8 @@ def test_title_falls_back_when_a_replacement_session_has_no_terminal_output(monk
     fallback = TtyStream()
     with create_pipe_input() as pipe_input:
         app = make_app(monkeypatch, pipe_input, title_output(stream))
-    assert app._window_title_fallback_output is None
+    # The fallback output hasn't been created, since no title has needed it.
+    assert not app._window_title_fallback_checked
 
     app.main_session = PromptSession(input=DummyInput(), output=DummyOutput())
     monkeypatch.setattr("cmd2.cmd2.create_output", lambda **_kwargs: title_output(fallback))
@@ -607,6 +608,69 @@ def test_title_is_scheduled_while_a_finishing_prompt_still_has_its_loop(monkeypa
     assert output.title_loops["Teardown"] is loop
 
 
+def test_titles_set_before_the_loop_runs_share_one_callback(monkeypatch):
+    stream = TtyStream()
+    output = title_output(stream)
+    loop = asyncio.new_event_loop()
+    scheduled = []
+    schedule = loop.call_soon_threadsafe
+
+    def count_callbacks(callback, *args, **kwargs):
+        scheduled.append(callback)
+        return schedule(callback, *args, **kwargs)
+
+    try:
+        with create_pipe_input() as pipe_input:
+            app = make_app(monkeypatch, pipe_input, output)
+            monkeypatch.setattr(app.main_session.app, "loop", loop)
+            monkeypatch.setattr(loop, "call_soon_threadsafe", count_callbacks)
+            for title in ("One", "Two", "Three"):
+                app.set_window_title(title)
+            assert len(scheduled) == 1
+
+            loop.call_soon(loop.stop)
+            loop.run_forever()
+
+            # Only the latest title was written, and the next title gets a new callback.
+            assert stream.getvalue() == "\x1b]2;Three\x07"
+            assert app._window_title_callback_loop is None
+            app.set_window_title("Four")
+            assert len(scheduled) == 2
+
+            loop.call_soon(loop.stop)
+            loop.run_forever()
+    finally:
+        loop.close()
+
+    assert stream.getvalue() == "\x1b]2;Three\x07\x1b]2;Four\x07"
+
+
+def test_prompt_cleanup_clears_a_callback_its_loop_never_ran(monkeypatch):
+    stream = TtyStream()
+    output = title_output(stream)
+    stopped_loop = asyncio.new_event_loop()
+    try:
+        with create_pipe_input() as pipe_input:
+            app = make_app(monkeypatch, pipe_input, output)
+            prompt_app = app.main_session.app
+
+            def prompt_with_unrun_callback(*_args, **_kwargs):
+                # The title callback is queued on a loop which stops without running it.
+                monkeypatch.setattr(prompt_app, "loop", stopped_loop)
+                app.set_window_title("Queued")
+                monkeypatch.setattr(prompt_app, "loop", None)
+                return "done"
+
+            monkeypatch.setattr(app.main_session, "prompt", prompt_with_unrun_callback)
+            assert app._read_raw_input("prompt> ", app.main_session) == "done"
+    finally:
+        stopped_loop.close()
+
+    # The prompt's cleanup wrote the title and cleared the queued callback's loop, so later prompts schedule their own.
+    assert stream.getvalue() == "\x1b]2;Queued\x07"
+    assert app._window_title_callback_loop is None
+
+
 class NoIsattyStream:
     """A minimal file-like stdout without isatty()."""
 
@@ -634,8 +698,9 @@ def test_stdout_which_cannot_report_a_terminal_does_not_break_titles(closed):
 
     app.set_window_title("Nowhere")
     app.set_window_title("Still nowhere")
+    # The check ran once and found no terminal.
+    assert app._window_title_fallback_checked
     assert app._window_title_fallback_output is None
-    assert app._window_title_fallback_stream is None
     if not closed:
         assert stdout.written == []
 

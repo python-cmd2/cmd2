@@ -38,7 +38,8 @@
       title is now flushed before the method returns when no prompt is running. While a prompt or
       `select()` menu is running, it is written on that prompt's event loop so it doesn't interleave
       with rendering, and output errors are ignored so they can't disrupt the prompt. Titles are
-      still written when stdin isn't a terminal but stdout is.
+      still written to a terminal stdout when prompts use a dummy output, such as when stdin isn't a
+      terminal.
 
 ## 4.3.1 (October 24, 2026)
 

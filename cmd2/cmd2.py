@@ -702,10 +702,14 @@ class Cmd:
         self._pending_window_title: str | None = None
         self._writing_window_title = False
 
-        # When stdin isn't a terminal, the main session uses a DummyOutput. If the stdout this app was created with is
-        # a terminal, then window titles are still written to it, including while a command's output is redirected.
-        # Whether it's a terminal is checked, and its output created, the first time a title needs it.
-        self._window_title_fallback_stream: TextIO | None = self.stdout
+        # The prompt loop on which a title callback is queued but hasn't run yet. Later titles set while it's queued
+        # only replace the pending title, which that callback writes.
+        self._window_title_callback_loop: asyncio.AbstractEventLoop | None = None
+
+        # The stdout this app was created with. When the main session uses a DummyOutput, titles are written to it if
+        # it's a terminal, including while a command's output is redirected. See _get_window_title_fallback_output().
+        self._window_title_stdout: TextIO = self.stdout
+        self._window_title_fallback_checked = False
         self._window_title_fallback_output: Output | None = None
 
         # The AppSession of a select() menu while it is displayed, so window titles can find its event loop.
@@ -5918,18 +5922,21 @@ class Cmd:
     def set_window_title(self, title: str) -> None:
         """Set the title of this application's terminal.
 
-        The title is written to the same output as the main prompt, custom input prompts, and
-        select() menus. When stdin isn't a terminal, those use a dummy output, so the title is
-        written to the stdout this app was created with instead, if that is a terminal. This method
-        is safe to call from any thread.
+        The title is written to the output used by the main prompt, custom input prompts, and
+        select() menus. That is a dummy output when stdin or stdout isn't a terminal, or when the
+        terminal couldn't be set up. In that case, the title is written to the stdout this app was
+        created with instead, if that is a terminal. Otherwise, no title is written.
 
-        If no prompt is running, then the title is written and flushed before this returns, and
-        output errors propagate to the caller.
+        This can be called from any thread. If no prompt is running, then the title is written and
+        flushed before this returns, and output errors propagate to the caller. Such a direct write
+        from another thread isn't synchronized with other writers to the terminal, such as a prompt
+        which is just starting or finishing.
 
         While a prompt is running, the title is written on the prompt's event loop, even when this is
-        called on that loop, so it never interleaves with rendering. It appears once the loop runs its
-        next callback, which can be delayed while the loop is busy, such as in a slow completer.
-        Output errors are ignored so they can't disrupt the prompt.
+        called on that loop, so it doesn't interleave with rendering. It appears once the loop runs its
+        next callback, which can be delayed while the loop is busy, such as in a slow completer. If
+        several titles are set before then, only the latest is written. Output errors are ignored so
+        they can't disrupt the prompt.
 
         :param title: the new window title
         """
@@ -5937,6 +5944,10 @@ class Cmd:
             self._pending_window_title = title
             loop = self._get_prompt_loop()
             if loop is not None:
+                if self._window_title_callback_loop is loop:
+                    # A callback queued on this loop hasn't run yet, and it will write this title.
+                    return
+
                 try:
                     loop.call_soon_threadsafe(self._flush_pending_window_title_quietly)
                 except RuntimeError:
@@ -5945,6 +5956,7 @@ class Cmd:
                 else:
                     # If the prompt finishes before the loop runs the callback, then the prompt's
                     # cleanup writes the pending title.
+                    self._window_title_callback_loop = loop
                     return
 
         self._flush_pending_window_title()
@@ -5970,23 +5982,28 @@ class Cmd:
                 return loop
         return None
 
+    def _get_window_title_fallback_output(self) -> Output | None:
+        """Return an output for the stdout this app was created with, or None if that isn't a terminal.
+
+        Window titles use it when the main session has a DummyOutput. It's created the first time a title needs it.
+        This isn't a cached_property because inspect.getmembers() evaluates properties while this app is constructed.
+        """
+        if not self._window_title_fallback_checked:
+            self._window_title_fallback_checked = True
+
+            # A stream without isatty(), or a closed one, raises AttributeError or ValueError here.
+            with contextlib.suppress(*_TERMINAL_INIT_ERRORS):
+                if self._window_title_stdout.isatty():
+                    self._window_title_fallback_output = create_output(stdout=self._window_title_stdout)
+
+        return self._window_title_fallback_output
+
     def _get_window_title_output(self) -> Output:
         """Return the output which window titles are written to."""
         output = self.main_session.output
-        if not isinstance(output, DummyOutput):
-            return output
-
-        stream = self._window_title_fallback_stream
-        if self._window_title_fallback_output is None and stream is not None:
-            # A stream without isatty(), or a closed one, raises AttributeError or ValueError here.
-            with contextlib.suppress(*_TERMINAL_INIT_ERRORS):
-                if stream.isatty():
-                    self._window_title_fallback_output = create_output(stdout=stream)
-
-            # Whatever the outcome, don't check again for every title.
-            self._window_title_fallback_stream = None
-
-        return self._window_title_fallback_output or output
+        if isinstance(output, DummyOutput) and (fallback := self._get_window_title_fallback_output()) is not None:
+            return fallback
+        return output
 
     def _flush_pending_window_title(self) -> None:
         """Write and flush the most recent title passed to set_window_title(), if it hasn't been written yet."""
@@ -6013,8 +6030,12 @@ class Cmd:
         An error here would otherwise disrupt the prompt or replace its result. Writing to a closed stream raises
         ValueError rather than OSError.
         """
-        with contextlib.suppress(OSError, ValueError):
-            self._flush_pending_window_title()
+        with self._window_title_lock:
+            # Either this is the queued callback, or the prompt finished and its loop won't run that callback.
+            # Either way, the next title set during a prompt needs a new callback.
+            self._window_title_callback_loop = None
+            with contextlib.suppress(OSError, ValueError):
+                self._flush_pending_window_title()
 
     def enable_command(self, command: str) -> None:
         """Enable a command by restoring its functions.
