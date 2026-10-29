@@ -30,6 +30,10 @@
     - History regular expressions containing range separators are now handled as regex searches.
       Other selectors are treated as numbers or ranges only when they match the supported syntax;
       strings such as URLs, `a:b`, `+1`, and `1_0` remain literal searches.
+    - Fixed `History.truncate()` leaving the current session's start index unchanged. Code calling
+      it directly would then have retained current-session entries hidden from unbounded ranges and
+      searches. Interactive `history` use was unaffected, since `cmd2` only truncates when
+      persisting history at exit.
     - Fixed `set_window_title()` leaving title changes buffered until the next prompt render. Title
       writes and flushes are serialized with rendering on the application's output driver, including
       during prompt setup and teardown. Output errors propagate to the calling thread.
