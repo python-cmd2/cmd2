@@ -1,6 +1,7 @@
 """Window title behavior through real prompt-toolkit output and applications."""
 
 import asyncio
+import contextlib
 import contextvars
 import io
 import sys
@@ -433,16 +434,30 @@ def test_prompt_loop_ignores_a_select_session_without_an_app(monkeypatch):
             assert app._get_prompt_loop() is None
 
 
-def test_title_set_while_writing_a_title_does_not_deadlock(monkeypatch):
+def test_title_set_while_writing_a_title_is_written_next(monkeypatch):
     stream = TtyStream()
     errors = []
 
     class ReentrantOutput(TitleOutput):
+        flushing = False
+        nested_flush = False
+
         def set_title(self, title):
             if title == "Outer":
-                # Like a signal handler which sets the title while the main thread is writing one.
+                # Like a signal handler which sets the title while this thread is writing one.
                 app.set_window_title("Inner")
             super().set_title(title)
+
+        def flush(self):
+            self.nested_flush |= self.flushing
+            self.flushing = True
+            try:
+                if "\x1b]2;Outer\x07" in "".join(self._buffer):
+                    # Like a signal handler which runs while this thread is writing to the stream.
+                    app.set_window_title("During flush")
+                super().flush()
+            finally:
+                self.flushing = False
 
     with create_pipe_input() as pipe_input:
         app = make_app(monkeypatch, pipe_input, ReentrantOutput(stream))
@@ -453,23 +468,88 @@ def test_title_set_while_writing_a_title_does_not_deadlock(monkeypatch):
             except BaseException as error:  # noqa: BLE001
                 errors.append(error)
 
+        # Run in a thread so a deadlock fails the test instead of hanging it.
         worker = threading.Thread(target=set_outer_title, daemon=True)
         worker.start()
         worker.join(timeout=5)
         assert not worker.is_alive()
 
     assert not errors
-    assert stream.getvalue() == "\x1b]2;Inner\x07\x1b]2;Outer\x07"
+    # The nested calls didn't write inside the outer write. "During flush" replaced "Inner" before it was written, so
+    # only the latest title was written after "Outer".
+    assert not app.main_session.output.nested_flush
+    assert stream.getvalue() == "\x1b]2;Outer\x07\x1b]2;During flush\x07"
+    assert app._pending_window_title is None
+    assert not app._writing_window_title
+
+
+def test_quiet_title_flush_ignores_a_closed_stream(monkeypatch):
+    stream = TtyStream()
+    with create_pipe_input() as pipe_input:
+        app = make_app(monkeypatch, pipe_input, title_output(stream))
+        stream.close()
+        app._pending_window_title = "Closed"
+        app._flush_pending_window_title_quietly()
+
+    assert app._pending_window_title is None
+    assert not app._writing_window_title
+
+
+def test_prompt_cleanup_writes_the_title_after_patch_stdout_exits(monkeypatch):
+    events = []
+
+    class RecordingOutput(TitleOutput):
+        def set_title(self, title):
+            events.append(f"title {title}")
+            super().set_title(title)
+
+    @contextlib.contextmanager
+    def recording_patch_stdout():
+        events.append("patch_stdout enter")
+        try:
+            yield
+        finally:
+            events.append("patch_stdout exit")
+
+    def prompt_with_pending_title(*_args, **_kwargs):
+        # Leave a title for the cleanup, as if the prompt's loop stopped before running the title callback.
+        app._pending_window_title = "Cleanup"
+        return "done"
+
+    with create_pipe_input() as pipe_input:
+        app = make_app(monkeypatch, pipe_input, RecordingOutput(TtyStream()))
+        monkeypatch.setattr("cmd2.cmd2.patch_stdout", recording_patch_stdout)
+        monkeypatch.setattr(app.main_session, "prompt", prompt_with_pending_title)
+        assert app._read_raw_input("prompt> ", app.main_session) == "done"
+
+    assert events == ["patch_stdout enter", "patch_stdout exit", "title Cleanup"]
 
 
 def test_title_falls_back_to_a_terminal_stdout_when_stdin_is_not_a_terminal(monkeypatch):
     stream = TtyStream()
     output = title_output(stream)
-    monkeypatch.setattr("cmd2.cmd2.create_output", lambda **_kwargs: output)
+    created = []
+
+    def create_title_output(**kwargs):
+        created.append(kwargs["stdout"])
+        return output
+
+    monkeypatch.setattr("cmd2.cmd2.create_output", create_title_output)
     app = cmd2.Cmd(stdin=io.StringIO(), stdout=stream, allow_cli_args=False)
     assert isinstance(app.main_session.output, DummyOutput)
+
+    # The fallback output is only created once a title needs it.
+    assert not created
     app.set_window_title("Piped input")
-    assert stream.getvalue() == "\x1b]2;Piped input\x07"
+    app.set_window_title("Again")
+    assert created == [stream]
+    assert stream.getvalue() == "\x1b]2;Piped input\x07\x1b]2;Again\x07"
+
+    # Titles still reach the terminal while a command's output is redirected.
+    app.stdout = io.StringIO()
+    app.set_window_title("Redirected")
+    assert stream.getvalue().endswith("\x1b]2;Redirected\x07")
+    assert app.stdout.getvalue() == ""
 
     # A replacement session with a real output takes precedence over the fallback.
     replacement = TtyStream()
@@ -480,15 +560,36 @@ def test_title_falls_back_to_a_terminal_stdout_when_stdin_is_not_a_terminal(monk
     assert "Replacement" not in stream.getvalue()
 
 
+def test_title_falls_back_when_a_replacement_session_has_no_terminal_output(monkeypatch):
+    stream = TtyStream()
+    fallback = TtyStream()
+    with create_pipe_input() as pipe_input:
+        app = make_app(monkeypatch, pipe_input, title_output(stream))
+    assert app._window_title_fallback_output is None
+
+    app.main_session = PromptSession(input=DummyInput(), output=DummyOutput())
+    monkeypatch.setattr("cmd2.cmd2.create_output", lambda **_kwargs: title_output(fallback))
+    app.set_window_title("Fallback")
+    assert fallback.getvalue() == "\x1b]2;Fallback\x07"
+    assert stream.getvalue() == ""
+
+
 def test_title_fallback_is_skipped_when_the_terminal_output_cannot_be_created(monkeypatch):
+    attempts = []
+
     def no_console(**_kwargs):
+        attempts.append(True)
         raise ValueError("no console")
 
     monkeypatch.setattr("cmd2.cmd2.create_output", no_console)
     app = cmd2.Cmd(stdin=io.StringIO(), stdout=TtyStream(), allow_cli_args=False)
-    assert app._window_title_fallback_output is None
     app.set_window_title("Nowhere")
+    app.set_window_title("Still nowhere")
+    assert app._window_title_fallback_output is None
     assert app.stdout.getvalue() == ""
+
+    # A failure isn't retried for every title.
+    assert len(attempts) == 1
 
 
 def test_title_is_written_directly_when_the_prompt_loop_is_closed(monkeypatch):
