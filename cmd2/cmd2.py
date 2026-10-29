@@ -5959,7 +5959,9 @@ class Cmd:
                     self._window_title_callback_loop = loop
                     return
 
-        self._flush_pending_window_title()
+            # Keep ownership until the direct write finishes, so another caller or prompt cleanup cannot consume
+            # this request and receive or suppress its output error.
+            self._flush_pending_window_title()
 
     def _get_prompt_loop(self) -> asyncio.AbstractEventLoop | None:
         """Return the event loop of the prompt-toolkit application drawing on this terminal, if one is running.
