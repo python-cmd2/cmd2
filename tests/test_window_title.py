@@ -650,7 +650,8 @@ def test_prompt_cleanup_clears_a_callback_its_loop_never_ran(monkeypatch):
     output = title_output(stream)
     stopped_loop = asyncio.new_event_loop()
     try:
-        with create_pipe_input() as pipe_input:
+        # Give patch_stdout() a VT100 output, since a Windows CI runner has no console for the default one.
+        with create_pipe_input() as pipe_input, create_app_session(input=DummyInput(), output=output):
             app = make_app(monkeypatch, pipe_input, output)
             prompt_app = app.main_session.app
 
