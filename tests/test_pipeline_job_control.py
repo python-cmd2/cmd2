@@ -82,7 +82,7 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
     pager_pid = tmp_path / "pager.pid"
     interrupts = tmp_path / "interrupts"
     pager.write_text(
-        "import errno, os, pathlib, signal, sys, termios, tty\n"
+        "import errno, os, pathlib, select, signal, sys, termios, tty\n"
         f"if {launcher == 'exec'!r}: assert signal.getsignal(signal.SIGTSTP) == signal.SIG_IGN\n"
         # Interactive bash leaves TTIN/TTOU ignored when exec replaces it. Give the simulated pager normal terminal-access
         # stops: EOF can arrive before cmd2 lends it the terminal, and an ignored TTIN makes that read fail with EIO instead of
@@ -102,6 +102,12 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
         "                return\n"
         "            except termios.error as error:\n"
         "                if error.args[0] != errno.EINTR: raise\n"
+        # A signal that lands as the pager goes back to a blocking read, after Python last checked for one, does not interrupt
+        # that read: its handler runs only once the next key arrives. So Ctrl-C sent just after the pager reports a key would go
+        # unanswered. Wait for keys in select() with a wakeup descriptor instead, which every handled signal makes readable.
+        "    wakeup, wakeup_write = os.pipe()\n"
+        "    os.set_blocking(wakeup_write, False)\n"
+        "    signal.set_wakeup_fd(wakeup_write)\n"
         # os.write rather than print: a signal handler that uses buffered stdout raises "reentrant call inside
         # <_io.BufferedWriter>" when the signal lands mid-write, which happens when the job is stopped while still reporting
         # readiness.
@@ -119,6 +125,9 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
         "        setcbreak()\n"
         "        os.write(1, b'PAGER_READY\\n')\n"
         "        while True:\n"
+        "            ready = select.select([terminal, wakeup], [], [])[0]\n"
+        "            if wakeup in ready: os.read(wakeup, 4096)\n"
+        "            if terminal not in ready: continue\n"
         "            key = os.read(terminal.fileno(), 1)\n"
         "            if key == b'q': break\n"
         "            if key == b'p': os.write(1, b'PAGER_ALIVE\\n')\n"
