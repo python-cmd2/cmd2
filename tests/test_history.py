@@ -1763,3 +1763,106 @@ def test_persist_history_permission_error(hist_file, mocker, capsys) -> None:
     out, err = capsys.readouterr()
     assert not out
     assert "Cannot write persistent history file" in err
+
+
+@pytest.fixture
+def persistence_app(base_app, hist, tmp_path):
+    base_app.history = hist
+    hist.session_start_index = 2
+    base_app.persistent_history_file = str(tmp_path / "history.dat")
+    return base_app
+
+
+def read_persisted_history(app):
+    try:
+        import lzma as compress_lib
+    except ModuleNotFoundError:
+        import bz2 as compress_lib
+
+    from cmd2.history import History
+
+    with open(app.persistent_history_file, "rb") as stream:
+        return History.from_json(compress_lib.decompress(stream.read()).decode("utf-8"))
+
+
+def history_state(app):
+    history = app.history
+    return (
+        id(history),
+        tuple(id(item) for item in history),
+        history.to_json(),
+        history.session_start_index,
+        history.span(":"),
+        history.str_search("third"),
+    )
+
+
+@pytest.mark.parametrize("limit", [-1, 0, 1, 2, 4, 6])
+def test_persist_history_preserves_live_state(persistence_app, limit) -> None:
+    app = persistence_app
+    app._persistent_history_length = limit
+    before = history_state(app)
+    expected = list(app.history[-limit:]) if limit > 0 else []
+
+    app._persist_history()
+
+    assert list(read_persisted_history(app)) == expected
+    assert history_state(app) == before
+
+
+def test_persist_history_empty(persistence_app) -> None:
+    app = persistence_app
+    app.history.clear()
+    app._persistent_history_length = 2
+    before = history_state(app)
+    app._persist_history()
+    assert not read_persisted_history(app)
+    assert history_state(app) == before
+
+
+def test_persist_history_repeat_append_and_reload(persistence_app, mocker) -> None:
+    app = persistence_app
+    app._persistent_history_length = 2
+    before = history_state(app)
+    app._persist_history()
+    app._persist_history()
+    assert history_state(app) == before
+
+    app.history.append(Statement("", raw="fifth café"))
+    before = history_state(app)
+    app._persist_history()
+    assert [item.raw for item in read_persisted_history(app)] == ["fourth", "fifth café"]
+    assert history_state(app) == before
+    assert app.history.get(1).raw == "first"
+    assert list(app.history.span(":")) == [3, 4, 5]
+
+    # The reload is temporary and must not register a later write to a deleted file.
+    mocker.patch("atexit.register")
+    reloaded = cmd2.Cmd(persistent_history_file=app.persistent_history_file)
+    assert [item.raw for item in reloaded.history] == ["fourth", "fifth café"]
+    assert reloaded.history.session_start_index == 2
+    assert reloaded.main_session.history.get_strings() == ["fourth", "fifth café"]
+    assert history_state(app) == before
+
+
+def test_persist_history_no_file_preserves_live_state(persistence_app, mocker) -> None:
+    app = persistence_app
+    app.persistent_history_file = ""
+    app._persistent_history_length = 1
+    before = history_state(app)
+    open_mock = mocker.patch("builtins.open")
+    app._persist_history()
+    open_mock.assert_not_called()
+    assert history_state(app) == before
+
+
+def test_persist_history_write_error_preserves_live_state(persistence_app, mocker) -> None:
+    app = persistence_app
+    app._persistent_history_length = 1
+    before = history_state(app)
+    mocker.patch("builtins.open", side_effect=PermissionError("synthetic write failure"))
+    error = mocker.patch.object(app, "perror")
+    app._persist_history()
+    assert "Cannot write persistent history file" in error.call_args.args[0]
+    assert "synthetic write failure" in error.call_args.args[0]
+    assert history_state(app) == before

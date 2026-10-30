@@ -5722,8 +5722,9 @@ class Cmd:
         except ModuleNotFoundError:  # pragma: no cover
             import bz2 as compress_lib  # type: ignore[no-redef]
 
-        self.history.truncate(self._persistent_history_length)
-        history_json = self.history.to_json()
+        history = History(self.history)
+        history.truncate(self._persistent_history_length)
+        history_json = history.to_json()
         compressed_bytes = compress_lib.compress(history_json.encode(encoding="utf-8"))
 
         try:
