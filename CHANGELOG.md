@@ -1,6 +1,8 @@
 ## 4.4.0 (TBD)
 
 - Breaking Changes
+    - `set_window_title()` is now an instance method. Call `app.set_window_title(title)` or
+      `self.set_window_title(title)` so title changes use that application's terminal.
     - `History.get()` and `History.span()` now raise `HistoryIndexError`, an `IndexError` subclass,
       for invalid indices and bounded ranges selecting no history items. Unbounded ranges (`:` and
       `..`) can still return an empty dictionary. Starts before the beginning of history are
@@ -32,6 +34,12 @@
       it directly would then have retained current-session entries hidden from unbounded ranges and
       searches. Interactive `history` use was unaffected, since `cmd2` only truncates when
       persisting history at exit.
+    - Fixed `set_window_title()` leaving title changes buffered until the next prompt render. The
+      title is now flushed before the method returns when no prompt is running. While a prompt or
+      `select()` menu is running, it is written on that prompt's event loop so it doesn't interleave
+      with rendering, and output errors are ignored so they can't disrupt the prompt. Titles are
+      still written to a terminal stdout when prompts use a dummy output, such as when stdin isn't a
+      terminal.
 
 ## 4.3.1 (October 24, 2026)
 

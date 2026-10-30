@@ -29,6 +29,7 @@ Documentation: https://cmd2.readthedocs.io/
 # import this module, many of these imports are lazy-loaded
 # i.e. we only import the module when we use it.
 import argparse
+import asyncio
 import contextlib
 import copy
 import dataclasses
@@ -71,7 +72,7 @@ from prompt_toolkit import (
     filters,
     print_formatted_text,
 )
-from prompt_toolkit.application import create_app_session, get_app
+from prompt_toolkit.application import Application, AppSession, create_app_session, get_app
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import Completer, DummyCompleter
 from prompt_toolkit.formatted_text import ANSI, AnyFormattedText
@@ -82,9 +83,9 @@ from prompt_toolkit.key_binding.key_processor import KeyPress, KeyPressEvent
 from prompt_toolkit.keys import Keys
 from prompt_toolkit.layout import Window, walk
 from prompt_toolkit.layout.containers import ConditionalContainer, FloatContainer
-from prompt_toolkit.output import DummyOutput, create_output
+from prompt_toolkit.output import DummyOutput, Output, create_output
 from prompt_toolkit.patch_stdout import patch_stdout
-from prompt_toolkit.shortcuts import CompleteStyle, PromptSession, choice, set_title
+from prompt_toolkit.shortcuts import CompleteStyle, PromptSession, choice
 from prompt_toolkit.styles import DynamicStyle
 from rich.console import (
     Group,
@@ -218,6 +219,11 @@ from .utils import (
 
 if TYPE_CHECKING:  # pragma: no cover
     from prompt_toolkit.buffer import Buffer
+
+
+# Errors raised when prompt-toolkit can't use a terminal. For example, GitHub Actions on Windows reports
+# isatty() as True but has no real console.
+_TERMINAL_INIT_ERRORS = (NoConsoleScreenBufferError, AttributeError, ValueError)
 
 
 class _SavedCmd2Env:
@@ -689,6 +695,26 @@ class Cmd:
         self._alert_thread: threading.Thread | None = None
         self._alert_prompt_timestamp: float = 0.0  # Uses time.monotonic()
 
+        # Members related to setting the window title. The lock is reentrant so a signal handler which sets the title
+        # while the main thread is writing one doesn't deadlock. Such a nested call only records its title, and the
+        # outer call writes it next.
+        self._window_title_lock = threading.RLock()
+        self._pending_window_title: str | None = None
+        self._writing_window_title = False
+
+        # The prompt loop on which a title callback is queued but hasn't run yet. Later titles set while it's queued
+        # only replace the pending title, which that callback writes.
+        self._window_title_callback_loop: asyncio.AbstractEventLoop | None = None
+
+        # The stdout this app was created with. When the main session uses a DummyOutput, titles are written to it if
+        # it's a terminal, including while a command's output is redirected. See _get_window_title_fallback_output().
+        self._window_title_stdout: TextIO = self.stdout
+        self._window_title_fallback_checked = False
+        self._window_title_fallback_output: Output | None = None
+
+        # The AppSession of a select() menu while it is displayed, so window titles can find its event loop.
+        self._select_app_session: AppSession | None = None
+
         # Add functions decorated to be subcommands
         self._register_subcommands(self)
 
@@ -838,7 +864,7 @@ class Cmd:
                     kwargs["output"] = create_output(stdout=self.stdout)
                 return PromptSession(**kwargs)
 
-            except (NoConsoleScreenBufferError, AttributeError, ValueError):
+            except _TERMINAL_INIT_ERRORS:
                 # Fallback to dummy input/output if PromptSession initialization fails.
                 # This can happen in some CI environments (like GitHub Actions on Windows)
                 # where isatty() is True but there is no real console.
@@ -3659,14 +3685,19 @@ class Cmd:
             if not callable(prompt):
                 prompt = pt_filter_style(prompt)
 
-            with patch_stdout():
-                try:
-                    # Set this session as the active one for UI/completion logic.
-                    self.active_session = session
-                    return session.prompt(prompt, **prompt_kwargs)
-                finally:
-                    # Revert back to the main session.
-                    self.active_session = self.main_session
+            try:
+                with patch_stdout():
+                    try:
+                        # Set this session as the active one for UI/completion logic.
+                        self.active_session = session
+                        return session.prompt(prompt, **prompt_kwargs)
+                    finally:
+                        # Revert back to the main session.
+                        self.active_session = self.main_session
+            finally:
+                # Write any title whose callback the prompt's event loop didn't run. Do this after patch_stdout()
+                # exits so the write can't race with its writer thread on the same output.
+                self._flush_pending_window_title_quietly()
 
         # We're not at a terminal, so we're likely reading from a file or a pipe.
         prompt_obj = prompt if isinstance(prompt, (ANSI, str)) else prompt()
@@ -4794,8 +4825,13 @@ class Cmd:
         if self._is_tty_session(self.main_session):
             try:
                 while True:
-                    with create_app_session(input=self.main_session.input, output=self.main_session.output):
-                        result = choice(message=prompt, options=fulloptions)
+                    with create_app_session(input=self.main_session.input, output=self.main_session.output) as app_session:
+                        self._select_app_session = app_session
+                        try:
+                            result = choice(message=prompt, options=fulloptions)
+                        finally:
+                            self._select_app_session = None
+                            self._flush_pending_window_title_quietly()
                     if result is not None:
                         return result
             except KeyboardInterrupt:
@@ -5883,13 +5919,125 @@ class Cmd:
             self._alert_queue.append(alert)
             self._alert_condition.notify_all()
 
-    @staticmethod
-    def set_window_title(title: str) -> None:  # pragma: no cover
-        """Set the terminal window title.
+    def set_window_title(self, title: str) -> None:
+        """Set the title of this application's terminal.
+
+        The title is written to the output used by the main prompt, custom input prompts, and
+        select() menus. That is a dummy output when stdin or stdout isn't a terminal, or when the
+        terminal couldn't be set up. In that case, the title is written to the stdout this app was
+        created with instead, if that is a terminal. Otherwise, no title is written.
+
+        This can be called from any thread. If no prompt is running, then the title is written and
+        flushed before this returns, and output errors propagate to the caller. Such a direct write
+        from another thread isn't synchronized with other writers to the terminal, such as a prompt
+        which is just starting or finishing.
+
+        While a prompt is running, the title is written on the prompt's event loop, even when this is
+        called on that loop, so it doesn't interleave with rendering. It appears once the loop runs its
+        next callback, which can be delayed while the loop is busy, such as in a slow completer. If
+        several titles are set before then, only the latest is written. Output errors are ignored so
+        they can't disrupt the prompt.
 
         :param title: the new window title
         """
-        set_title(title)
+        with self._window_title_lock:
+            self._pending_window_title = title
+            loop = self._get_prompt_loop()
+            if loop is not None:
+                if self._window_title_callback_loop is loop:
+                    # A callback queued on this loop hasn't run yet, and it will write this title.
+                    return
+
+                try:
+                    loop.call_soon_threadsafe(self._flush_pending_window_title_quietly)
+                except RuntimeError:
+                    # The loop closed after we found it, so the prompt is no longer rendering.
+                    pass
+                else:
+                    # If the prompt finishes before the loop runs the callback, then the prompt's
+                    # cleanup writes the pending title.
+                    self._window_title_callback_loop = loop
+                    return
+
+            # Keep ownership until the direct write finishes, so another caller or prompt cleanup cannot consume
+            # this request and receive or suppress its output error.
+            self._flush_pending_window_title()
+
+    def _get_prompt_loop(self) -> asyncio.AbstractEventLoop | None:
+        """Return the event loop of the prompt-toolkit application drawing on this terminal, if one is running.
+
+        An application's loop is set for its whole run, including startup and teardown, when its is_running flag
+        is already cleared but the loop can still write to the terminal.
+        """
+        apps: list[Application[Any]] = [self.active_session.app]
+
+        # The main thread clears these when select() finishes, so read each one only once.
+        select_app_session = self._select_app_session
+        if select_app_session is not None:
+            select_app = select_app_session.app
+            if select_app is not None:
+                apps.append(select_app)
+
+        for app in apps:
+            loop = app.loop
+            if loop is not None:
+                return loop
+        return None
+
+    def _get_window_title_fallback_output(self) -> Output | None:
+        """Return an output for the stdout this app was created with, or None if that isn't a terminal.
+
+        Window titles use it when the main session has a DummyOutput. It's created the first time a title needs it.
+        This isn't a cached_property because inspect.getmembers() evaluates properties while this app is constructed.
+        """
+        if not self._window_title_fallback_checked:
+            self._window_title_fallback_checked = True
+
+            # A stream without isatty(), or a closed one, raises AttributeError or ValueError here.
+            with contextlib.suppress(*_TERMINAL_INIT_ERRORS):
+                if self._window_title_stdout.isatty():
+                    self._window_title_fallback_output = create_output(stdout=self._window_title_stdout)
+
+        return self._window_title_fallback_output
+
+    def _get_window_title_output(self) -> Output:
+        """Return the output which window titles are written to."""
+        output = self.main_session.output
+        if isinstance(output, DummyOutput) and (fallback := self._get_window_title_fallback_output()) is not None:
+            return fallback
+        return output
+
+    def _flush_pending_window_title(self) -> None:
+        """Write and flush the most recent title passed to set_window_title(), if it hasn't been written yet."""
+        with self._window_title_lock:
+            if self._writing_window_title:
+                # This thread is already writing a title, such as when a signal handler calls set_window_title().
+                # Writing now would nest inside that write, so leave the title pending for the outer call.
+                return
+
+            self._writing_window_title = True
+            try:
+                # Keep going until no newer title arrived during the last write, so the latest title always wins.
+                while (title := self._pending_window_title) is not None:
+                    self._pending_window_title = None
+                    output = self._get_window_title_output()
+                    output.set_title(title)
+                    output.flush()
+            finally:
+                self._writing_window_title = False
+
+    def _flush_pending_window_title_quietly(self) -> None:
+        """Flush a pending window title on a prompt's event loop or during its cleanup, ignoring output errors.
+
+        An error here would otherwise disrupt the prompt or replace its result. Writing to a closed stream raises
+        ValueError rather than OSError.
+        """
+        with self._window_title_lock:
+            # Either this is the queued callback, or the prompt finished and its loop won't run that callback.
+            # Either way, the next title set during a prompt needs a new callback.
+            self._window_title_callback_loop = None
+            with contextlib.suppress(OSError, ValueError):
+                self._flush_pending_window_title()
 
     def enable_command(self, command: str) -> None:
         """Enable a command by restoring its functions.

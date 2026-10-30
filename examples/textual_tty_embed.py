@@ -40,8 +40,6 @@ import time
 from datetime import datetime
 from typing import Any, ClassVar
 
-from prompt_toolkit.application import get_app_session
-
 import cmd2
 
 # Prefix which marks a window title as a status update from the cmd2 application
@@ -92,8 +90,6 @@ class StatusApp(cmd2.Cmd):
         # hook reports the end of the command. Writing to it then fails, which doesn't matter because nobody can see it.
         with contextlib.suppress(OSError):
             self.set_window_title(STATUS_PREFIX + json.dumps(status))
-            # prompt-toolkit buffers its output, so flush it or the "running" state would only appear after the command ends
-            get_app_session().output.flush()
 
     def preloop(self) -> None:
         """Report the initial status before the first prompt."""

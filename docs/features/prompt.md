@@ -54,6 +54,26 @@ Alerts can interact with the CLI in two ways:
 
 - [cmd2.Cmd.set_window_title][]
 
+Call this method on your application instance, for example `app.set_window_title("Working…")`. The
+title is sent to the same terminal as that instance's main prompt, custom input prompts, and
+`select()` menus, including while a command is running.
+
+The method can be called from any thread. If no prompt is running, then the title is flushed before
+the method returns, and output errors such as a closed terminal propagate to the caller. Such a
+direct write from another thread isn't synchronized with other writers to the terminal, such as a
+prompt which is just starting or finishing.
+
+While a prompt or `select()` menu is running, the title is written on that prompt's event loop, even
+when the method is called on that loop, so it doesn't interleave with rendering. The title appears
+once the loop runs its next callback, which can be delayed while the loop is busy, for example in a
+slow completer. If several titles are set before then, only the latest is written. Output errors are
+ignored in that case so they can't disrupt the prompt.
+
+Prompts use a dummy output when stdin or stdout isn't a terminal, or when the terminal couldn't be
+set up. In that case, titles are written to the stdout the application was created with instead, if
+that is a terminal, including while a command's output is redirected. Otherwise, no title is
+emitted.
+
 The easiest way to understand these functions is to see the
 [async_printing.py](https://github.com/python-cmd2/cmd2/blob/main/examples/async_printing.py)
 example for a demonstration.
