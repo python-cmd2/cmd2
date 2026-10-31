@@ -5557,7 +5557,7 @@ class Cmd:
             self.perror(NO_MATCHING_HISTORY_ITEMS if is_search else NO_HISTORY_ITEMS)
             return None
 
-        if (args.run or args.edit) and not args.all and any(index <= self.history.session_start_index for index in history):
+        if (args.run or args.edit) and not args.all and any(self.history.is_persisted(item) for item in history.values()):
             self.perror("Use --all to run or edit commands from previous sessions.")
             return None
 
