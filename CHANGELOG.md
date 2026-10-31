@@ -34,6 +34,9 @@
       it directly would then have retained current-session entries hidden from unbounded ranges and
       searches. Interactive `history` use was unaffected, since `cmd2` only truncates when
       persisting history at exit.
+    - Fixed deleting, popping, removing, inserting, or slice-assigning `History` entries before the
+      current session leaving `session_start_index` stale. In-place filtering recognizes retained
+      persisted entries by identity, so equal commands from the current session are not hidden.
     - Fixed `set_window_title()` leaving title changes buffered until the next prompt render. The
       title is now flushed before the method returns when no prompt is running. While a prompt or
       `select()` menu is running, it is written on that prompt's event loop so it doesn't interleave

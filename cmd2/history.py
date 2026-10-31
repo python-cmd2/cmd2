@@ -189,19 +189,28 @@ class History(list[HistoryItem]):
     def __setitem__(self, key: slice, value: Iterable[HistoryItem], /) -> None: ...  # pragma: no cover
 
     def __setitem__(self, key: SupportsIndex | slice, value: HistoryItem | Iterable[HistoryItem], /) -> None:
-        """Replace entries while retaining the session boundary's position within the replacement."""
+        """Replace entries, retaining persisted item identities when a slice spans the session boundary."""
         if not isinstance(key, slice):
             super().__setitem__(key, cast(HistoryItem, value))
             return
         start, stop, step = key.indices(len(self))
         replacement = list(cast(Iterable[HistoryItem], value))
+        persisted_ids = (
+            {id(entry) for entry in self[start : self.session_start_index]}
+            if step == 1 and start < self.session_start_index < stop
+            else None
+        )
         super().__setitem__(key, replacement)
-        if step == 1 and start < self.session_start_index:
+        if persisted_ids is not None:
+            boundary = start
+            for entry in replacement:
+                if id(entry) not in persisted_ids:
+                    break
+                boundary += 1
+            self.session_start_index = boundary
+        elif step == 1 and start < self.session_start_index:
             stop = max(start, stop)
-            if stop <= self.session_start_index:
-                self.session_start_index += len(replacement) - (stop - start)
-            else:
-                self.session_start_index = min(self.session_start_index, start + len(replacement))
+            self.session_start_index += len(replacement) - (stop - start)
 
     def insert(self, index: SupportsIndex, value: HistoryItem, /) -> None:
         """Insert an entry, shifting the session boundary if the insertion precedes it."""

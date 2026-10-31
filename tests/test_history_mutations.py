@@ -87,11 +87,11 @@ def test_insert_tracks_session(history, index, boundary, expected):
     [
         (slice(0, 1), 2, 5, ["new-0", "new-1"]),
         (slice(1, 3), 0, 2, ["new-0", "new-1"]),
-        (slice(2, 5), 2, 4, ["new-1"]),
-        (slice(2, 5), 4, 4, ["replacement-2", "replacement-3", "new-1"]),
+        (slice(2, 5), 2, 2, ["replacement-0", "replacement-1", "new-1"]),
+        (slice(2, 5), 4, 2, ["replacement-0", "replacement-1", "replacement-2", "replacement-3", "new-1"]),
         (slice(4, 5), 2, 4, ["replacement-0", "replacement-1", "new-1"]),
         (slice(None, 4), 1, 1, ["new-0", "new-1"]),
-        (slice(None), 2, 2, []),
+        (slice(None), 2, 0, ["replacement-0", "replacement-1"]),
         (slice(2, 2), 2, 6, ["new-0", "new-1"]),
         (slice(4, 2), 2, 4, ["replacement-0", "replacement-1", "new-0", "new-1"]),
         (slice(3, 1), 2, 6, ["new-0", "new-1"]),
@@ -177,3 +177,75 @@ def test_remove_retains_native_list_dispatch(history):
     custom.session_start_index = history.session_start_index
     custom.remove(item("old-1"))
     assert_session(custom, 3, ["new-0", "new-1"])
+
+
+@pytest.mark.parametrize("as_iterator", [False, True])
+@pytest.mark.parametrize(
+    ("start", "stop", "removed"),
+    [
+        (0, 6, {1}),
+        (0, 6, {0, 2}),
+        (0, 6, {4}),
+        (0, 6, {5}),
+        (0, 6, {0, 4}),
+        (1, 6, {1, 3}),
+        (2, 6, {2, 4}),
+        (3, 5, {3}),
+        (0, 5, {1, 4}),
+    ],
+)
+def test_filtering_straddling_slice_matches_deletion(history, start, stop, removed, as_iterator):
+    original = list(history)
+    expected = History(original)
+    expected.session_start_index = history.session_start_index
+    for index in sorted(removed, reverse=True):
+        del expected[index]
+    replacement = [entry for index, entry in enumerate(original) if start <= index < stop and index not in removed]
+    history[start:stop] = iter(replacement) if as_iterator else replacement
+    assert all(actual is wanted for actual, wanted in zip(history, expected, strict=True))
+    assert_session(history, expected.session_start_index, [entry.raw for entry in expected.span(":").values()])
+
+
+def test_filtering_distinguishes_equal_commands_from_different_sessions(history):
+    current = item(history[0].raw)
+    assert current == history[0]
+    assert current is not history[0]
+    history[4] = current
+    history[:] = history[1:]
+    assert history[3] is current
+    assert_session(history, 3, ["old-0", "new-1"])
+
+
+@pytest.mark.parametrize(
+    ("indices", "boundary", "current"),
+    [
+        ([3, 1, 4, 5], 2, ["new-0", "new-1"]),
+        ([4, 1, 5], 0, ["new-0", "old-1", "new-1"]),
+        ([1, 3], 2, []),
+        ([0, 0, 4], 2, ["new-0"]),
+        ([4, 0, 5, 1], 0, ["new-0", "old-0", "new-1", "old-1"]),
+        ([0, 2, 1, 3, 4, 5], 4, ["new-0", "new-1"]),
+    ],
+)
+def test_reordered_straddling_slice_retains_only_leading_persisted_entries(history, indices, boundary, current):
+    history[:] = [history[index] for index in indices]
+    assert_session(history, boundary, current)
+
+
+def test_new_equal_entry_in_straddling_slice_starts_current_session(history):
+    new_entry = item(history[0].raw)
+    history[:] = [new_entry, history[1], history[4]]
+    assert_session(history, 0, ["old-0", "old-1", "new-0"])
+
+
+def test_failed_straddling_replacement_preserves_history(history):
+    original = list(history)
+
+    def broken_items():
+        yield original[0]
+        raise RuntimeError("incomplete replacement")
+
+    with pytest.raises(RuntimeError, match="incomplete replacement"):
+        history[:] = broken_items()
+    assert all(actual is expected for actual, expected in zip(history, original, strict=True))
+    assert_session(history, 4, ["new-0", "new-1"])
