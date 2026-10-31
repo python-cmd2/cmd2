@@ -1,4 +1,4 @@
-## 4.4.0 (TBD)
+## 4.4.0 (October 31, 2026) 🎃
 
 - Breaking Changes
     - `set_window_title()` is now an instance method. Call `app.set_window_title(title)` or
