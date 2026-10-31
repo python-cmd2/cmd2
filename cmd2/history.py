@@ -1,6 +1,7 @@
 """History management classes."""
 
 import json
+import operator
 import re
 from collections.abc import (
     Callable,
@@ -9,6 +10,9 @@ from collections.abc import (
 from dataclasses import dataclass
 from typing import (
     Any,
+    Self,
+    SupportsIndex,
+    cast,
     overload,
 )
 
@@ -166,6 +170,79 @@ class History(list[HistoryItem]):
         """Initialize History instances."""
         super().__init__(seq)
         self.session_start_index = 0
+
+    def __delitem__(self, key: SupportsIndex | slice, /) -> None:
+        """Delete entries and move the session boundary past any removed persisted entries."""
+        if isinstance(key, slice):
+            removed_before = sum(index < self.session_start_index for index in range(*key.indices(len(self))))
+        else:
+            key = operator.index(key)
+            position = key if key >= 0 else len(self) + key
+            removed_before = int(position < self.session_start_index)
+        super().__delitem__(key)
+        self.session_start_index -= removed_before
+
+    @overload
+    def __setitem__(self, key: SupportsIndex, value: HistoryItem, /) -> None: ...  # pragma: no cover
+
+    @overload
+    def __setitem__(self, key: slice, value: Iterable[HistoryItem], /) -> None: ...  # pragma: no cover
+
+    def __setitem__(self, key: SupportsIndex | slice, value: HistoryItem | Iterable[HistoryItem], /) -> None:
+        """Replace entries, retaining persisted item identities when a slice spans the session boundary."""
+        if not isinstance(key, slice):
+            super().__setitem__(key, cast(HistoryItem, value))
+            return
+        start, stop, step = key.indices(len(self))
+        replacement = list(cast(Iterable[HistoryItem], value))
+        persisted_ids = (
+            {id(entry) for entry in self[start : self.session_start_index]}
+            if step == 1 and start < self.session_start_index < stop
+            else None
+        )
+        super().__setitem__(key, replacement)
+        if persisted_ids is not None:
+            boundary = start
+            for entry in replacement:
+                if id(entry) not in persisted_ids:
+                    break
+                boundary += 1
+            self.session_start_index = boundary
+        elif step == 1 and start < self.session_start_index:
+            stop = max(start, stop)
+            self.session_start_index += len(replacement) - (stop - start)
+
+    def insert(self, index: SupportsIndex, value: HistoryItem, /) -> None:
+        """Insert an entry, shifting the session boundary if the insertion precedes it."""
+        index = operator.index(index)
+        position = min(len(self), max(0, index if index >= 0 else len(self) + index))
+        super().insert(index, value)
+        if position < self.session_start_index:
+            self.session_start_index += 1
+
+    def pop(self, index: SupportsIndex = -1, /) -> HistoryItem:
+        """Remove and return an entry, retaining the session boundary."""
+        index = operator.index(index)
+        position = index if index >= 0 else len(self) + index
+        result = super().pop(index)
+        if position < self.session_start_index:
+            self.session_start_index -= 1
+        return result
+
+    def remove(self, value: HistoryItem, /) -> None:
+        """Remove the first matching entry, retaining the session boundary."""
+        position = super().index(value)
+        super().pop(position)
+        if position < self.session_start_index:
+            self.session_start_index -= 1
+
+    def __imul__(self, count: SupportsIndex, /) -> Self:
+        """Repeat entries in place, resetting the boundary if repetition clears the list."""
+        count = operator.index(count)
+        super().__imul__(count)
+        if count <= 0:
+            self.session_start_index = 0
+        return self
 
     def start_session(self) -> None:
         """Start a new session, thereby setting the next index as the first index in the new session."""
@@ -331,8 +408,6 @@ class History(list[HistoryItem]):
         elif len(self) > max_length:
             last_element = len(self) - max_length
             del self[0:last_element]
-            # keep the session boundary pointing at the same retained items
-            self.session_start_index = max(0, self.session_start_index - last_element)
 
     def _build_result_dictionary(
         self, start: int, end: int, filter_func: Callable[[HistoryItem], bool] | None = None
