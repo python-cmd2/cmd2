@@ -1,7 +1,6 @@
 """History management classes."""
 
 import json
-import operator
 import re
 from collections.abc import (
     Callable,
@@ -10,9 +9,6 @@ from collections.abc import (
 from dataclasses import dataclass
 from typing import (
     Any,
-    Self,
-    SupportsIndex,
-    cast,
     overload,
 )
 
@@ -140,6 +136,25 @@ class HistoryItem:
         return HistoryItem(Statement.from_dict(statement_dict))
 
 
+class _EntryRef:
+    """Hashable reference to a history entry that compares by identity rather than by value.
+
+    Unlike id() keys, these are rehashed when a set of them is copied or unpickled, so they keep
+    referring to the copied entries.
+    """
+
+    __slots__ = ("entry",)
+
+    def __init__(self, entry: HistoryItem) -> None:
+        self.entry = entry
+
+    def __hash__(self) -> int:
+        return id(self.entry)
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, _EntryRef) and other.entry is self.entry
+
+
 class HistoryIndexError(IndexError):
     """Raised when a history index is invalid or a bounded range selects no items."""
 
@@ -169,83 +184,42 @@ class History(list[HistoryItem]):
     def __init__(self, seq: Iterable[HistoryItem] = ()) -> None:
         """Initialize History instances."""
         super().__init__(seq)
-        self.session_start_index = 0
+        # Entries that were in the list when the session started. Holding references keeps their
+        # ids from being reused by new entries after they leave the list.
+        self._persisted: set[_EntryRef] = set()
 
-    def __delitem__(self, key: SupportsIndex | slice, /) -> None:
-        """Delete entries and move the session boundary past any removed persisted entries."""
-        if isinstance(key, slice):
-            removed_before = sum(index < self.session_start_index for index in range(*key.indices(len(self))))
-        else:
-            key = operator.index(key)
-            position = key if key >= 0 else len(self) + key
-            removed_before = int(position < self.session_start_index)
-        super().__delitem__(key)
-        self.session_start_index -= removed_before
+    def is_persisted(self, item: HistoryItem) -> bool:
+        """Return whether an entry was in the history when the current session started.
 
-    @overload
-    def __setitem__(self, key: SupportsIndex, value: HistoryItem, /) -> None: ...  # pragma: no cover
+        Membership belongs to the entry object rather than its position, so a persisted entry stays
+        persisted when the list is reordered, filtered, or repeated, and new entries belong to the
+        current session wherever they are placed. Equal commands from different sessions are separate
+        entries. To record a persisted command again in the current session, append its statement.
 
-    @overload
-    def __setitem__(self, key: slice, value: Iterable[HistoryItem], /) -> None: ...  # pragma: no cover
+        :param item: the history entry to check
+        :return: True if the entry is from a previous session
+        """
+        return _EntryRef(item) in self._persisted
 
-    def __setitem__(self, key: SupportsIndex | slice, value: HistoryItem | Iterable[HistoryItem], /) -> None:
-        """Replace entries, retaining persisted item identities when a slice spans the session boundary."""
-        if not isinstance(key, slice):
-            super().__setitem__(key, cast(HistoryItem, value))
-            return
-        start, stop, step = key.indices(len(self))
-        replacement = list(cast(Iterable[HistoryItem], value))
-        persisted_ids = (
-            {id(entry) for entry in self[start : self.session_start_index]}
-            if step == 1 and start < self.session_start_index < stop
-            else None
-        )
-        super().__setitem__(key, replacement)
-        if persisted_ids is not None:
-            boundary = start
-            for entry in replacement:
-                if id(entry) not in persisted_ids:
-                    break
-                boundary += 1
-            self.session_start_index = boundary
-        elif step == 1 and start < self.session_start_index:
-            stop = max(start, stop)
-            self.session_start_index += len(replacement) - (stop - start)
+    @property
+    def session_start_index(self) -> int:
+        """Index just past the last persisted entry.
 
-    def insert(self, index: SupportsIndex, value: HistoryItem, /) -> None:
-        """Insert an entry, shifting the session boundary if the insertion precedes it."""
-        index = operator.index(index)
-        position = min(len(self), max(0, index if index >= 0 else len(self) + index))
-        super().insert(index, value)
-        if position < self.session_start_index:
-            self.session_start_index += 1
+        Every entry from this index on belongs to the current session. Unless the list has been
+        reordered, every entry before it is persisted. Assigning ``n`` marks the first ``n`` entries
+        as persisted and the rest as current.
+        """
+        for index in range(len(self) - 1, -1, -1):
+            if self.is_persisted(self[index]):
+                return index + 1
+        return 0
 
-    def pop(self, index: SupportsIndex = -1, /) -> HistoryItem:
-        """Remove and return an entry, retaining the session boundary."""
-        index = operator.index(index)
-        position = index if index >= 0 else len(self) + index
-        result = super().pop(index)
-        if position < self.session_start_index:
-            self.session_start_index -= 1
-        return result
-
-    def remove(self, value: HistoryItem, /) -> None:
-        """Remove the first matching entry, retaining the session boundary."""
-        position = super().index(value)
-        super().pop(position)
-        if position < self.session_start_index:
-            self.session_start_index -= 1
-
-    def __imul__(self, count: SupportsIndex, /) -> Self:
-        """Repeat entries in place, resetting the boundary if repetition clears the list."""
-        count = operator.index(count)
-        super().__imul__(count)
-        if count <= 0:
-            self.session_start_index = 0
-        return self
+    @session_start_index.setter
+    def session_start_index(self, index: int) -> None:
+        self._persisted = {_EntryRef(entry) for entry in self[:index]}
 
     def start_session(self) -> None:
-        """Start a new session, thereby setting the next index as the first index in the new session."""
+        """Start a new session, marking every entry currently in the history as persisted."""
         self.session_start_index = len(self)
 
     def _zero_based_index(self, onebased: int | str) -> int:
@@ -339,7 +313,7 @@ class History(list[HistoryItem]):
                 if start < 0:
                     raise HistoryIndexError(NO_HISTORY_ITEMS)
         else:
-            start = 0 if include_persisted or end_token else self.session_start_index
+            start = 0
 
         if end_token:
             end = min(int(end_token), len(self))
@@ -348,10 +322,11 @@ class History(list[HistoryItem]):
         else:
             end = len(self)
 
-        if (start_token or end_token) and (start >= len(self) or end <= start):
+        bounded = bool(start_token or end_token)
+        if bounded and (start >= len(self) or end <= start):
             raise HistoryIndexError(NO_HISTORY_ITEMS)
 
-        return self._build_result_dictionary(start, end)
+        return self._build_result_dictionary(start, end, include_persisted=include_persisted or bounded)
 
     def str_search(self, search: str, include_persisted: bool = False) -> dict[int, "HistoryItem"]:
         """Find history items which contain a given string.
@@ -369,8 +344,7 @@ class History(list[HistoryItem]):
             inexpanded = sloppy in su.norm_fold(history_item.expanded)
             return inraw or inexpanded
 
-        start = 0 if include_persisted else self.session_start_index
-        return self._build_result_dictionary(start, len(self), isin)
+        return self._build_result_dictionary(0, len(self), isin, include_persisted)
 
     def regex_search(self, regex: str, include_persisted: bool = False) -> dict[int, "HistoryItem"]:
         """Find history items which match a given regular expression.
@@ -389,15 +363,13 @@ class History(list[HistoryItem]):
             """Filter function for doing a regular expression search of history."""
             return bool(finder.search(hi.raw) or finder.search(hi.expanded))
 
-        start = 0 if include_persisted else self.session_start_index
-        return self._build_result_dictionary(start, len(self), isin)
+        return self._build_result_dictionary(0, len(self), isin, include_persisted)
 
     def truncate(self, max_length: int) -> None:
         """Truncate the length of the history, dropping the oldest items if necessary.
 
-        The current session's start index is shifted so it still marks the first retained
-        current-session item. If any current-session items are dropped, all retained items
-        belong to the current session.
+        Retained items keep their session membership, so retained current-session items still
+        appear in unbounded ranges and searches.
 
         :param max_length: the maximum length of the history, if zero or negative, all history
                            items will be deleted
@@ -410,17 +382,24 @@ class History(list[HistoryItem]):
             del self[0:last_element]
 
     def _build_result_dictionary(
-        self, start: int, end: int, filter_func: Callable[[HistoryItem], bool] | None = None
+        self,
+        start: int,
+        end: int,
+        filter_func: Callable[[HistoryItem], bool] | None = None,
+        include_persisted: bool = True,
     ) -> dict[int, "HistoryItem"]:
         """Build history search results.
 
         :param start: start index to search from
         :param end: end index to stop searching (exclusive).
+        :param filter_func: optional function that returns True for entries to include
+        :param include_persisted: if False, skip entries from previous sessions
         """
         results: dict[int, HistoryItem] = {}
         for index in range(start, end):
-            if filter_func is None or filter_func(self[index]):
-                results[index + 1] = self[index]
+            entry = self[index]
+            if (include_persisted or not self.is_persisted(entry)) and (filter_func is None or filter_func(entry)):
+                results[index + 1] = entry
         return results
 
     def to_json(self) -> str:

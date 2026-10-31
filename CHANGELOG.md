@@ -22,6 +22,14 @@
       selections report `No history items in range`, while search misses report
       `No matching history items`; displaying them still succeeds without output. The no-argument
       `history --run` safety refusal is unchanged.
+    - `History` now records which entries were loaded before the session started instead of keeping
+      a plain start index. Entries added after `start_session()` belong to the current session
+      wherever they are placed, including entries inserted at the front of the history.
+      `session_start_index` is now computed as the index just past the last persisted entry.
+      Assigning it marks only the entries already in the list, so assign it or call
+      `start_session()` after loading entries. After the list is reordered,
+      `history[history.session_start_index:]` can omit current-session entries; use
+      `History.is_persisted()` to check an entry instead.
 - Bug Fixes
     - Fixed history ranges starting past the end selecting the last command. Invalid indices and
       bounded ranges selecting no items report `No history items in range` before running, editing,
@@ -34,15 +42,20 @@
       it directly would then have retained current-session entries hidden from unbounded ranges and
       searches. Interactive `history` use was unaffected, since `cmd2` only truncates when
       persisting history at exit.
-    - Fixed deleting, popping, removing, inserting, or slice-assigning `History` entries before the
-      current session leaving `session_start_index` stale. In-place filtering recognizes retained
-      persisted entries by identity, so equal commands from the current session are not hidden.
+    - Fixed changing a `History` list in place moving commands between the persisted history and the
+      current session. Deleting, inserting, assigning, reordering (such as `reverse()` and
+      `sort()`), or repeating entries no longer shows persisted commands as current or hides
+      current-session commands, and `history --run` and `history --edit` still require `--all` for a
+      moved persisted command. Equal commands from different sessions remain separate entries.
     - Fixed `set_window_title()` leaving title changes buffered until the next prompt render. The
       title is now flushed before the method returns when no prompt is running. While a prompt or
       `select()` menu is running, it is written on that prompt's event loop so it doesn't interleave
       with rendering, and output errors are ignored so they can't disrupt the prompt. Titles are
       still written to a terminal stdout when prompts use a dummy output, such as when stdin isn't a
       terminal.
+- Enhancements
+    - Added `History.is_persisted()` to check whether a history entry was loaded from a previous
+      session.
 
 ## 4.3.1 (October 24, 2026)
 
