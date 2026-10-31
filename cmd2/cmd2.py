@@ -5722,6 +5722,7 @@ class Cmd:
         except ModuleNotFoundError:  # pragma: no cover
             import bz2 as compress_lib  # type: ignore[no-redef]
 
+        # Truncate a copy so live history numbering and the session boundary are unchanged.
         history = History(self.history)
         history.truncate(self._persistent_history_length)
         history_json = history.to_json()
