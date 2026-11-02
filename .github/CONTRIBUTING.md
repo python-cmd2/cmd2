@@ -80,7 +80,7 @@ for a list of dependencies needed for building `cmd2`.
 | [setuptools](https://pypi.org/project/setuptools/)       | `72.1.0`        | Python package management        |
 | [setuptools-scm](https://github.com/pypa/setuptools-scm) | `8.0.4`         | Manage your versions by scm tags |
 
-> [uv-publish](https://pypi.org/project/uv-publish/) is also needed for publishing releases to PyPI,
+> The [GitHub CLI](https://cli.github.com/) (`gh`) is also needed for publishing releases to PyPI,
 > but that is something only core maintainers need to worry about.
 
 #### Additional prerequisites for developing cmd2
@@ -766,7 +766,12 @@ other branches can be deleted. All releases are tagged so that they can be repro
 ## Publishing a new release
 
 Since 0.9.2, the process of publishing a new release of `cmd2` to [PyPi](https://pypi.org/) has been
-mostly automated. The manual steps are all git operations. Here's the checklist:
+mostly automated. Releases are built and uploaded by the
+[Publish](https://github.com/python-cmd2/cmd2/actions/workflows/publish.yml) GitHub Actions workflow
+using [Trusted Publishing](https://docs.pypi.org/trusted-publishers/), which also attaches
+[provenance attestations](https://docs.pypi.org/attestations/) to every file. The `make publish`
+targets start that workflow with the [GitHub CLI](https://cli.github.com/) (`gh`), so you need `gh`
+installed and authenticated. Here's the checklist:
 
 1. Make sure you're on the proper branch (almost always **main**)
 1. Make sure all the unit tests pass with `make test`
@@ -774,9 +779,31 @@ mostly automated. The manual steps are all git operations. Here's the checklist:
 1. Make sure `CHANGELOG.md` describes the version and has the correct release date
 1. Add a git tag representing the version number using `make tag TAG=x.y.z`
     - Where x, y, and z are all small non-negative integers
-1. (Optional) Run `make publish-test` to clean, build, and upload a new release to
+1. (Optional) Run `make publish-test` to build and upload the tagged release to
    [Test PyPi](https://test.pypi.org)
-1. Run `make publish` to clean, build, and upload a new release to [PyPi](https://pypi.org/)
+1. Run `make publish` to build and upload the tagged release to [PyPi](https://pypi.org/)
+
+Both targets wait for the workflow run to finish and fail if it fails. Only members of the
+`cmd2-admins` team can publish: the upload job waits until one of them approves it, either from the
+workflow run page that `make publish` prints or from the repository's Actions tab.
+
+### One-time publishing setup
+
+Trusted Publishing needs this configuration, which only a project owner can change:
+
+- On [PyPI](https://pypi.org/manage/project/cmd2/settings/publishing/), add a GitHub Trusted
+  Publisher with owner `python-cmd2`, repository `cmd2`, workflow `publish.yml`, and environment
+  `pypi`
+- On [Test PyPI](https://test.pypi.org/manage/project/cmd2/settings/publishing/), add the same
+  Trusted Publisher, but with environment `testpypi`
+- In the GitHub repository settings, create the `pypi` and `testpypi` environments. For each one:
+    - Limit deployments to tags matching `*.*.*`, so the workflow can only publish a tagged release
+    - Add the `cmd2-admins` team as required reviewers and turn off administrator bypass, so only
+      members of that team can approve an upload
+- In the GitHub repository rulesets, add an active tag ruleset named "Release tags" that targets
+  `refs/tags/*.*.*`, restricts creations, updates, and deletions, and lets only the `cmd2-admins`
+  team bypass it. This stops anyone else from creating or moving the release tags the workflow
+  publishes from
 
 ## Acknowledgement
 
