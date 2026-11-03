@@ -80,13 +80,13 @@ def test_pager_long_line_navigation_resize_and_typeahead(toolbar_app, chop) -> N
     def interact():
         try:
             assert entered.wait(2)
-            pipe.send_text("\x1b[C" if chop else " ")
+            send_keys(app, pipe, "\x1b[C" if chop else " ")
             assert scrolled.wait(2)
             app.main_session.output.size = Size(rows=20, columns=60)
             app.main_session.app.invalidate()
             assert resized.wait(2)
         finally:
-            pipe.send_text("qnext\n")
+            send_keys(app, pipe, "qnext\n")
 
     app.main_session.app.after_render += observe
     with ThreadPoolExecutor() as executor:
@@ -99,10 +99,31 @@ def test_pager_long_line_navigation_resize_and_typeahead(toolbar_app, chop) -> N
     assert app._read_raw_input("Next: ", app.main_session) == "next"
 
 
+def send_keys(app, pipe, text) -> None:
+    """Send text to the pipe input from the thread that runs the prompt-toolkit application.
+
+    A Windows pipe input parses the text in the caller's thread, while the application
+    flushes that same parser from its event loop once ttimeoutlen has passed. The parser
+    is a generator, so the two overlapping raise "generator already executing", which a
+    free-threaded interpreter makes likely. A POSIX pipe input is read by the loop itself.
+    """
+    loop = app.main_session.app.loop
+    if loop is not None:
+        try:
+            loop.call_soon_threadsafe(pipe.send_text, text)
+        except RuntimeError:
+            # The application finished and closed its loop in the meantime.
+            pass
+        else:
+            return
+    pipe.send_text(text)
+
+
 class PagerKeys:
     """Send keys to the built-in pager and wait for the frame that reflects them."""
 
     def __init__(self, app, pipe, pager) -> None:
+        self.app = app
         self.pipe = pipe
         self.pager = pager
         self.presses = 0
@@ -134,7 +155,7 @@ class PagerKeys:
         """Send keys and wait for a drawn frame that shows the expected position."""
         with self.updated:
             handled = self.presses
-        self.pipe.send_text(keys)
+        send_keys(self.app, self.pipe, keys)
         deadline = time.monotonic() + 5
         index = 0
         with self.updated:
@@ -168,7 +189,7 @@ def drive_pager(app, pipe, text, *, chop, script) -> None:
             assert entered.wait(5)
             script(PagerKeys(app, pipe, created[0]))
         finally:
-            pipe.send_text("q")
+            send_keys(app, pipe, "q")
 
     app.main_session.app.after_render += observe
     with mock.patch("cmd2.command_toolbar.Pager", side_effect=make_pager), ThreadPoolExecutor() as executor:
@@ -310,11 +331,11 @@ def test_pager_close_keys(toolbar_app, key) -> None:
     def interact() -> None:
         assert entered.wait(5), "pager never opened"
         # Scroll first, so the pager is known to be reading keys before the close key.
-        pipe.send_text("j")
-        pipe.send_text(key)
+        send_keys(app, pipe, "j")
+        send_keys(app, pipe, key)
         if not closed.wait(5):
             # Rescue the blocked main thread so this fails as an assertion, not a hang.
-            pipe.send_text("q")
+            send_keys(app, pipe, "q")
             raise AssertionError(f"{key!r} did not close the pager")
 
     app.main_session.app.after_render += observe
