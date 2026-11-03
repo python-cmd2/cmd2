@@ -646,6 +646,9 @@ class CommandToolbar:
         # the main prompt's again, and the prompt must render for real.
         self._set_render_suppressed(False)
         self._thread = None
+        # Write any window title whose callback the display's loop didn't run. The display has
+        # stopped, so this can't interleave with its rendering.
+        self.cmd._flush_pending_window_title_quietly()
         # Return the borrowed application to the main prompt, including on proxy failures.
         # The upstream toolbar owned a separate application.
         if self._display_stack is not None:
