@@ -1,4 +1,4 @@
-## 4.4.0 (TBD)
+## 4.5.0 (TBD)
 
 - Bug Fixes
     - Background output printed above an active reserved prompt through `run_in_terminal()` or
@@ -60,6 +60,86 @@
       every platform, including Windows where the default external pager (`more`) always wraps.
       Output which already fits on the screen is printed directly rather than paged. Set
       `self.use_builtin_pager = False` to keep using the external `pager`/`pager_chop` commands.
+
+## 4.4.1 (November 2, 2026)
+
+- Enhancements
+    - Improve PyPI release security by publishing
+      [provenance](https://docs.pypi.org/using-pypi/package-security/provenance/) info via shared
+      attestations.
+
+## 4.4.0 (October 31, 2026) 🎃
+
+- Breaking Changes
+    - `set_window_title()` is now an instance method. Call `app.set_window_title(title)` or
+      `self.set_window_title(title)` so title changes use that application's terminal.
+    - `History.get()` and `History.span()` now raise `HistoryIndexError`, an `IndexError` subclass,
+      for invalid indices and bounded ranges selecting no history items. Unbounded ranges (`:` and
+      `..`) can still return an empty dictionary. Starts before the beginning of history are
+      rejected rather than clamped. Malformed ranges, including zero endpoints, raise
+      `HistoryFormatError`, a `ValueError` subclass. The `history` command reports these selection
+      errors without a traceback hint, and index zero includes the reminder that the first command
+      is command 1.
+    - End-only ranges now start at command 1 in the full history, including persisted commands, just
+      like explicit-start ranges and single indices. Bare `history` and unbounded ranges still
+      select only the current session unless `--all` is supplied.
+    - Replaying or editing a selection containing persisted commands now requires `--all`. This
+      includes single indices and bounded ranges. Displaying or saving these selections does not
+      require `--all`, and command numbers are unchanged.
+    - Running, editing, or saving an empty history selection now fails before replay, opening an
+      editor, or creating or overwriting a file. This includes `history -o FILE` and `history -e`
+      with no selector in an empty session, and actions on searches with no matches. Empty unbounded
+      selections report `No history items in range`, while search misses report
+      `No matching history items`; displaying them still succeeds without output. The no-argument
+      `history --run` safety refusal is unchanged.
+    - `History` now records which entries were loaded before the session started instead of keeping
+      a plain start index. Entries added after `start_session()` belong to the current session
+      wherever they are placed, including entries inserted at the front of the history.
+      `session_start_index` is now computed as the index just past the last persisted entry.
+      Assigning it marks only the entries already in the list, so assign it or call
+      `start_session()` after loading entries. After the list is reordered,
+      `history[history.session_start_index:]` can omit current-session entries; use
+      `History.is_persisted()` to check an entry instead.
+- Bug Fixes
+    - Fixed history ranges starting past the end selecting the last command. Invalid indices and
+      bounded ranges selecting no items report `No history items in range` before running, editing,
+      or saving commands.
+    - Negative single-index history selections now display and return the positive command number.
+    - History regular expressions containing range separators are now handled as regex searches.
+      Other selectors are treated as numbers or ranges only when they match the supported syntax;
+      strings such as URLs, `a:b`, `+1`, and `1_0` remain literal searches.
+    - Fixed `History.truncate()` leaving the current session's start index unchanged. Code calling
+      it directly would then have retained current-session entries hidden from unbounded ranges and
+      searches. Interactive `history` use was unaffected, since `cmd2` only truncates when
+      persisting history at exit.
+    - Fixed changing a `History` list in place moving commands between the persisted history and the
+      current session. Deleting, inserting, assigning, reordering (such as `reverse()` and
+      `sort()`), or repeating entries no longer shows persisted commands as current or hides
+      current-session commands, and `history --run` and `history --edit` still require `--all` for a
+      moved persisted command. Equal commands from different sessions remain separate entries.
+    - Fixed `set_window_title()` leaving title changes buffered until the next prompt render. The
+      title is now flushed before the method returns when no prompt is running. While a prompt or
+      `select()` menu is running, it is written on that prompt's event loop so it doesn't interleave
+      with rendering, and output errors are ignored so they can't disrupt the prompt. Titles are
+      still written to a terminal stdout when prompts use a dummy output, such as when stdin isn't a
+      terminal.
+- Enhancements
+    - Added `History.is_persisted()` to check whether a history entry was loaded from a previous
+      session.
+
+## 4.3.1 (October 24, 2026)
+
+- Bug Fixes
+    - Fixed `@with_annotated` command `--help` output bypassing the application's output stream,
+      leaving redirected help files empty and preventing help from being captured by embedded apps.
+- Enhancements
+    - Added the
+      [textual_tty_embed.py](https://github.com/python-cmd2/cmd2/blob/main/examples/textual_tty_embed.py)
+      example, which embeds a `cmd2` application in a [Textual](https://textual.textualize.io/)
+      application using [textual-tty](https://github.com/ttygroup/textual-tty). The Textual
+      application shows a realtime status panel beside the `cmd2` application, which can display
+      much richer information than a bottom toolbar. See the
+      [Embedding in Textual](docs/examples/embedding_in_textual.md) documentation for details.
 
 ## 4.3.0 (October 13, 2026)
 

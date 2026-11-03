@@ -82,7 +82,7 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
     pager_pid = tmp_path / "pager.pid"
     interrupts = tmp_path / "interrupts"
     pager.write_text(
-        "import errno, os, pathlib, signal, sys, termios, tty\n"
+        "import errno, os, pathlib, select, signal, sys, termios, tty\n"
         f"if {launcher == 'exec'!r}: assert signal.getsignal(signal.SIGTSTP) == signal.SIG_IGN\n"
         # Interactive bash leaves TTIN/TTOU ignored when exec replaces it. Give the simulated pager normal terminal-access
         # stops: EOF can arrive before cmd2 lends it the terminal, and an ignored TTIN makes that read fail with EIO instead of
@@ -102,6 +102,12 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
         "                return\n"
         "            except termios.error as error:\n"
         "                if error.args[0] != errno.EINTR: raise\n"
+        # A signal that lands as the pager goes back to a blocking read, after Python last checked for one, does not interrupt
+        # that read: its handler runs only once the next key arrives. So Ctrl-C sent just after the pager reports a key would go
+        # unanswered. Wait for keys in select() with a wakeup descriptor instead, which every handled signal makes readable.
+        "    wakeup, wakeup_write = os.pipe()\n"
+        "    os.set_blocking(wakeup_write, False)\n"
+        "    signal.set_wakeup_fd(wakeup_write)\n"
         # os.write rather than print: a signal handler that uses buffered stdout raises "reentrant call inside
         # <_io.BufferedWriter>" when the signal lands mid-write, which happens when the job is stopped while still reporting
         # readiness.
@@ -119,6 +125,9 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
         "        setcbreak()\n"
         "        os.write(1, b'PAGER_READY\\n')\n"
         "        while True:\n"
+        "            ready = select.select([terminal, wakeup], [], [])[0]\n"
+        "            if wakeup in ready: os.read(wakeup, 4096)\n"
+        "            if terminal not in ready: continue\n"
         "            key = os.read(terminal.fileno(), 1)\n"
         "            if key == b'q': break\n"
         "            if key == b'p': os.write(1, b'PAGER_ALIVE\\n')\n"
@@ -238,6 +247,15 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
             f"resizes: {resizes}\nterminal size at timeout: {terminal_size()}"
         )
 
+    def states(*pids: int) -> list[str] | None:
+        """Each process's state as ps reports it, or None unless every process still exists."""
+        pids = tuple(set(pids))
+        listing = subprocess.run(
+            ["ps", "-o", "stat=", "-p", ",".join(map(str, pids))], capture_output=True, text=True, check=False
+        )
+        found = listing.stdout.split()
+        return found if len(found) == len(pids) else None
+
     def stopped(*pids: int) -> bool:
         """Whether every process is stopped, not merely deprived of the terminal.
 
@@ -245,12 +263,17 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
         blocked in a one-byte terminal read is woken by the stop signal and, if a keystroke
         has arrived by then, consumes it before it stops. Typing has to wait for the whole job.
         """
-        pids = tuple(set(pids))
-        listing = subprocess.run(
-            ["ps", "-o", "stat=", "-p", ",".join(map(str, pids))], capture_output=True, text=True, check=False
-        )
-        states = listing.stdout.split()
-        return len(states) == len(pids) and all(state.startswith("T") for state in states)
+        found = states(*pids)
+        return found is not None and all(state.startswith("T") for state in found)
+
+    def running(*pids: int) -> bool:
+        """Whether no process is stopped, so that Ctrl-Z can stop each one.
+
+        A process that is stopped already, such as a pager that read the terminal from the
+        background, discards the SIGTSTP of Ctrl-Z rather than keeping it until it goes on.
+        """
+        found = states(*pids)
+        return found is not None and not any(state.startswith("T") for state in found)
 
     job_group = None
     pipeline_group = None
@@ -332,6 +355,10 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
             wait_until(lambda: "PAGER_ALIVE\r\n" in transcript[start:])
             assert os.tcgetpgrp(master) == pipeline_group
         for rows in (12, 24) if stop_job else ():
+            # Owning the terminal is not enough. When cmd2 takes it back between lends, a pager blocked reading it is stopped,
+            # with the rest of its group, and the pipeline's watcher continues them only some time after the next lend. A
+            # Ctrl-Z meanwhile is discarded by the processes stopped already, and that continue undoes it for the rest.
+            wait_until(lambda: running(pipeline_group, pager_process))
             send("\x1a")
             wait_until(lambda: os.tcgetpgrp(master) == process.pid)
             wait_until(lambda: stopped(job_group, app_pid, pager_process))
@@ -1415,11 +1442,20 @@ def test_command_reads_the_terminal_after_a_subprocess_wrote_to_a_slow_pipe(tmp_
     producer = tmp_path / "producer.py"
     producer.write_text("import sys\nsys.stdout.write('x' * 262144)\n", encoding="utf-8")
     slow = tmp_path / "slow.py"
-    slow.write_text("import sys, time\nwhile sys.stdin.buffer.read(16384):\n    time.sleep(0.15)\n", encoding="utf-8")
+    slow_pid = tmp_path / "slow.pid"
+    slow.write_text(
+        "import os, pathlib, sys, time\n"
+        f"pathlib.Path({str(slow_pid)!r}).write_text(str(os.getpid()))\n"
+        "while sys.stdin.buffer.read(16384):\n"
+        "    time.sleep(0.15)\n",
+        encoding="utf-8",
+    )
     application = tmp_path / "application.py"
+    application_pid = tmp_path / "application.pid"
     application.write_text(
-        "import os, subprocess, sys\n"
+        "import os, pathlib, subprocess, sys\n"
         "from cmd2 import Cmd\n"
+        f"pathlib.Path({str(application_pid)!r}).write_text(str(os.getpid()))\n"
         "class App(Cmd):\n"
         "    def do_produce(self, _):\n"
         f"        subprocess.run([sys.executable, {str(producer)!r}], stdout=self.stdout, check=True)\n"
@@ -1477,6 +1513,12 @@ def test_command_reads_the_terminal_after_a_subprocess_wrote_to_a_slow_pipe(tmp_
         )
         assert "ANSWER=answer" in transcript[start:]
     finally:
+        # Killing the session leader leaves cmd2 and the slow consumer running past the end of the test. Coverage would then
+        # write their data files after pytest-cov has combined them.
+        for pid_file in (application_pid, slow_pid):
+            if pid_file.exists():
+                with contextlib.suppress(ProcessLookupError):
+                    os.kill(int(pid_file.read_text()), signal.SIGKILL)
         os.close(master)
         process.kill()
         process.wait(timeout=5)
