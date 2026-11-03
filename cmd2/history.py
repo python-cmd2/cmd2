@@ -18,6 +18,11 @@ from .parsing import (
     shlex_split,
 )
 
+NO_HISTORY_ITEMS = "No history items in range"
+NO_MATCHING_HISTORY_ITEMS = "No matching history items"
+FIRST_HISTORY_INDEX = "The first command in history is command 1."
+INVALID_HISTORY_RANGE = "History indices must be positive or negative integers, and may not be zero."
+
 
 def single_line_format(statement: Statement) -> str:
     """Format a command line to display on a single line.
@@ -131,6 +136,33 @@ class HistoryItem:
         return HistoryItem(Statement.from_dict(statement_dict))
 
 
+class _EntryRef:
+    """Hashable reference to a history entry that compares by identity rather than by value.
+
+    Unlike id() keys, these are rehashed when a set of them is copied or unpickled, so they keep
+    referring to the copied entries.
+    """
+
+    __slots__ = ("entry",)
+
+    def __init__(self, entry: HistoryItem) -> None:
+        self.entry = entry
+
+    def __hash__(self) -> int:
+        return id(self.entry)
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, _EntryRef) and other.entry is self.entry
+
+
+class HistoryIndexError(IndexError):
+    """Raised when a history index is invalid or a bounded range selects no items."""
+
+
+class HistoryFormatError(ValueError):
+    """Raised when a history range has invalid syntax or a zero endpoint."""
+
+
 class History(list[HistoryItem]):
     """A list of [HistoryItem][cmd2.history.HistoryItem] objects with additional methods for searching and managing the list.
 
@@ -152,10 +184,42 @@ class History(list[HistoryItem]):
     def __init__(self, seq: Iterable[HistoryItem] = ()) -> None:
         """Initialize History instances."""
         super().__init__(seq)
-        self.session_start_index = 0
+        # Entries that were in the list when the session started. Holding references keeps their
+        # ids from being reused by new entries after they leave the list.
+        self._persisted: set[_EntryRef] = set()
+
+    def is_persisted(self, item: HistoryItem) -> bool:
+        """Return whether an entry was in the history when the current session started.
+
+        Membership belongs to the entry object rather than its position, so a persisted entry stays
+        persisted when the list is reordered, filtered, or repeated, and new entries belong to the
+        current session wherever they are placed. Equal commands from different sessions are separate
+        entries. To record a persisted command again in the current session, append its statement.
+
+        :param item: the history entry to check
+        :return: True if the entry is from a previous session
+        """
+        return _EntryRef(item) in self._persisted
+
+    @property
+    def session_start_index(self) -> int:
+        """Index just past the last persisted entry.
+
+        Every entry from this index on belongs to the current session. Unless the list has been
+        reordered, every entry before it is persisted. Assigning ``n`` marks the first ``n`` entries
+        as persisted and the rest as current.
+        """
+        for index in range(len(self) - 1, -1, -1):
+            if self.is_persisted(self[index]):
+                return index + 1
+        return 0
+
+    @session_start_index.setter
+    def session_start_index(self, index: int) -> None:
+        self._persisted = {_EntryRef(entry) for entry in self[:index]}
 
     def start_session(self) -> None:
-        """Start a new session, thereby setting the next index as the first index in the new session."""
+        """Start a new session, marking every entry currently in the history as persisted."""
         self.session_start_index = len(self)
 
     def _zero_based_index(self, onebased: int | str) -> int:
@@ -190,46 +254,30 @@ class History(list[HistoryItem]):
 
         :param index: optional item to get
         :return: a single [cmd2.history.HistoryItem][]
+        :raises HistoryIndexError: if index is zero or outside the history
         """
         if index == 0:
-            raise IndexError("The first command in history is command 1.")
+            raise HistoryIndexError(f"{NO_HISTORY_ITEMS}. {FIRST_HISTORY_INDEX}")
+        if abs(index) > len(self):
+            raise HistoryIndexError(NO_HISTORY_ITEMS)
         if index < 0:
             return self[index]
         return self[index - 1]
 
-    # This regular expression parses input for the span() method. There are five parts:
-    #
-    #    ^\s*                          matches any whitespace at the beginning of the
-    #                                  input. This is here so you don't have to trim the input
-    #
-    #    (?P<start>-?[1-9]{1}\d*)?     create a capture group named 'start' which matches an
-    #                                  optional minus sign, followed by exactly one non-zero
-    #                                  digit, and as many other digits as you want. This group
-    #                                  is optional so that we can match an input string like '..2'.
-    #                                  This regex will match 1, -1, 10, -10, but not 0 or -0.
-    #
-    #    (?P<separator>:|(\.{2,}))?    create a capture group named 'separator' which matches either
-    #                                  a colon or two periods.
-    #
-    #    (?P<end>-?[1-9]{1}\d*)?       create a capture group named 'end' which matches an
-    #                                  optional minus sign, followed by exactly one non-zero
-    #                                  digit, and as many other digits as you want. This group is
-    #                                  optional so that we can match an input string like ':'
-    #                                  or '5:'. This regex will match 1, -1, 10, -10, but not
-    #                                  0 or -0.
-    #
-    #    \s*$                          match any whitespace at the end of the input. This is here so
-    #                                  you don't have to trim the input
-    #
-    spanpattern = re.compile(r"^\s*(?P<start>-?[1-9]\d*)?(?P<separator>:|(\.{2,}))(?P<end>-?[1-9]\d*)?\s*$")
+    # Recognize ranges with optional signed ASCII integer endpoints. Zero is parsed so that
+    # span() can report its specific error; it is never a valid history index.
+    spanpattern = re.compile(r"\s*(?P<start>-?[0-9]+)?(?P<separator>:|\.{2,})(?P<end>-?[0-9]+)?\s*")
 
     def span(self, span: str, include_persisted: bool = False) -> dict[int, "HistoryItem"]:
         """Return a slice of the History list.
 
         :param span: string containing an index or a slice
-        :param include_persisted: if True, then retrieve full results including from persisted history
+        :param include_persisted: if True, include persisted history for unbounded ranges.
+                                  Ranges with either endpoint always use the full history.
         :return: a dictionary of history items keyed by their 1-based index in ascending order,
-                 or an empty dictionary if no results were found
+                 or an empty dictionary if an unbounded range (``:`` or ``..``) has no results
+        :raises HistoryFormatError: if the range format is invalid or an index is zero
+        :raises HistoryIndexError: if the start is out of bounds or a bounded range selects no history items
 
         This method can accommodate input in any of these forms:
 
@@ -249,20 +297,24 @@ class History(list[HistoryItem]):
         - off by one errors
 
         """
-        results = self.spanpattern.search(span)
+        results = self.spanpattern.fullmatch(span)
         if not results:
             # our regex doesn't match the input, bail out
-            raise ValueError("History indices must be positive or negative integers, and may not be zero.")
+            raise HistoryFormatError(INVALID_HISTORY_RANGE)
 
         start_token = results.group("start")
-        if start_token:
-            start = min(self._zero_based_index(start_token), len(self) - 1)
-            if start < 0:
-                start = max(0, len(self) + start)
-        else:
-            start = 0 if include_persisted else self.session_start_index
-
         end_token = results.group("end")
+        if any(token is not None and int(token) == 0 for token in (start_token, end_token)):
+            raise HistoryFormatError(f"{INVALID_HISTORY_RANGE} {FIRST_HISTORY_INDEX}")
+        if start_token:
+            start = self._zero_based_index(start_token)
+            if start < 0:
+                start += len(self)
+                if start < 0:
+                    raise HistoryIndexError(NO_HISTORY_ITEMS)
+        else:
+            start = 0
+
         if end_token:
             end = min(int(end_token), len(self))
             if end < 0:
@@ -270,7 +322,11 @@ class History(list[HistoryItem]):
         else:
             end = len(self)
 
-        return self._build_result_dictionary(start, end)
+        bounded = bool(start_token or end_token)
+        if bounded and (start >= len(self) or end <= start):
+            raise HistoryIndexError(NO_HISTORY_ITEMS)
+
+        return self._build_result_dictionary(start, end, include_persisted=include_persisted or bounded)
 
     def str_search(self, search: str, include_persisted: bool = False) -> dict[int, "HistoryItem"]:
         """Find history items which contain a given string.
@@ -288,8 +344,7 @@ class History(list[HistoryItem]):
             inexpanded = sloppy in su.norm_fold(history_item.expanded)
             return inraw or inexpanded
 
-        start = 0 if include_persisted else self.session_start_index
-        return self._build_result_dictionary(start, len(self), isin)
+        return self._build_result_dictionary(0, len(self), isin, include_persisted)
 
     def regex_search(self, regex: str, include_persisted: bool = False) -> dict[int, "HistoryItem"]:
         """Find history items which match a given regular expression.
@@ -308,35 +363,43 @@ class History(list[HistoryItem]):
             """Filter function for doing a regular expression search of history."""
             return bool(finder.search(hi.raw) or finder.search(hi.expanded))
 
-        start = 0 if include_persisted else self.session_start_index
-        return self._build_result_dictionary(start, len(self), isin)
+        return self._build_result_dictionary(0, len(self), isin, include_persisted)
 
     def truncate(self, max_length: int) -> None:
         """Truncate the length of the history, dropping the oldest items if necessary.
 
-        :param max_length: the maximum length of the history, if negative, all history
+        Retained items keep their session membership, so retained current-session items still
+        appear in unbounded ranges and searches.
+
+        :param max_length: the maximum length of the history, if zero or negative, all history
                            items will be deleted
         :return: nothing
         """
         if max_length <= 0:
-            # remove all history
-            del self[:]
+            self.clear()
         elif len(self) > max_length:
             last_element = len(self) - max_length
             del self[0:last_element]
 
     def _build_result_dictionary(
-        self, start: int, end: int, filter_func: Callable[[HistoryItem], bool] | None = None
+        self,
+        start: int,
+        end: int,
+        filter_func: Callable[[HistoryItem], bool] | None = None,
+        include_persisted: bool = True,
     ) -> dict[int, "HistoryItem"]:
         """Build history search results.
 
         :param start: start index to search from
         :param end: end index to stop searching (exclusive).
+        :param filter_func: optional function that returns True for entries to include
+        :param include_persisted: if False, skip entries from previous sessions
         """
         results: dict[int, HistoryItem] = {}
         for index in range(start, end):
-            if filter_func is None or filter_func(self[index]):
-                results[index + 1] = self[index]
+            entry = self[index]
+            if (include_persisted or not self.is_persisted(entry)) and (filter_func is None or filter_func(entry)):
+                results[index + 1] = entry
         return results
 
     def to_json(self) -> str:
