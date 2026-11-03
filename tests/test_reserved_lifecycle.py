@@ -6,6 +6,7 @@ shell is the one they started with.
 """
 
 import io
+import threading
 from collections.abc import Callable
 from typing import Any
 
@@ -20,6 +21,7 @@ from prompt_toolkit.shortcuts import PromptSession
 import cmd2
 from cmd2.plugin import CommandFinalizationData
 from cmd2.reserved_toolbar import native_toolbar_container
+from cmd2.terminal_transaction import current_transaction
 
 
 class TtyStringIO(io.StringIO):
@@ -298,6 +300,40 @@ class TestCommandOutputRouting:
                 assert harness.app.stdout is harness.app.stdout
         finally:
             harness.close()
+
+
+class TestWindowTitle:
+    @pytest.mark.parametrize("during_command", [False, True])
+    def test_title_is_written_inside_a_terminal_transaction(self, monkeypatch, during_command) -> None:
+        """Command output and toolbar paints share the terminal under one lock, so titles must take it too."""
+        harness = Harness(mode="reserved")
+        transactions = []
+        written = threading.Event()
+        set_title = harness.backend.set_title
+
+        def recording_set_title(title: str) -> None:
+            transactions.append(current_transaction())
+            written.set()
+            set_title(title)
+
+        monkeypatch.setattr(harness.backend, "set_title", recording_set_title)
+        try:
+            with harness.app._reserved_toolbar_context():
+                assert harness.app.reserved_toolbar is not None
+                assert harness.app.reserved_toolbar.is_active
+                if during_command:
+                    # The command display's loop writes the title, while the command thread writes its output.
+                    with harness.app._command_toolbar_context():
+                        harness.app.set_window_title("Reserved")
+                        assert written.wait(2)
+                else:
+                    harness.app.set_window_title("Reserved")
+        finally:
+            harness.close()
+
+        assert len(transactions) == 1
+        assert transactions[0] is not None
+        assert "\x1b]2;Reserved\x07" in harness.written()
 
 
 class TestSuspension:

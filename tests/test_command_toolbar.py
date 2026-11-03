@@ -10,11 +10,13 @@ from types import SimpleNamespace
 from unittest import mock
 
 import pytest
-from prompt_toolkit.application import get_app
+from prompt_toolkit.application import create_app_session, get_app
+from prompt_toolkit.data_structures import Size
 from prompt_toolkit.input import create_pipe_input
 from prompt_toolkit.input.typeahead import get_typeahead
 from prompt_toolkit.keys import Keys
 from prompt_toolkit.layout import HSplit, Layout, Window
+from prompt_toolkit.output.vt100 import Vt100_Output
 from prompt_toolkit.shortcuts import PromptSession
 
 from cmd2 import Cmd, ToolbarMode, command_toolbar
@@ -332,6 +334,72 @@ def test_command_toolbar_suspension_waits_for_in_flight_writes(toolbar_app, monk
             pending.result(timeout=5)
 
     assert "in flight\n" in output.getvalue()
+
+
+class TitleTerminal(Vt100_Output):
+    """A VT100 terminal which records the thread that wrote each window title."""
+
+    def __init__(self, stream: Terminal) -> None:
+        super().__init__(stream, lambda: Size(rows=24, columns=80), enable_cpr=False)
+        self.title_threads: dict[str, threading.Thread] = {}
+        self.title_written = threading.Event()
+
+    def set_title(self, title: str) -> None:
+        self.title_threads[title] = threading.current_thread()
+        self.title_written.set()
+        super().set_title(title)
+
+
+@pytest.fixture
+def title_toolbar_app():
+    # A real VT100 output, since window titles skip a DummyOutput in favor of the app's own stdout.
+    stream = Terminal()
+    with create_pipe_input() as pipe:
+        terminal = TitleTerminal(stream)
+        with create_app_session(input=pipe, output=terminal):
+            app = Cmd(allow_cli_args=False)
+            app.stdout = stream
+            app.main_session = PromptSession(input=pipe, output=terminal, bottom_toolbar="STATUS", refresh_interval=0.01)
+            yield app, terminal, stream
+
+
+def test_command_toolbar_writes_window_titles_on_its_display_thread(title_toolbar_app) -> None:
+    app, terminal, stream = title_toolbar_app
+    with app._command_toolbar_context():
+        display_thread = app._command_toolbar._thread
+        app.set_window_title("Working")
+        # Wait while the display is running, so its loop has the chance to write the title.
+        assert terminal.title_written.wait(2)
+
+    # Written by the display, which renders the toolbar to the same terminal, rather than by the command.
+    assert terminal.title_threads["Working"] is display_thread
+    assert "\x1b]2;Working\x07" in stream.getvalue()
+
+
+def test_command_toolbar_writes_a_queued_title_when_its_display_stops(title_toolbar_app, monkeypatch) -> None:
+    app, terminal, stream = title_toolbar_app
+    dropped = []
+    with app._command_toolbar_context():
+        loop = app._command_toolbar.app.loop
+        schedule = loop.call_soon_threadsafe
+
+        # Simulate the display stopping before its loop runs the title callback.
+        def drop_title_callback(callback, *args, **kwargs):
+            if getattr(callback, "__func__", None) is Cmd._flush_pending_window_title_quietly:
+                dropped.append(callback)
+                return None
+            return schedule(callback, *args, **kwargs)
+
+        monkeypatch.setattr(loop, "call_soon_threadsafe", drop_title_callback)
+        app.set_window_title("Queued")
+        assert "Queued" not in terminal.title_threads
+
+    assert len(dropped) == 1
+    # Stopping the display wrote the title once the display could no longer render.
+    assert terminal.title_threads["Queued"] is threading.main_thread()
+    assert stream.getvalue().endswith("\x1b]2;Queued\x07")
+    assert app._pending_window_title is None
+    assert app._window_title_callback_loop is None
 
 
 def test_command_toolbar_typeahead(toolbar_app) -> None:

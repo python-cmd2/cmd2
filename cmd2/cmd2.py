@@ -6194,6 +6194,9 @@ class Cmd:
         several titles are set before then, only the latest is written. Output errors are ignored so
         they can't disrupt the prompt.
 
+        The bottom toolbar's display counts as a prompt here. While it is shown during a command, the
+        title is written on its event loop in the same way.
+
         :param title: the new window title
         """
         with self._window_title_lock:
@@ -6233,6 +6236,11 @@ class Cmd:
             select_app = select_app_session.app
             if select_app is not None:
                 apps.append(select_app)
+
+        # While a command runs, the bottom toolbar's display draws on this terminal from its own thread.
+        toolbar = self._command_toolbar
+        if toolbar is not None:
+            apps.append(toolbar.app)
 
         for app in apps:
             loop = app.loop
@@ -6277,8 +6285,12 @@ class Cmd:
                 while (title := self._pending_window_title) is not None:
                     self._pending_window_title = None
                     output = self._get_window_title_output()
-                    output.set_title(title)
-                    output.flush()
+                    # A reserved toolbar's paints and command output share this terminal from other threads, and
+                    # every cmd2 writer serializes on its lock.
+                    reserved = self._reserved_toolbar
+                    with reserved.lock.transaction("window title") if reserved is not None else contextlib.nullcontext():
+                        output.set_title(title)
+                        output.flush()
             finally:
                 self._writing_window_title = False
 
