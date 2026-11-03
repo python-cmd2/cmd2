@@ -74,15 +74,34 @@ validate-tag: ## Check to make sure that a tag exists for the current HEAD and i
 	@echo "🚀 Validating version tag"
 	@uv run scripts/validate_tag.py
 
+# Start the GitHub Actions publish workflow (.github/workflows/publish.yml) on the tag at HEAD and wait for it to finish.
+# The workflow builds the release and uploads it with Trusted Publishing, which attaches PEP 740 provenance.
+# Argument: the package index to publish to (pypi or testpypi). Requires the GitHub CLI (gh).
+define publish-via-workflow
+set -e; \
+tag=$$(git describe --exact-match --tags); \
+if [ "$$(git ls-remote --tags origin "refs/tags/$$tag" | cut -f1)" != "$$(git rev-parse "$$tag")" ]; then \
+	echo "Tag '$$tag' is missing from origin or differs from it. Push it with: git push origin $$tag"; \
+	exit 1; \
+fi; \
+url=$$(gh workflow run publish.yml --ref "$$tag" -f target=$(1) | grep -o 'https://[^ ]*/actions/runs/[0-9]*') || { \
+	echo "Could not start the publish workflow or find its run URL"; \
+	exit 1; \
+}; \
+echo "🚀 Workflow run: $$url"; \
+echo "🚀 A member of the cmd2-admins team must approve the deployment on that page before the upload starts"; \
+gh run watch "$${url##*/}" --exit-status
+endef
+
 .PHONY: publish-test
-publish-test: validate-tag build ## Test publishing a release to PyPI, uses token from ~/.pypirc file.
-	@echo "🚀 Publishing: Dry run."
-	@uv run uv-publish --repository testpypi
+publish-test: validate-tag ## Publish the tag at HEAD to TestPyPI via GitHub Actions
+	@echo "🚀 Publishing to TestPyPI via GitHub Actions"
+	@$(call publish-via-workflow,testpypi)
 
 .PHONY: publish
-publish: validate-tag build ## Publish a release to PyPI, uses token from ~/.pypirc file.
-	@echo "🚀 Publishing."
-	@uv run uv-publish
+publish: validate-tag ## Publish the tag at HEAD to PyPI, with provenance, via GitHub Actions
+	@echo "🚀 Publishing to PyPI via GitHub Actions"
+	@$(call publish-via-workflow,pypi)
 
 # Define variables for files/directories to clean
 BUILD_DIRS = build dist *.egg-info

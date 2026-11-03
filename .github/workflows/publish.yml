@@ -1,0 +1,84 @@
+# Builds cmd2 from a release tag and publishes it to PyPI or TestPyPI using Trusted Publishing.
+# pypa/gh-action-pypi-publish generates and uploads PEP 740 attestations (provenance) by default.
+#
+# Started by `make publish` / `make publish-test`, which run:
+#   gh workflow run publish.yml --ref <tag> -f target=<pypi|testpypi>
+#
+# One-time setup is described in the "Publishing a new release" section of .github/CONTRIBUTING.md.
+#
+# For documentation on GitHub Actions Workflows, see:
+# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Package index to publish to
+        type: choice
+        options:
+          - testpypi
+          - pypi
+        default: testpypi
+
+permissions: {}
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Require a tag
+        if: github.ref_type != 'tag'
+        run: |
+          echo "::error::Publish must run on a release tag, not a branch (got ${GITHUB_REF})"
+          exit 1
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # Needed for setuptools_scm to work correctly
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: false # Never restore a cache into a release build
+      - name: Validate tag
+        run: uv run --no-project scripts/validate_tag.py
+      - name: Build
+        run: uv build
+      - name: Upload distributions
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    name: Publish to ${{ inputs.target }}
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.target }}
+      url: https://${{ inputs.target == 'testpypi' && 'test.' || '' }}pypi.org/p/cmd2
+    permissions:
+      id-token: write # Required for Trusted Publishing and for signing attestations
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist/
+      - name: Publish to TestPyPI
+        if: inputs.target == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+        with:
+          repository-url: https://test.pypi.org/legacy/
+      - name: Publish to PyPI
+        if: inputs.target == 'pypi'
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3

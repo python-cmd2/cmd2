@@ -478,14 +478,19 @@ def test_pipeline_writer_relay_lends_only_while_a_producer_waits(pauses) -> None
     waiting, command code gets the terminal back, whether or not the consumer has read all
     its output yet. That is as between cmd2's own writes.
     """
+    import fcntl
     import subprocess
     import threading
 
-    # More than the relay and both pipes hold, so the child blocks until the consumer reads. What remains after the consumer's
-    # first read fits, so the child can then finish.
-    payload = b"x" * 280000
-    first_read = 200000 if pauses else len(payload)
     read_fd, write_fd = os.pipe()
+    # Size the payload from the consumer's pipe. Linux reports its capacity, which follows the page size (16 pages by
+    # default); macOS and the BSDs cap a pipe at 64 KiB.
+    capacity = fcntl.fcntl(write_fd, fcntl.F_GETPIPE_SZ) if hasattr(fcntl, "F_GETPIPE_SZ") else 65536
+    # More than the relay and both pipes hold, so the child blocks until the consumer reads. What remains after the consumer's
+    # first read fits, so the child can then finish. It is also more than the consumer's pipe holds, so part of it is still
+    # in the relay when cmd2 writes after it.
+    payload = b"x" * (2 * capacity + 2 * 65536)
+    first_read = len(payload) - capacity - 16384 if pauses else len(payload)
     received = bytearray()
     lent = threading.Event()
     resume = threading.Event()
