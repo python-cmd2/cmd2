@@ -6047,6 +6047,9 @@ class Cmd:
         several titles are set before then, only the latest is written. Output errors are ignored so
         they can't disrupt the prompt.
 
+        The bottom toolbar's display counts as a prompt here. While it is shown during a command, the
+        title is written on its event loop in the same way.
+
         :param title: the new window title
         """
         with self._window_title_lock:
@@ -6086,6 +6089,11 @@ class Cmd:
             select_app = select_app_session.app
             if select_app is not None:
                 apps.append(select_app)
+
+        # While a command runs, the bottom toolbar's display draws on this terminal from its own thread.
+        toolbar = self._command_toolbar
+        if toolbar is not None:
+            apps.append(toolbar.app)
 
         for app in apps:
             loop = app.loop
