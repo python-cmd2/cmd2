@@ -19,15 +19,23 @@ working in rather than merely rendering poorly.
 rendering and silently got legacy rendering has been given the behaviour they ruled out, and
 would find out from a flickering toolbar rather than from an error.
 
+The backend is qualified by identity, never by ``TERM``, with one exception: a terminal which
+declares itself dumb. prompt-toolkit gives such a terminal no cursor positioning, and its own
+prompt falls back to plain line input there. The scroll margins and cursor addressing reserved
+rendering depends on would be shown as text rather than obeyed.
+
 Qualification is by exact version, not by the package requirement. ``prompt-toolkit>=3.0.53``
 is what cmd2 *installs against*; this set is what the reserved-row mechanism has actually been
 tested against, and it grows only when a version has been through the qualification gates.
 """
 
+import os
 from enum import StrEnum
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _installed_version
 from typing import TYPE_CHECKING
+
+from prompt_toolkit.utils import is_dumb_terminal
 
 from .terminal_display import PhysicalTerminal
 
@@ -174,4 +182,21 @@ def _unmet_prerequisite(
     supported, reason = PhysicalTerminal(output).capability()
     if not supported:
         return reason
-    return None
+    return _dumb_terminal_reason(output)
+
+
+def _dumb_terminal_reason(output: "Output") -> str | None:
+    """Report a qualified backend writing to a terminal which declares itself dumb.
+
+    The terminal type is decided as prompt-toolkit decides whether to ask for cursor position
+    reports: from the type the output was created for, or from ``TERM`` if it names none.
+
+    :param output: the backend prompt-toolkit selected
+    :return: the reason, or ``None`` when the terminal is not dumb
+    """
+    # Only VT100 outputs carry a terminal type.
+    term: str | None = getattr(output, "term", None)
+    if not is_dumb_terminal(term):
+        return None
+    name = term if term is not None else os.environ.get("TERM", "")
+    return f"TERM={name} is a dumb terminal, which has no cursor positioning"

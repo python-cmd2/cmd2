@@ -30,6 +30,11 @@ def qualified_output() -> Vt100_Output:
     return Vt100_Output(io.StringIO(), lambda: Size(rows=24, columns=80))
 
 
+def terminal_output(term: str) -> Vt100_Output:
+    """Build a qualified backend for a terminal which declares its own type."""
+    return Vt100_Output(io.StringIO(), lambda: Size(rows=24, columns=80), term=term)
+
+
 class TestValidation:
     @pytest.mark.parametrize("mode", list(ToolbarMode))
     def test_every_mode_is_accepted(self, mode: ToolbarMode) -> None:
@@ -114,6 +119,27 @@ class TestAutomaticSelection:
         assert mode is ToolbarMode.LEGACY
         assert "interactive" in reason
 
+    @pytest.mark.parametrize("term", ["dumb", "unknown", "DUMB"])
+    def test_a_dumb_terminal_falls_back(self, term: str) -> None:
+        """A dumb terminal shows scroll margins and cursor addressing as text instead of obeying them."""
+        mode, reason = _select_toolbar_mode("auto", terminal_output(term), toolbar_enabled=True, interactive=True)
+        assert mode is ToolbarMode.LEGACY
+        assert term in reason
+
+    def test_a_dumb_terminal_named_only_by_the_environment_falls_back(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """An output that names no terminal type reads TERM, as prompt-toolkit's own outputs do."""
+        monkeypatch.setenv("TERM", "dumb")
+        mode, reason = _select_toolbar_mode("auto", qualified_output(), toolbar_enabled=True, interactive=True)
+        assert mode is ToolbarMode.LEGACY
+        assert "dumb" in reason
+
+    def test_an_output_terminal_type_takes_precedence_over_the_environment(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """The type an output was created for is the one it writes to, as for its cursor position reports."""
+        monkeypatch.setenv("TERM", "dumb")
+        mode, reason = _select_toolbar_mode("auto", terminal_output("xterm-256color"), toolbar_enabled=True, interactive=True)
+        assert mode is ToolbarMode.RESERVED
+        assert reason == ""
+
 
 class TestForcedModes:
     @pytest.mark.parametrize("requested", [ToolbarMode.OFF, ToolbarMode.LEGACY])
@@ -144,6 +170,10 @@ class TestForcedModes:
     def test_forcing_reserved_without_a_terminal_is_an_error(self) -> None:
         with pytest.raises(ValueError, match="interactive"):
             _select_toolbar_mode("reserved", qualified_output(), toolbar_enabled=True, interactive=False)
+
+    def test_forcing_reserved_on_a_dumb_terminal_is_an_error(self) -> None:
+        with pytest.raises(ValueError, match="dumb"):
+            _select_toolbar_mode("reserved", terminal_output("dumb"), toolbar_enabled=True, interactive=True)
 
     def test_an_unknown_mode_is_rejected_before_anything_is_inspected(self) -> None:
         with pytest.raises(ValueError, match="pinned"):

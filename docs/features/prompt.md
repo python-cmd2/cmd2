@@ -96,8 +96,9 @@ class App(cmd2.Cmd):
 ```
 
 The default is `cmd2.ToolbarMode.OFF`. `AUTO` uses reserved terminal rows where supported and falls
-back to `LEGACY` rendering elsewhere. Select `LEGACY` to always redraw the toolbar with the prompt,
-or `RESERVED` to require reserved rows and raise an error if unavailable.
+back to `LEGACY` rendering elsewhere, including in dumb terminals (`TERM=dumb`, as in an Emacs
+shell), where prompt-toolkit itself shows no toolbar. Select `LEGACY` to always redraw the toolbar
+with the prompt, or `RESERVED` to require reserved rows and raise an error if unavailable.
 
 ### Customizing Toolbar Content
 
