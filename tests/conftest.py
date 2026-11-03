@@ -106,6 +106,25 @@ def neutral_color_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv(name, raising=False)
 
 
+#: Environment variables through which the caller's terminal type reaches prompt-toolkit. A VT100
+#: output that names no terminal type of its own reads TERM, and TERM=dumb, as Emacs shells set
+#: it, or PROMPT_TOOLKIT_NO_CPR=1 turns off cursor position reports. Left inherited, TERM=dumb
+#: fails 41 tests whose terminals model one that answers those reports.
+TERMINAL_ENVIRONMENT = ("TERM", "PROMPT_TOOLKIT_NO_CPR")
+
+
+@pytest.fixture(autouse=True)
+def neutral_terminal_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Model the same terminal regardless of the caller's environment, as CI does by leaving TERM unset.
+
+    Tests of dumb or non-reporting terminals set these variables explicitly, or give their
+    output its own terminal type, which still works because a test's own monkeypatching runs
+    after this fixture.
+    """
+    for name in TERMINAL_ENVIRONMENT:
+        monkeypatch.delenv(name, raising=False)
+
+
 @pytest.fixture(autouse=True)
 def fixed_terminal_size(monkeypatch: pytest.MonkeyPatch) -> None:
     """Keep wrapping independent of the caller's terminal and xdist worker environment.
