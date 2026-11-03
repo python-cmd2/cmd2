@@ -1,3 +1,10 @@
+## 4.4.1 (November 2, 2026)
+
+- Enhancements
+    - Improve PyPI release security by publishing
+      [provenance](https://docs.pypi.org/using-pypi/package-security/provenance/) info via shared
+      attestations.
+
 ## 4.4.0 (October 31, 2026) 🎃
 
 - Breaking Changes
