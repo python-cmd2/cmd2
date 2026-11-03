@@ -92,6 +92,11 @@ each:
     - Example of using Rich Tables within a cmd2 application for displaying tabular data
 - [rich_theme.py](https://github.com/python-cmd2/cmd2/blob/main/examples/rich_theme.py)
     - Demonstrates how to create a custom theme for a cmd2 application
+- [textual_tty_embed.py](https://github.com/python-cmd2/cmd2/blob/main/examples/textual_tty_embed.py)
+    - Shows how to embed a `cmd2` application in a [Textual](https://textual.textualize.io/)
+      application using [textual-tty](https://github.com/ttygroup/textual-tty), with a realtime
+      status panel next to the terminal. Requires a POSIX system such as Linux or macOS and
+      `textual-tty`, which is part of the `cmd2` development environment but not a `cmd2` dependency
 - [tmux_launch.sh](https://github.com/python-cmd2/cmd2/blob/main/examples/tmux_launch.sh)
     - Shell script that launches two applications using tmux in different windows/tabs
 - [tmux_split.sh](https://github.com/python-cmd2/cmd2/blob/main/examples/tmux_split.sh)

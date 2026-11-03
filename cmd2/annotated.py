@@ -3154,28 +3154,29 @@ def with_annotated(
 
         @functools.wraps(command_func)
         def cmd_wrapper(*args: Any, **kwargs: Any) -> _CommandReturn:
-            cmd2_app, statement_arg = _parse_positionals(args)
+            cmd_app, statement_arg = _parse_positionals(args)
             owner = args[0]  # Cmd or CommandSet instance
-            statement, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(
+            statement, parsed_arglist = cmd_app.statement_parser.get_command_arg_list(
                 command_name, statement_arg, preserve_quotes
             )
 
-            arg_parser = cmd2_app.command_parsers.get(cast(BoundCommandFunc[...], cmd_wrapper))
+            arg_parser = cmd_app.command_parsers.get(cast(BoundCommandFunc[...], cmd_wrapper))
             if arg_parser is None:
                 raise ValueError(f"No argument parser found for {command_name}")
 
             if ns_provider is None:
                 namespace = None
             else:
-                provider_self = cmd2_app._resolve_func_self(ns_provider, args[0])
-                namespace = ns_provider(provider_self if provider_self is not None else cmd2_app)
+                provider_self = cmd_app._resolve_func_self(ns_provider, args[0])
+                namespace = ns_provider(provider_self if provider_self is not None else cmd_app)
 
             try:
-                if with_unknown_args:
-                    ns, unknown = arg_parser.parse_known_args(parsed_arglist, namespace)
-                else:
-                    ns = arg_parser.parse_args(parsed_arglist, namespace)
-                    unknown = None
+                with arg_parser.output_to(cmd_app.stdout):
+                    if with_unknown_args:
+                        ns, unknown = arg_parser.parse_known_args(parsed_arglist, namespace)
+                    else:
+                        ns = arg_parser.parse_args(parsed_arglist, namespace)
+                        unknown = None
             except SystemExit as exc:
                 raise Cmd2ArgparseError from exc
 

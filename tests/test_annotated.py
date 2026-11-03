@@ -2467,6 +2467,41 @@ class TestWithAnnotatedIntegration:
         _out, err = run_cmd(app, "greet")
         assert any("error" in line.lower() or "usage" in line.lower() for line in err)
 
+    @pytest.mark.parametrize(
+        ("app_fixture", "command"),
+        [
+            ("app", "greet"),
+            ("app", "flex"),
+            ("subcmd_app", "manage"),
+            ("subcmd_app", "manage add"),
+            ("subcmd_app", "manage member add"),
+        ],
+    )
+    @pytest.mark.parametrize("destination", ["stdout", ">", ">>"])
+    def test_help_respects_output_destination(self, request, capsys, tmp_path, app_fixture, command, destination) -> None:
+        """Help follows app.stdout, including file redirection, without leaking to sys.stdout."""
+        app = request.getfixturevalue(app_fixture)
+        original_stdout = app.stdout
+        help_file = tmp_path / "help.txt"
+        line = f"{command} --help"
+        if destination != "stdout":
+            help_file.write_text("existing\n", encoding="utf-8")
+            line += f' {destination} "{help_file}"'
+
+        out, err = run_cmd(app, line)
+
+        assert app.stdout is original_stdout
+        assert not err
+        if destination == "stdout":
+            help_text = "\n".join(out)
+        else:
+            assert not out
+            help_text = help_file.read_text(encoding="utf-8")
+            assert help_text.startswith("existing\n") == (destination == ">>")
+        assert f"Usage: {command}" in help_text
+        assert "--help" in help_text
+        assert capsys.readouterr() == ("", "")
+
     def test_no_args_raises_type_error(self, app) -> None:
         with pytest.raises(TypeError, match="Expected arguments"):
             app.do_greet()
