@@ -1,3 +1,9 @@
+## 4.5.0 (TBD)
+
+- Enhancements
+    - `enable_bottom_toolbar=True` now keeps the toolbar visible and refreshing during command
+      execution
+
 ## 4.4.1 (November 2, 2026)
 
 - Enhancements
