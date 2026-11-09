@@ -156,7 +156,7 @@ class Cmd2HelpFormatter(RichHelpFormatter):
         return self._console
 
     @console.setter
-    def console(self, console: "Cmd2RichArgparseConsole") -> None:  # ty: ignore[invalid-property-type-override]
+    def console(self, console: "Cmd2RichArgparseConsole") -> None:  # ty: ignore[incompatible-property-override]
         """Set our console instance."""
         self._file = None
         self._console = console
@@ -200,7 +200,7 @@ class Cmd2HelpFormatter(RichHelpFormatter):
         get_metavar = self._metavar_formatter(action, default_metavar)
 
         # Handle nargs specified as a range
-        nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+        nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
         if nargs_range is not None:
             arg_str = "%s" % get_metavar(1)  # noqa: UP031
             range_str = self._build_nargs_range_str(nargs_range)
@@ -227,7 +227,7 @@ class Cmd2HelpFormatter(RichHelpFormatter):
         get_metavar = self._metavar_formatter(action, default_metavar)
 
         # Handle nargs specified as a range
-        nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+        nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
         if nargs_range is not None:
             yield "%s" % get_metavar(1), True  # noqa: UP031
             yield self._build_nargs_range_str(nargs_range), False
