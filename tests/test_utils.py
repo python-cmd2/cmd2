@@ -1864,6 +1864,14 @@ def test_get_types_non_empty() -> None:
     assert param_value is int
 
 
+def test_get_types_unresolvable_forward_reference() -> None:
+    def foo(x: "NotDefinedAnywhere") -> None:  # noqa: F821
+        print(x)
+
+    with pytest.raises(ValueError, match="Unable to resolve type hints"):
+        cu.get_types(foo)
+
+
 def test_get_types_method() -> None:
     class Foo:
         def bar(self, x: bool) -> None:
