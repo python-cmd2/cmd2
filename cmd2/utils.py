@@ -1617,11 +1617,15 @@ def get_types(func_or_method: Callable[..., Any]) -> tuple[dict[str, Any], Any]:
     :return: tuple with first element being dictionary mapping param names to type hints
             and second element being the return type hint or None if there is no return value type hint
     :raises ValueError: if the `func_or_method` argument is not a valid object to pass to `inspect.get_annotations`
+                      or if its annotations cannot be resolved
     """
     try:
         type_hints = inspect.get_annotations(func_or_method, eval_str=True)  # Get dictionary of type hints
     except TypeError as exc:
         raise ValueError("Argument passed to get_types should be a function or method") from exc
+    except (NameError, SyntaxError) as exc:
+        name = getattr(func_or_method, "__name__", func_or_method)
+        raise ValueError(f"Unable to resolve type hints for {name}: {exc}") from exc
     ret_ann = type_hints.pop("return", None)  # Pop off the return annotation if it exists
     if inspect.ismethod(func_or_method):
         type_hints.pop("self", None)  # Pop off `self` hint for methods
