@@ -1,3 +1,15 @@
+## 4.4.2 (November 11, 2026)
+
+- Security
+    - Fixed shell command injection through file names in the `edit` command and `Cmd.run_editor()`.
+      A file name containing shell syntax such as `$(...)` or backticks was interpreted by the shell
+      instead of being passed to the editor as-is. On Windows, `run_editor()` now raises
+      `ValueError` for an editor or file path containing a double quote, which cannot be passed
+      safely to `cmd.exe`.
+    - The persistent history file is now readable and writable only by its owner (mode `0600` on
+      POSIX), since history can contain secrets typed as command arguments. The permissions of an
+      existing history file are tightened the next time history is saved.
+
 ## 4.4.1 (November 2, 2026)
 
 - Enhancements

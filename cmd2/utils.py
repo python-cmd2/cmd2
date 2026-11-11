@@ -323,6 +323,28 @@ def expand_user_in_tokens(tokens: MutableSequence[str]) -> None:
         tokens[index] = expand_user(tokens[index])
 
 
+def _quote_shell_arg(arg: str) -> str:
+    """Quote a string so the OS shell treats it as one literal argument.
+
+    Unlike [cmd2.string_utils.quote][], which only wraps a string in quotes for cmd2's own parser, this
+    protects every character the shell would otherwise interpret, such as ``$(...)`` and backticks.
+
+    :param arg: the argument to quote, such as a file path
+    :return: the quoted argument
+    :raises ValueError: on Windows if the argument contains a double quote
+    """
+    if sys.platform.startswith("win"):
+        # cmd.exe treats its operators literally inside double quotes, but has no way to escape a double quote there.
+        # Windows file names can't contain one anyway.
+        if '"' in arg:
+            raise ValueError(f"Cannot pass an argument containing a double quote to the shell: {arg}")
+        return f'"{arg}"'
+
+    import shlex
+
+    return shlex.quote(arg)
+
+
 def find_editor() -> str | None:
     """Set cmd2.Cmd.DEFAULT_EDITOR. If EDITOR env variable is set, that will be used.
 

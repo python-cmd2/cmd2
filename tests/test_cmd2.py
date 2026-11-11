@@ -1442,14 +1442,18 @@ def test_edit_file(base_app, request, monkeypatch) -> None:
 @pytest.mark.parametrize("file_name", odd_file_names)
 def test_edit_file_with_odd_file_names(base_app, file_name, monkeypatch) -> None:
     """Test editor and file names with various patterns"""
-    # Mock out the do_shell call to see what args are passed to it
-    shell_mock = mock.MagicMock(name="do_shell")
-    monkeypatch.setattr("cmd2.Cmd.do_shell", shell_mock)
+    # Mock out the shell call to see what command line is passed to it
+    shell_mock = mock.MagicMock(name="_run_shell_command")
+    monkeypatch.setattr("cmd2.Cmd._run_shell_command", shell_mock)
 
     base_app.editor = "fooedit"
-    file_name = su.quote("nothingweird.py")
     run_cmd(base_app, f"edit {su.quote(file_name)}")
-    shell_mock.assert_called_once_with(f'"fooedit" {su.quote(file_name)}')
+
+    if sys.platform.startswith("win") and '"' in file_name:
+        # A double quote can't be passed to cmd.exe
+        shell_mock.assert_not_called()
+    else:
+        shell_mock.assert_called_once_with(f"{utils._quote_shell_arg('fooedit')} {utils._quote_shell_arg(file_name)}")
 
 
 def test_edit_file_with_spaces(base_app, request, monkeypatch) -> None:
@@ -1481,6 +1485,115 @@ def test_edit_blank(base_app, monkeypatch) -> None:
 
     # We have an editor, so should expect a Popen call
     m.assert_called_once()
+
+
+@pytest.fixture
+def recording_editor(base_app, tmp_path, monkeypatch):
+    """Make the editor a real program that records the file name it is given, and run from an empty directory."""
+    work_dir = tmp_path / "work"
+    work_dir.mkdir()
+    monkeypatch.chdir(work_dir)
+    received = tmp_path / "received.txt"
+    editor = tmp_path / "fake editor"
+    editor.write_text(f"#!/bin/sh\nprintf '%s' \"$1\" > '{received}'\n")
+    editor.chmod(0o755)
+    base_app.editor = str(editor)
+    return received, work_dir
+
+
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="uses a POSIX shell script as the editor")
+@pytest.mark.parametrize(
+    "file_name",
+    [
+        "$(touch pwned).txt",
+        "`touch pwned`.txt",
+        "${HOME}.txt",
+        "a; touch pwned; b.txt",
+        "a > pwned | touch pwned.txt",
+        'it\'s "quoted".txt',
+        "two  spaces.txt",
+        "back\\slash.txt",
+        "-leading-dash.txt",
+    ],
+)
+def test_run_editor_passes_file_name_literally(base_app, recording_editor, file_name) -> None:
+    """The shell must not interpret anything in a file name: the editor gets it exactly, and nothing else runs."""
+    received, work_dir = recording_editor
+
+    base_app.run_editor(file_name)
+
+    assert received.read_text() == file_name
+    assert list(work_dir.iterdir()) == []
+
+
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="uses a POSIX shell script as the editor")
+@pytest.mark.parametrize("file_name", ["$(touch pwned).txt", "`touch pwned`.txt"])
+def test_edit_command_passes_file_name_literally(base_app, recording_editor, file_name) -> None:
+    received, work_dir = recording_editor
+
+    run_cmd(base_app, f"edit '{file_name}'")
+
+    assert received.read_text() == file_name
+    assert list(work_dir.iterdir()) == []
+
+
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="uses a POSIX shell script as the editor")
+def test_run_editor_expands_user_in_file_name(base_app, recording_editor, monkeypatch) -> None:
+    received, _ = recording_editor
+    monkeypatch.setenv("HOME", "/fake/home")
+
+    base_app.run_editor("~/notes.txt")
+
+    assert received.read_text() == "/fake/home/notes.txt"
+
+
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="uses a POSIX shell script as the editor")
+def test_run_editor_sets_last_result_to_return_code(base_app, recording_editor) -> None:
+    base_app.last_result = None
+
+    base_app.run_editor("notes.txt")
+
+    assert base_app.last_result == 0
+
+
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="uses a POSIX shell script as the editor")
+def test_edit_does_not_run_editor_when_shell_is_disabled(base_app, recording_editor) -> None:
+    """edit runs an OS program, so disabling the shell command keeps stopping it."""
+    received, _ = recording_editor
+    base_app.disable_command("shell", "shell is disabled")
+
+    _out, err = run_cmd(base_app, "edit notes.txt")
+
+    assert err == ["shell is disabled"]
+    assert not received.exists()
+
+
+def test_run_editor_raises_when_shell_is_removed(base_app, monkeypatch) -> None:
+    base_app.editor = "fooedit"
+    popen_mock = mock.MagicMock(name="Popen")
+    monkeypatch.setattr("subprocess.Popen", popen_mock)
+    monkeypatch.delattr("cmd2.Cmd.do_shell")
+
+    with pytest.raises(AttributeError):
+        base_app.run_editor("notes.txt")
+
+    popen_mock.assert_not_called()
+
+
+def test_quote_shell_arg_windows_wraps_in_double_quotes(monkeypatch) -> None:
+    """cmd.exe treats &, |, <, > and ^ literally only inside double quotes."""
+    monkeypatch.setattr(sys, "platform", "win32")
+
+    assert utils._quote_shell_arg("a&calc.txt") == '"a&calc.txt"'
+    assert utils._quote_shell_arg("my file.txt") == '"my file.txt"'
+
+
+def test_quote_shell_arg_windows_rejects_double_quote(monkeypatch) -> None:
+    """A double quote cannot be escaped for cmd.exe, and no Windows file name contains one."""
+    monkeypatch.setattr(sys, "platform", "win32")
+
+    with pytest.raises(ValueError, match="double quote"):
+        utils._quote_shell_arg('a" & calc & ".txt')
 
 
 def test_base_py_interactive(base_app) -> None:

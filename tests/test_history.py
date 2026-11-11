@@ -1785,7 +1785,7 @@ def test_persist_history_permission_error(hist_file, mocker, capsys) -> None:
     run_cmd(app, "shortcuts")
     app._persistent_history_length = 1
     before = history_state(app)
-    mock_open = mocker.patch("builtins.open")
+    mock_open = mocker.patch("os.open")
     mock_open.side_effect = PermissionError
     app._persist_history()
     out, err = capsys.readouterr()
@@ -1820,3 +1820,44 @@ def test_persist_history_repeat_and_append(persistence_app) -> None:
     app._persist_history()
     assert [item.raw for item in read_persisted_history(app)] == ["fourth", "fifth café"]
     assert history_state(app) == before
+
+
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="POSIX file permissions")
+def test_persist_history_creates_file_readable_only_by_owner(base_app, tmp_path) -> None:
+    """History can hold secrets typed as command arguments, so other users must not be able to read it."""
+    history_file = tmp_path / "history.dat"
+    base_app.persistent_history_file = str(history_file)
+    run_cmd(base_app, "help")
+    old_umask = os.umask(0o022)
+    try:
+        base_app._persist_history()
+    finally:
+        os.umask(old_umask)
+
+    assert history_file.stat().st_mode & 0o777 == 0o600
+
+
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="POSIX file permissions")
+def test_persist_history_tightens_permissions_of_existing_file(base_app, tmp_path) -> None:
+    """A history file written by an older version of cmd2 was readable by everyone."""
+    history_file = tmp_path / "history.dat"
+    history_file.write_bytes(b"")
+    history_file.chmod(0o644)
+    base_app.persistent_history_file = str(history_file)
+    run_cmd(base_app, "help")
+
+    base_app._persist_history()
+
+    assert history_file.stat().st_mode & 0o777 == 0o600
+
+
+def test_persisted_history_round_trips(base_app, tmp_path) -> None:
+    history_file = tmp_path / "history.dat"
+    base_app.persistent_history_file = str(history_file)
+    run_cmd(base_app, "help")
+    run_cmd(base_app, "shortcuts")
+    base_app._persist_history()
+
+    app = cmd2.Cmd(persistent_history_file=str(history_file))
+
+    assert [item.raw for item in app.history] == ["help", "shortcuts"]

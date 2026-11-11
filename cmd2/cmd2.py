@@ -5007,6 +5007,21 @@ class Cmd:
     @with_argparser(_build_shell_parser, preserve_quotes=True)
     def do_shell(self, args: argparse.Namespace) -> None:
         """Execute a command as if at the OS prompt."""
+        # Create a list of arguments to shell
+        tokens = [args.command, *args.command_args]
+
+        # Expand ~ where needed
+        utils.expand_user_in_tokens(tokens)
+        self._run_shell_command(" ".join(tokens))
+
+    def _run_shell_command(self, command: str) -> None:
+        """Run a command line in the OS shell and wait for it to finish.
+
+        The shell interprets all of ``command``. Quote any part of it which isn't meant to be shell syntax,
+        such as a file name, with ``utils._quote_shell_arg()``.
+
+        :param command: the command line to run
+        """
         import signal
         import subprocess
 
@@ -5030,13 +5045,6 @@ class Cmd:
             shell = os.environ.get("SHELL")
             if shell:
                 kwargs["executable"] = shell
-
-        # Create a list of arguments to shell
-        tokens = [args.command, *args.command_args]
-
-        # Expand ~ where needed
-        utils.expand_user_in_tokens(tokens)
-        expanded_command = " ".join(tokens)
 
         # A terminal pipeline's consumer needs the terminal to drain the pipe, but a shell command writes into that pipe itself
         # rather than through self.stdout, which lends the terminal per write. Run the command inside the pipeline's job
@@ -5079,7 +5087,7 @@ class Cmd:
                         utils._session_leader_job_stops(pipeline) if joined_writer is not None else contextlib.nullcontext(),
                     ):
                         proc = subprocess.Popen(  # noqa: S602
-                            expanded_command,
+                            command,
                             stdout=stdout,
                             stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
                             shell=True,
@@ -5728,8 +5736,16 @@ class Cmd:
         history_json = history.to_json()
         compressed_bytes = compress_lib.compress(history_json.encode(encoding="utf-8"))
 
+        # History can contain secrets typed as command arguments, so only its owner may read the file. O_BINARY keeps
+        # Windows from translating newlines in the compressed data.
+        flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_BINARY", 0)
         try:
-            with open(self.persistent_history_file, "wb") as fobj:
+            fd = os.open(self.persistent_history_file, flags, 0o600)
+            with os.fdopen(fd, "wb") as fobj:
+                # The mode given to os.open() only applies to a new file. Older versions of cmd2 created this file
+                # readable by everyone.
+                if hasattr(os, "fchmod"):
+                    os.fchmod(fd, 0o600)
                 fobj.write(compressed_bytes)
         except OSError as ex:
             self.perror(f"Cannot write persistent history file '{self.persistent_history_file}': {ex}")
@@ -5764,16 +5780,25 @@ class Cmd:
         """Run a text editor and optionally open a file with it.
 
         :param file_path: optional path of the file to edit. Defaults to None.
-        :raises ValueError: if self.editor is not set
+        :raises ValueError: if self.editor is not set, or on Windows if the editor or file path contains a double quote
         """
         if not self.editor:
             raise ValueError("Please use 'set editor' to specify your text editing program of choice.")
 
-        command = su.quote(os.path.expanduser(self.editor))
-        if file_path:
-            command += " " + su.quote(os.path.expanduser(file_path))
+        # The editor is an OS program like any the shell command runs, so removing or disabling that command stops the
+        # editor too. A removed command raises AttributeError here and a disabled one reports that it is disabled.
+        shell_func = self.do_shell
+        if "shell" in self.disabled_commands:
+            shell_func("")
+            return
 
-        self.do_shell(command)
+        # The editor and file path are data, not shell syntax. Quote them for the shell itself, and don't pass them back
+        # through the command line parser, which doesn't understand the shell's quoting rules.
+        command = utils._quote_shell_arg(os.path.expanduser(self.editor))
+        if file_path:
+            command += " " + utils._quote_shell_arg(os.path.expanduser(file_path))
+
+        self._run_shell_command(command)
 
     @property
     def _current_script_dir(self) -> str | None:
