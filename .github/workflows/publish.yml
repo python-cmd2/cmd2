@@ -50,6 +50,12 @@ jobs:
           enable-cache: false # Never restore a cache into a release build
       - name: Validate tag
         run: uv run --no-project scripts/validate_tag.py
+      - name: Require the tagged commit to be on main
+        run: |
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "::error::Tag ${GITHUB_REF_NAME} points to a commit that is not on main"
+            exit 1
+          fi
       - name: Build
         run: uv build
       - name: Upload distributions

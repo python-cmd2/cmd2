@@ -18,8 +18,9 @@ build:
   jobs:
     pre_create_environment:
       - asdf plugin add uv
-      - asdf install uv latest
-      - asdf global uv latest
+      # Pin uv instead of installing whatever is latest when the docs build. Update this version by hand.
+      - asdf install uv 0.13.7
+      - asdf global uv 0.13.7
     create_environment:
       - uv venv "${READTHEDOCS_VIRTUALENV_PATH}"
     install:

@@ -68,6 +68,14 @@ Python interpreter. Behavior of these features that is working as designed is no
 - The `run_script` command (and its `@` shortcut) runs `cmd2` command scripts.
 - The `run_pyscript` command, and the optional `py` and `ipy` commands, run Python code.
 - Output redirection (`>`, `>>`) and pipes (`|`) write to files and run shell commands.
+- The `history` command writes commands to a file of the user's choice (`--output-file`), opens them
+  in the external editor (`--edit`), and runs them again (`--run`). Setting `allow_redirection` to
+  `False` does not affect `history --output-file`.
+- The `set` command changes settings such as `editor`, the program which `edit` and `history --edit`
+  launch. With `debug` and `traceback_show_locals` enabled, tracebacks display the application's
+  local variables.
+- Arguments on the command line of a `cmd2` application are run as commands when it starts, unless
+  the application is created with `allow_cli_args=False`.
 
 Developers who expose a `cmd2` application to untrusted users are responsible for removing or
 disabling the features they do not want to offer. See
