@@ -56,7 +56,9 @@ conveniences:
 1. Since users can pipe output to a shell command, it catches `BrokenPipeError` and outputs the
    contents of `self.broken_pipe_warning` to `stderr`. `self.broken_pipe_warning` defaults to an
    empty string so this method will just swallow the exception. If you want to show an error
-   message, put it in `self.broken_pipe_warning` when you initialize `cmd2.Cmd`.
+   message, put it in `self.broken_pipe_warning` when you initialize `cmd2.Cmd`. A command which
+   writes to `self.stdout` some other way gets the same treatment when its output is piped to a
+   shell command: `cmd2` handles a `BrokenPipeError` which escapes it.
 2. It examines and honors the [allow_style](./settings.md#allow_style) setting. See
    [Colored Output](#colored-output) below for more details.
 3. It allows printing arbitrary `rich` renderable objects which can get visually quite complex.
@@ -137,8 +139,9 @@ def do_process(self, _):
 A few things to know when using a progress bar in a command:
 
 - While the bar is active, print with `progress.console.print()` as shown above. The message then
-  appears above the bar. `poutput` does not know about the bar and writes on top of it. Once the
-  `with` block exits, `poutput` is safe to use again.
+  appears above the bar. `poutput` and the other print methods do not know about the bar: their
+  output lands on the end of its line and a stale copy of the bar is left behind. Once the `with`
+  block exits, they are safe to use again.
 - The finished bar is left on the screen. Pass `transient=True` to `Progress` to erase it instead.
 - Call `add_task` more than once to show several bars at the same time, and pass
   [columns](https://rich.readthedocs.io/en/stable/progress.html#columns) to `Progress` to change
@@ -148,7 +151,7 @@ A few things to know when using a progress bar in a command:
 
 ### Styles, Redirection, and Markup
 
-Status messages and progress bars differ from the print methods in a few ways:
+Status messages and progress bars differ from the print methods in two ways:
 
 - **They are only animated where `allow_style` allows it.** With the default setting of `Terminal`,
   they are animated on a terminal. When the output of the command is redirected to a file or piped
@@ -156,15 +159,14 @@ Status messages and progress bars differ from the print methods in a few ways:
   just a blank line if it is transient. With `Never`, that is what happens on a terminal too. With
   `Always`, redirected output also contains the escape sequences which hide and show the cursor and
   style the bar.
-- **Their text is parsed as [console markup](https://rich.readthedocs.io/en/stable/markup.html).**
-  This applies to status messages and to the descriptions of progress bar tasks, even though markup
-  is off by default in the print methods. If the text could contain square brackets, as a file name
-  can, pass it through `rich.markup.escape()` first. Otherwise `report[draft].txt` is displayed as
-  `report.txt`, and an unmatched closing tag such as `[/b]` raises a `MarkupError`.
-- **They do not handle broken pipes.** `poutput` quietly ignores the `BrokenPipeError` which occurs
-  when output is piped to a shell command that exits early, such as `head`. Anything written by a
-  console you created raises it instead. Catch `BrokenPipeError` around the `with` block if your
-  command prints through the console while it is running.
+- **Their text is parsed as [console markup](https://rich.readthedocs.io/en/stable/markup.html).** A
+  status message or the description of a progress bar task is searched for markup tags such as
+  `[bold]` and emoji codes such as `:warning:`, even though both are off by default in the print
+  methods. So `report[draft].txt` is displayed as `report.txt`, `user:id:42` as `user🆔42`, and an
+  unmatched closing tag such as `[/b]` raises a `MarkupError`. To display text you do not control,
+  such as a file name, exactly as it is, give a status a `rich.text.Text` object instead of a
+  string, and show task descriptions with a `TextColumn("{task.description}", markup=False)`
+  [column](https://rich.readthedocs.io/en/stable/progress.html#columns).
 
 ### Carriage Returns
 
@@ -172,6 +174,8 @@ If you would rather write the escape sequences yourself, put the carriage return
 parameter, which `rich` does not strip:
 
 ```py
+import time
+
 CLEAR_LINE = "\x1b[2K"
 
 
@@ -192,7 +196,8 @@ when the output of the command is redirected to a file or pipe.
 
 The print methods flush the stream after every call, so there is no `flush` parameter to pass.
 Strings written directly to `self.stdout` are not processed by `rich`, so control characters in them
-are left alone.
+are left alone. They are not flushed either, so call `self.stdout.flush()` after writing a line
+which does not end with a newline.
 
 ## Error Messages
 
