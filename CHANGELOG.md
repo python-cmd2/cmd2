@@ -1,5 +1,11 @@
 ## 4.4.3 (TBD)
 
+- Bug Fixes
+    - A `BrokenPipeError` which escapes a command whose output is piped to a shell command is now
+      handled the way `poutput()` handles it: it is ignored, or `broken_pipe_warning` is printed if
+      set. Previously a command which wrote to `self.stdout` without using one of the print methods,
+      with its own Rich console for instance, ended with a `BrokenPipeError` message when the shell
+      command exited early, as `head` does.
 - Enhancements
     - Added the
       [rich_progress.py](https://github.com/python-cmd2/cmd2/blob/main/examples/rich_progress.py)

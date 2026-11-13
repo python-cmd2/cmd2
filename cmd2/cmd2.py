@@ -610,6 +610,10 @@ class Cmd:
         # Used to keep track of whether we are redirecting or piping output
         self._redirecting = False
 
+        # True while self.stdout is a pipe to a shell command, whether the current command set up that pipe
+        # or a command which is running it did
+        self._stdout_is_pipe = False
+
         # Set text which prints right before all of the help tables are listed.
         self.doc_leader = ""
 
@@ -3032,6 +3036,11 @@ class Cmd:
         stop = False
         statement = None
 
+        # Whether the command's output goes to a pipe. Kept here as well as in self._stdout_is_pipe,
+        # which is back to what it was for the caller by the time an exception is handled.
+        piping = False
+        saved_stdout_is_pipe = self._stdout_is_pipe
+
         try:
             # Convert the line into a Statement
             statement = self._input_line_to_statement(line)
@@ -3061,6 +3070,11 @@ class Cmd:
                         self.stdout.pause_storage = False  # type: ignore[attr-defined]  # ty: ignore[invalid-assignment]
 
                     redir_saved_state = self._redirect_output(statement)
+
+                    # A command which does not redirect its output writes wherever its caller's goes
+                    if redir_saved_state.redirecting:
+                        self._stdout_is_pipe = self._cur_pipe_proc_reader is not None
+                    piping = self._stdout_is_pipe
 
                 timestart = dt.datetime.now(tz=dt.timezone.utc)
 
@@ -3092,6 +3106,7 @@ class Cmd:
             finally:
                 # Get sigint protection while we restore stuff
                 with self.sigint_protection:
+                    self._stdout_is_pipe = saved_stdout_is_pipe
                     if redir_saved_state is not None:
                         self._restore_output(statement, redir_saved_state)
 
@@ -3114,6 +3129,15 @@ class Cmd:
             stop = True
         except PassThroughException as ex:
             raise ex.wrapped_ex from None
+        except BrokenPipeError as ex:
+            # The print methods handle this in print_to(). A command which writes to self.stdout
+            # some other way, such as with its own Rich console, lets it escape when the shell
+            # command its output is piped to exits early. Treat that the same way. Without a
+            # pipe, the error came from something else the command did and is reported as usual.
+            if not piping:
+                self.pexcept(ex)
+            elif self.broken_pipe_warning:
+                Cmd2GeneralConsole(file=sys.stderr).print(self.broken_pipe_warning)
         except Exception as ex:  # noqa: BLE001
             self.pexcept(ex)
         finally:

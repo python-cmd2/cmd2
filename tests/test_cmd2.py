@@ -967,6 +967,85 @@ def test_pipe_to_shell_and_redirect(redirection_app, running_pipe_process) -> No
     os.remove(filename)
 
 
+class BrokenPipeApp(cmd2.Cmd):
+    """Commands which hit a broken pipe without going through one of cmd2's print methods."""
+
+    def do_own_console(self, _: str) -> None:
+        """Print through a console of its own until the consumer of its output exits."""
+        console = ru.Cmd2GeneralConsole(file=self.stdout)
+
+        # More than fits in a pipe, so the command is still writing when the consumer exits
+        for _line in range(4096):
+            console.print("x" * 1024)
+        self.perror("the pipe never broke")
+
+    def do_raise_broken_pipe(self, _: str) -> None:
+        """Raise the error a write to a closed pipe or socket raises."""
+        raise BrokenPipeError
+
+
+@pytest.fixture
+def broken_pipe_app() -> BrokenPipeApp:
+    return BrokenPipeApp()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="a write to a closed pipe raises a different OSError on Windows")
+def test_broken_pipe_from_a_commands_own_console_is_ignored(broken_pipe_app) -> None:
+    """A consumer which exits early ends the command quietly, as it does for one which uses poutput()."""
+    consumer = f'{sys.executable} -c "import time; time.sleep(0.5)"'
+    out, err = run_cmd(broken_pipe_app, f"own_console | {consumer}")
+    assert not out
+    assert not err
+
+
+def test_broken_pipe_raised_by_a_piped_command_is_ignored(broken_pipe_app, running_pipe_process) -> None:
+    out, err = run_cmd(broken_pipe_app, "raise_broken_pipe | sort")
+    assert not out
+    assert not err
+
+
+def test_broken_pipe_raised_by_a_piped_command_prints_the_warning(broken_pipe_app, running_pipe_process) -> None:
+    broken_pipe_app.broken_pipe_warning = "The pipe broke"
+    out, err = run_cmd(broken_pipe_app, "raise_broken_pipe | sort")
+    assert not out
+    assert err == ["The pipe broke"]
+
+
+def test_broken_pipe_raised_by_a_command_in_a_piped_script_is_ignored(broken_pipe_app, tmp_path, running_pipe_process) -> None:
+    """A command which does not redirect its own output writes to the pipe of the command running it."""
+    script = tmp_path / "script.txt"
+    script.write_text("raise_broken_pipe\n")
+    out, err = run_cmd(broken_pipe_app, f"run_script {script} | sort")
+    assert not out
+    assert not err
+
+
+def test_broken_pipe_raised_by_a_redirected_command_in_a_piped_script_is_reported(
+    broken_pipe_app, tmp_path, running_pipe_process
+) -> None:
+    """A command which redirects its output to a file does not write to the pipe of the command running it."""
+    script = tmp_path / "script.txt"
+    script.write_text(f"raise_broken_pipe > {tmp_path / 'out.txt'}\n")
+    _out, err = run_cmd(broken_pipe_app, f"run_script {script} | sort")
+    assert "BrokenPipeError" in err[0]
+
+
+def test_broken_pipe_raised_after_a_piped_command_is_reported(broken_pipe_app, running_pipe_process) -> None:
+    """The pipe of one command does not hide the error for the commands which follow it."""
+    run_cmd(broken_pipe_app, "raise_broken_pipe | sort")
+    _out, err = run_cmd(broken_pipe_app, "raise_broken_pipe")
+    assert "BrokenPipeError" in err[0]
+
+
+@pytest.mark.parametrize("redirection", ["", " > {file}"])
+def test_broken_pipe_raised_by_a_command_which_is_not_piped_is_reported(broken_pipe_app, tmp_path, redirection) -> None:
+    """Without a pipe the error did not come from the command's output, so it is not hidden."""
+    broken_pipe_app.broken_pipe_warning = "The pipe broke"
+    _out, err = run_cmd(broken_pipe_app, "raise_broken_pipe" + redirection.format(file=tmp_path / "out.txt"))
+    assert "BrokenPipeError" in err[0]
+    assert "The pipe broke" not in err
+
+
 @pytest.mark.parametrize(
     "terminal",
     [False, pytest.param(True, marks=pytest.mark.skipif(sys.platform == "win32", reason="POSIX terminal job control"))],
