@@ -1,3 +1,19 @@
+## 4.4.3 (TBD)
+
+- Bug Fixes
+    - A command which prints through a `cmd2` console of its own, such as a `Cmd2GeneralConsole`
+      showing a Rich progress bar, no longer ends with a `BrokenPipeError` message when its output
+      is piped to something that exits early, as `head` does. `cmd2` now ends the command quietly
+      instead, printing `broken_pipe_warning` if it is set.
+- Enhancements
+    - Added the
+      [rich_progress.py](https://github.com/python-cmd2/cmd2/blob/main/examples/rich_progress.py)
+      example, which shows how to display the progress of long-running commands with Rich status
+      spinners and progress bars. See the new
+      [Updating Output in Place](docs/features/generating_output.md#updating-output-in-place)
+      documentation for details, including why a carriage return embedded in a string passed to
+      `poutput()` does not move the cursor.
+
 ## 4.4.2 (November 11, 2026)
 
 - Security

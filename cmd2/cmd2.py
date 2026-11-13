@@ -145,6 +145,7 @@ from .exceptions import (
     Cmd2ShlexError,
     CommandSetRegistrationError,
     CompletionError,
+    ConsoleBrokenPipeError,
     EmbeddedConsoleExit,
     EmptyStatement,
     IncompleteStatement,
@@ -1706,8 +1707,42 @@ class Cmd:
             # writing. If you would like your application to print a
             # warning message, then set the broken_pipe_warning attribute
             # to the message you want printed.
-            if self.broken_pipe_warning and file != sys.stderr:
-                Cmd2GeneralConsole(file=sys.stderr).print(self.broken_pipe_warning)
+            if file != sys.stderr:
+                self._print_broken_pipe_warning()
+
+    def _print_broken_pipe_warning(self) -> None:
+        """Print broken_pipe_warning, if there is one, to sys.stderr."""
+        if self.broken_pipe_warning:
+            # Should sys.stderr be a broken pipe too, print_to() says nothing about it
+            self.print_to(sys.stderr, self.broken_pipe_warning)
+
+    def _handle_console_broken_pipe(self, ex: ConsoleBrokenPipeError) -> None:
+        """Handle a broken pipe which a cmd2 console raised while a command or one of its hooks was running.
+
+        The print methods handle a broken pipe in print_to(). A command which prints through a cmd2 console
+        of its own, as one which shows a Rich progress bar does, lets it escape. Call this while self.stdout
+        is still what the command was writing to.
+
+        :param ex: the exception the console raised
+        :raises KeyboardInterrupt: if the broken pipe replaced one
+        :raises SystemExit: if the broken pipe replaced one
+        :raises ConsoleBrokenPipeError: if it was not the command's output which broke
+        """
+        # A console can hit the broken pipe while another exception is ending the command, as the with block
+        # of a progress display exits for instance. Ctrl-C and exiting still mean what they did.
+        context = ex.__context__
+        while context is not None:
+            if isinstance(context, (KeyboardInterrupt, SystemExit)):
+                raise context
+            context = context.__context__
+
+        # Only the output of the command going away is expected. A console which was writing somewhere else,
+        # to a socket for instance, has a failure to report.
+        if not any(ex.file is stream for stream in (self.stdout, sys.stdout, sys.stderr)):
+            raise ex
+
+        if ex.file is not sys.stderr:
+            self._print_broken_pipe_warning()
 
     def poutput(
         self,
@@ -3089,6 +3124,8 @@ class Cmd:
 
                 if self.timing:
                     self.perror(f"Elapsed: {dt.datetime.now(tz=dt.timezone.utc) - timestart}", style=None)
+            except ConsoleBrokenPipeError as ex:
+                self._handle_console_broken_pipe(ex)
             finally:
                 # Get sigint protection while we restore stuff
                 with self.sigint_protection:
@@ -3118,7 +3155,10 @@ class Cmd:
             self.pexcept(ex)
         finally:
             try:
-                stop = self._run_cmdfinalization_hooks(stop, statement)
+                try:
+                    stop = self._run_cmdfinalization_hooks(stop, statement)
+                except ConsoleBrokenPipeError as ex:
+                    self._handle_console_broken_pipe(ex)
             except KeyboardInterrupt:
                 if raise_keyboard_interrupt and not stop:
                     raise
