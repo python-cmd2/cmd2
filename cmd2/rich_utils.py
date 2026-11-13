@@ -46,6 +46,7 @@ from rich_argparse import (
 )
 
 from . import constants
+from .exceptions import ConsoleBrokenPipeError
 from .styles import (
     DEFAULT_ARGPARSE_STYLES,
     Cmd2Style,
@@ -413,9 +414,12 @@ class Cmd2BaseConsole(Console):
         return self._config_key == self._build_config_key(file=file, **kwargs)
 
     def on_broken_pipe(self) -> None:
-        """Override which raises BrokenPipeError instead of SystemExit."""
+        """Override which raises a BrokenPipeError instead of SystemExit.
+
+        cmd2 handles the error if it escapes the command which was printing.
+        """
         self.quiet = True
-        raise BrokenPipeError
+        raise ConsoleBrokenPipeError
 
     def print(
         self,

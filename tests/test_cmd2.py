@@ -9,9 +9,11 @@ import sys
 import tempfile
 import threading
 from code import InteractiveConsole
+from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from typing import (
     NoReturn,
+    TextIO,
     cast,
 )
 from unittest import mock
@@ -971,10 +973,10 @@ class BrokenPipeApp(cmd2.Cmd):
     """Commands which hit a broken pipe without going through one of cmd2's print methods."""
 
     def do_own_console(self, _: str) -> None:
-        """Print through a console of its own until the consumer of its output exits."""
+        """Print through a console of its own, for longer than the reader of its output stays around."""
         console = ru.Cmd2GeneralConsole(file=self.stdout)
 
-        # More than fits in a pipe, so the command is still writing when the consumer exits
+        # More than fits in a pipe, so the command is still writing when the reader goes away
         for _line in range(4096):
             console.print("x" * 1024)
         self.perror("the pipe never broke")
@@ -985,64 +987,61 @@ class BrokenPipeApp(cmd2.Cmd):
 
 
 @pytest.fixture
-def broken_pipe_app() -> BrokenPipeApp:
-    return BrokenPipeApp()
+def broken_pipe() -> Iterator[TextIO]:
+    """A stream which writes to a pipe nothing reads."""
+    read_fd, write_fd = os.pipe()
+    os.close(read_fd)
+    stream = open(write_fd, "w")  # noqa: SIM115
+    yield stream
+
+    # Closing flushes what a failed write left in the buffer, which fails again
+    with contextlib.suppress(BrokenPipeError):
+        stream.close()
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="a write to a closed pipe raises a different OSError on Windows")
-def test_broken_pipe_from_a_commands_own_console_is_ignored(broken_pipe_app) -> None:
-    """A consumer which exits early ends the command quietly, as it does for one which uses poutput()."""
-    # The consumer must outlive the check that it started, and is not a Python process, which could write
-    # warnings of its own to stderr: coverage does when it starts in a subprocess on Python 3.11.
-    out, err = run_cmd(broken_pipe_app, "own_console | sleep 0.5")
+#: A closed pipe raises BrokenPipeError on POSIX. On Windows it can raise another OSError, which no part of cmd2 handles.
+posix_broken_pipe = pytest.mark.skipif(sys.platform == "win32", reason="a write to a closed pipe raises another OSError")
+
+
+@posix_broken_pipe
+def test_broken_pipe_from_a_commands_own_console_is_ignored(broken_pipe, capsys) -> None:
+    """Whatever stdout is a pipe to, a command ends quietly when its reader goes away, as one which uses poutput() does."""
+    app = BrokenPipeApp(stdout=broken_pipe)
+    app.onecmd_plus_hooks("own_console")
+    assert not capsys.readouterr().err
+
+
+@posix_broken_pipe
+def test_broken_pipe_from_a_commands_own_console_prints_the_warning(broken_pipe, capsys) -> None:
+    app = BrokenPipeApp(stdout=broken_pipe)
+    app.broken_pipe_warning = "The pipe broke"
+    app.onecmd_plus_hooks("own_console")
+    assert capsys.readouterr().err == "The pipe broke\n"
+
+
+@posix_broken_pipe
+def test_broken_pipe_from_a_piped_commands_own_console_is_ignored(running_pipe_process) -> None:
+    """The shell command a command's output is piped to exits without reading it."""
+    out, err = run_cmd(BrokenPipeApp(), "own_console | true")
     assert not out
     assert not err
 
 
-def test_broken_pipe_raised_by_a_piped_command_is_ignored(broken_pipe_app, running_pipe_process) -> None:
-    out, err = run_cmd(broken_pipe_app, "raise_broken_pipe | sort")
-    assert not out
-    assert not err
-
-
-def test_broken_pipe_raised_by_a_piped_command_prints_the_warning(broken_pipe_app, running_pipe_process) -> None:
-    broken_pipe_app.broken_pipe_warning = "The pipe broke"
-    out, err = run_cmd(broken_pipe_app, "raise_broken_pipe | sort")
-    assert not out
-    assert err == ["The pipe broke"]
-
-
-def test_broken_pipe_raised_by_a_command_in_a_piped_script_is_ignored(broken_pipe_app, tmp_path, running_pipe_process) -> None:
-    """A command which does not redirect its own output writes to the pipe of the command running it."""
+@posix_broken_pipe
+def test_broken_pipe_from_the_console_of_a_command_in_a_piped_script_is_ignored(tmp_path, running_pipe_process) -> None:
     script = tmp_path / "script.txt"
-    script.write_text("raise_broken_pipe\n")
-    out, err = run_cmd(broken_pipe_app, f"run_script {script} | sort")
+    script.write_text("own_console\n")
+    out, err = run_cmd(BrokenPipeApp(), f"run_script {script} | true")
     assert not out
     assert not err
 
 
-def test_broken_pipe_raised_by_a_redirected_command_in_a_piped_script_is_reported(
-    broken_pipe_app, tmp_path, running_pipe_process
-) -> None:
-    """A command which redirects its output to a file does not write to the pipe of the command running it."""
-    script = tmp_path / "script.txt"
-    script.write_text(f"raise_broken_pipe > {tmp_path / 'out.txt'}\n")
-    _out, err = run_cmd(broken_pipe_app, f"run_script {script} | sort")
-    assert "BrokenPipeError" in err[0]
-
-
-def test_broken_pipe_raised_after_a_piped_command_is_reported(broken_pipe_app, running_pipe_process) -> None:
-    """The pipe of one command does not hide the error for the commands which follow it."""
-    run_cmd(broken_pipe_app, "raise_broken_pipe | sort")
-    _out, err = run_cmd(broken_pipe_app, "raise_broken_pipe")
-    assert "BrokenPipeError" in err[0]
-
-
-@pytest.mark.parametrize("redirection", ["", " > {file}"])
-def test_broken_pipe_raised_by_a_command_which_is_not_piped_is_reported(broken_pipe_app, tmp_path, redirection) -> None:
-    """Without a pipe the error did not come from the command's output, so it is not hidden."""
-    broken_pipe_app.broken_pipe_warning = "The pipe broke"
-    _out, err = run_cmd(broken_pipe_app, "raise_broken_pipe" + redirection.format(file=tmp_path / "out.txt"))
+@pytest.mark.parametrize("redirection", ["", " | sort", " > {file}"])
+def test_broken_pipe_raised_by_a_command_is_reported(tmp_path, running_pipe_process, redirection) -> None:
+    """Only a console knows that it was the command's output which broke. Any other BrokenPipeError is not hidden."""
+    app = BrokenPipeApp()
+    app.broken_pipe_warning = "The pipe broke"
+    _out, err = run_cmd(app, "raise_broken_pipe" + redirection.format(file=tmp_path / "out.txt"))
     assert "BrokenPipeError" in err[0]
     assert "The pipe broke" not in err
 

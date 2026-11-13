@@ -69,6 +69,14 @@ class Cmd2ShlexError(Exception):
     """Raised when shlex fails to parse a command line string in StatementParser."""
 
 
+class ConsoleBrokenPipeError(BrokenPipeError):
+    """Raised by a cmd2 console when the stream it writes to is a pipe whose reader has gone away.
+
+    Being a subclass tells cmd2 that it was a command's output which broke, rather than something
+    else the command was writing to, such as a socket.
+    """
+
+
 class EmbeddedConsoleExit(SystemExit):
     """Custom exception class for use with the py command."""
 

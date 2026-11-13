@@ -57,8 +57,10 @@ conveniences:
    contents of `self.broken_pipe_warning` to `stderr`. `self.broken_pipe_warning` defaults to an
    empty string so this method will just swallow the exception. If you want to show an error
    message, put it in `self.broken_pipe_warning` when you initialize `cmd2.Cmd`. A command which
-   writes to `self.stdout` some other way gets the same treatment when its output is piped to a
-   shell command: `cmd2` handles a `BrokenPipeError` which escapes it.
+   prints through a `cmd2` console of its own, such as the
+   [Cmd2GeneralConsole][cmd2.rich_utils.Cmd2GeneralConsole] used for the progress displays described
+   below, gets the same treatment. Use one of those rather than a plain `rich.console.Console`,
+   which exits the application when it writes to a broken pipe.
 2. It examines and honors the [allow_style](./settings.md#allow_style) setting. See
    [Colored Output](#colored-output) below for more details.
 3. It allows printing arbitrary `rich` renderable objects which can get visually quite complex.
