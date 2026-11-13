@@ -78,10 +78,17 @@ removes the carriage return, backspace, bell, vertical tab, and form feed charac
 string it renders because they would break its width calculations. Each update is then appended to
 the line instead of overwriting it.
 
-The recommended approach is to let `rich` manage the cursor with a
-[status](https://rich.readthedocs.io/en/stable/console.html#status) or
-[live display](https://rich.readthedocs.io/en/stable/live.html) attached to a console which writes
-to `self.stdout`:
+`rich` can manage the cursor for you instead. Its status spinners, progress bars, and live displays
+all work inside a command when you give them a console which writes to `self.stdout`. Create one
+with [Cmd2GeneralConsole][cmd2.rich_utils.Cmd2GeneralConsole] so the display honors output
+redirection, the [allow_style](./settings.md#allow_style) setting, and the `cmd2` theme. The
+[rich_progress.py](https://github.com/python-cmd2/cmd2/blob/main/examples/rich_progress.py) example
+demonstrates everything described below.
+
+### Status Messages
+
+For work of an unknown length, show a spinner and a message with a
+[status](https://rich.readthedocs.io/en/stable/console.html#status):
 
 ```py
 import time
@@ -104,6 +111,48 @@ output of the command is redirected to a file or piped to a shell command. Use
 `rich.live.Live(console=console, transient=True)` in the same way to update any `rich` renderable in
 place without a spinner.
 
+### Progress Bars
+
+When you know how much work there is, show a
+[progress bar](https://rich.readthedocs.io/en/stable/progress.html):
+
+```py
+import time
+
+from rich.progress import Progress
+
+from cmd2.rich_utils import Cmd2GeneralConsole
+
+
+def do_process(self, _):
+    """Process some files while showing a progress bar"""
+    files = [f"file_{i}.dat" for i in range(1, 11)]
+    console = Cmd2GeneralConsole(file=self.stdout)
+    with Progress(console=console) as progress:
+        task_id = progress.add_task("Processing files", total=len(files))
+        for file in files:
+            time.sleep(0.4)
+            progress.console.print(f"Processed {file}")
+            progress.advance(task_id)
+    self.poutput("All files processed.")
+```
+
+A few things to know when using a progress bar in a command:
+
+- While the bar is active, print with `progress.console.print()` as shown above. The message then
+  appears above the bar. `poutput` does not know about the bar and writes on top of it. Once the
+  `with` block exits, `poutput` is safe to use again.
+- The finished bar is left on the screen. Pass `transient=True` to `Progress` to erase it instead.
+- Call `add_task` more than once to show several bars at the same time, and pass
+  [columns](https://rich.readthedocs.io/en/stable/progress.html#columns) to `Progress` to change
+  what is shown for each one.
+- To add a bar to a simple loop, wrap the sequence being iterated over with
+  `rich.progress.track(sequence, console=console)`.
+- When the output of the command is redirected to a file or piped to a shell command, the bar is not
+  animated. Only its final state is written, or nothing but a blank line if it is transient.
+
+### Carriage Returns
+
 If you would rather write the escape sequences yourself, put the carriage return in the `end`
 parameter, which is written exactly as given:
 
@@ -119,8 +168,8 @@ def do_countdown(self, _):
     self.poutput(f"{CLEAR_LINE}Done!")
 ```
 
-Unlike the `rich` status and live displays, this writes the escape sequences and carriage returns to
-the file or pipe when the output of the command is redirected.
+Unlike the `rich` displays, this writes the escape sequences and carriage returns to the file or
+pipe when the output of the command is redirected.
 
 The print methods flush the stream after every call, so there is no `flush` parameter to pass.
 Strings written directly to `self.stdout` are not processed by `rich`, so control characters in them

@@ -88,6 +88,9 @@ each:
 - [remove_settable.py](https://github.com/python-cmd2/cmd2/blob/main/examples/remove_settable.py)
     - Shows how to remove any of the built-in cmd2 `Settables` you do not want in your cmd2
       application
+- [rich_progress.py](https://github.com/python-cmd2/cmd2/blob/main/examples/rich_progress.py)
+    - Shows how to use Rich progress bars and status spinners to display the progress of
+      long-running commands
 - [rich_tables.py](https://github.com/python-cmd2/cmd2/blob/main/examples/rich_tables.py)
     - Example of using Rich Tables within a cmd2 application for displaying tabular data
 - [rich_theme.py](https://github.com/python-cmd2/cmd2/blob/main/examples/rich_theme.py)
