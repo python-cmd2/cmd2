@@ -65,16 +65,22 @@ class ProgressApp(cmd2.Cmd):
         """Show a progress bar and print messages above it while it is running."""
         files = [f"file_{i}.dat" for i in range(1, 11)]
 
-        with Progress(console=self._create_console()) as progress:
-            task_id = progress.add_task("Processing files", total=len(files))
-            for file in files:
-                time.sleep(0.4)
+        try:
+            with Progress(console=self._create_console()) as progress:
+                task_id = progress.add_task("Processing files", total=len(files))
+                for file in files:
+                    time.sleep(0.4)
 
-                # While the progress bar is active, print through its console so the message
-                # appears above the bar. poutput() does not know about the bar and would write
-                # on top of it.
-                progress.console.print(f"Processed {file}")
-                progress.advance(task_id)
+                    # While the progress bar is active, print through its console so the message
+                    # appears above the bar. poutput() does not know about the bar and would write
+                    # on top of it.
+                    progress.console.print(f"Processed {file}")
+                    progress.advance(task_id)
+        except BrokenPipeError:
+            # The output was piped to a shell command which exited before reading all of it
+            # (e.g. "progress | head -n 2"). poutput() ignores this error for you, but output
+            # printed through a console you created does not.
+            return
 
         # The finished bar is left on the screen. Once the with block exits, poutput() is safe again.
         self.poutput("All files processed.")
@@ -95,8 +101,9 @@ class ProgressApp(cmd2.Cmd):
 
             while not progress.finished:
                 time.sleep(0.05)
-                for task_id, chunk_size in chunk_sizes.items():
-                    progress.advance(task_id, chunk_size)
+                for task in progress.tasks:
+                    if not task.finished:
+                        progress.advance(task.id, chunk_sizes[task.id])
 
         self.poutput(f"Downloaded {len(DOWNLOADS)} files.")
 

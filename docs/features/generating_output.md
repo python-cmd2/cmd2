@@ -75,13 +75,13 @@ Countdowns, progress indicators, and status lines repeatedly overwrite the same 
 terminal. The traditional way to do that with `print()` is to embed a carriage return (`\r`) in the
 string, but that does not work with `poutput` or any of the other `cmd2` print methods. `rich`
 removes the carriage return, backspace, bell, vertical tab, and form feed characters from every
-string it renders because they would break its width calculations. Each update is then appended to
-the line instead of overwriting it.
+string it renders because they would break its width calculations, so the cursor never returns to
+the start of the line.
 
-`rich` can manage the cursor for you instead. Its status spinners, progress bars, and live displays
-all work inside a command when you give them a console which writes to `self.stdout`. Create one
-with [Cmd2GeneralConsole][cmd2.rich_utils.Cmd2GeneralConsole] so the display honors output
-redirection, the [allow_style](./settings.md#allow_style) setting, and the `cmd2` theme. The
+`rich` can manage the cursor for you instead. Its status spinners and progress bars work inside a
+command when you give them a console which writes to `self.stdout`. Create one with
+[Cmd2GeneralConsole][cmd2.rich_utils.Cmd2GeneralConsole] so the display uses the `cmd2` theme and
+follows the [allow_style](./settings.md#allow_style) setting. The
 [rich_progress.py](https://github.com/python-cmd2/cmd2/blob/main/examples/rich_progress.py) example
 demonstrates everything described below.
 
@@ -106,10 +106,7 @@ def do_countdown(self, _):
     self.poutput("Done!")
 ```
 
-The status line disappears when the `with` block exits, and nothing is written for it when the
-output of the command is redirected to a file or piped to a shell command. Use
-`rich.live.Live(console=console, transient=True)` in the same way to update any `rich` renderable in
-place without a spinner.
+The status line disappears when the `with` block exits.
 
 ### Progress Bars
 
@@ -148,13 +145,31 @@ A few things to know when using a progress bar in a command:
   what is shown for each one.
 - To add a bar to a simple loop, wrap the sequence being iterated over with
   `rich.progress.track(sequence, console=console)`.
-- When the output of the command is redirected to a file or piped to a shell command, the bar is not
-  animated. Only its final state is written, or nothing but a blank line if it is transient.
+
+### Styles, Redirection, and Markup
+
+Status messages and progress bars differ from the print methods in a few ways:
+
+- **They are only animated where `allow_style` allows it.** With the default setting of `Terminal`,
+  they are animated on a terminal. When the output of the command is redirected to a file or piped
+  to a shell command, a status writes nothing and a progress bar writes only its final state, or
+  just a blank line if it is transient. With `Never`, that is what happens on a terminal too. With
+  `Always`, redirected output also contains the escape sequences which hide and show the cursor and
+  style the bar.
+- **Their text is parsed as [console markup](https://rich.readthedocs.io/en/stable/markup.html).**
+  This applies to status messages and to the descriptions of progress bar tasks, even though markup
+  is off by default in the print methods. If the text could contain square brackets, as a file name
+  can, pass it through `rich.markup.escape()` first. Otherwise `report[draft].txt` is displayed as
+  `report.txt`, and an unmatched closing tag such as `[/b]` raises a `MarkupError`.
+- **They do not handle broken pipes.** `poutput` quietly ignores the `BrokenPipeError` which occurs
+  when output is piped to a shell command that exits early, such as `head`. Anything written by a
+  console you created raises it instead. Catch `BrokenPipeError` around the `with` block if your
+  command prints through the console while it is running.
 
 ### Carriage Returns
 
 If you would rather write the escape sequences yourself, put the carriage return in the `end`
-parameter, which is written exactly as given:
+parameter, which `rich` does not strip:
 
 ```py
 CLEAR_LINE = "\x1b[2K"
@@ -168,8 +183,12 @@ def do_countdown(self, _):
     self.poutput(f"{CLEAR_LINE}Done!")
 ```
 
-Unlike the `rich` displays, this writes the escape sequences and carriage returns to the file or
-pipe when the output of the command is redirected.
+Use the `style` parameter if you want to color text printed this way. A string which already
+contains ANSI style sequences is parsed as ANSI text, which discards every other kind of escape
+sequence in it, including the one that clears the line.
+
+Unlike the `rich` displays, this always writes the escape sequences and carriage returns, including
+when the output of the command is redirected to a file or pipe.
 
 The print methods flush the stream after every call, so there is no `flush` parameter to pass.
 Strings written directly to `self.stdout` are not processed by `rich`, so control characters in them
