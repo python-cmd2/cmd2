@@ -992,8 +992,9 @@ def broken_pipe_app() -> BrokenPipeApp:
 @pytest.mark.skipif(sys.platform == "win32", reason="a write to a closed pipe raises a different OSError on Windows")
 def test_broken_pipe_from_a_commands_own_console_is_ignored(broken_pipe_app) -> None:
     """A consumer which exits early ends the command quietly, as it does for one which uses poutput()."""
-    consumer = f'{sys.executable} -c "import time; time.sleep(0.5)"'
-    out, err = run_cmd(broken_pipe_app, f"own_console | {consumer}")
+    # The consumer must outlive the check that it started, and is not a Python process, which could write
+    # warnings of its own to stderr: coverage does when it starts in a subprocess on Python 3.11.
+    out, err = run_cmd(broken_pipe_app, "own_console | sleep 0.5")
     assert not out
     assert not err
 
