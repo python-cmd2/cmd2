@@ -1,6 +1,9 @@
 """Custom exceptions for cmd2."""
 
-from typing import Any
+from typing import (
+    IO,
+    Any,
+)
 
 ############################################################################################################
 # The following exceptions are part of the public API
@@ -72,9 +75,17 @@ class Cmd2ShlexError(Exception):
 class ConsoleBrokenPipeError(BrokenPipeError):
     """Raised by a cmd2 console when the stream it writes to is a pipe whose reader has gone away.
 
-    Being a subclass tells cmd2 that it was a command's output which broke, rather than something
-    else the command was writing to, such as a socket.
+    It names the stream, which tells cmd2 whether it was a command's output which broke, rather
+    than something else the command was writing to, such as a socket.
     """
+
+    def __init__(self, file: IO[str]) -> None:
+        """Initialize ConsoleBrokenPipeError instance.
+
+        :param file: the stream the console was writing to
+        """
+        super().__init__()
+        self.file = file
 
 
 class EmbeddedConsoleExit(SystemExit):

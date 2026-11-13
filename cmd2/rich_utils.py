@@ -419,7 +419,7 @@ class Cmd2BaseConsole(Console):
         cmd2 handles the error if it escapes the command which was printing.
         """
         self.quiet = True
-        raise ConsoleBrokenPipeError
+        raise ConsoleBrokenPipeError(self.file)
 
     def print(
         self,

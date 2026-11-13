@@ -985,6 +985,25 @@ class BrokenPipeApp(cmd2.Cmd):
         """Raise the error a write to a closed pipe or socket raises."""
         raise BrokenPipeError
 
+    def do_other_console(self, _: str) -> None:
+        """Print through a console which writes somewhere other than the command's output."""
+        ru.Cmd2GeneralConsole(file=self.other_stream).print("x")
+
+    def do_unwind(self, how: str) -> None:
+        """Have a console write as an exception ends the command, as the with block of a progress display does."""
+        try:
+            raise KeyboardInterrupt if how == "interrupt" else SystemExit(5)
+        finally:
+            ru.Cmd2GeneralConsole(file=self.stdout).print("x")
+
+    def do_quiet(self, _: str) -> None:
+        """Write nothing."""
+
+    def console_hook(self, data: cmd2.plugin.CommandFinalizationData) -> cmd2.plugin.CommandFinalizationData:
+        """Print through a console of its own once a command has finished."""
+        ru.Cmd2GeneralConsole(file=self.stdout).print("x")
+        return data
+
 
 @pytest.fixture
 def broken_pipe() -> Iterator[TextIO]:
@@ -1038,6 +1057,38 @@ def test_broken_pipe_from_the_console_of_a_command_in_a_piped_script_is_ignored(
     out, err = run_cmd(BrokenPipeApp(), f"run_script {script} | head -n 1")
     assert out == ["x" * 1024]
     assert not err
+
+
+@posix_broken_pipe
+def test_broken_pipe_from_a_console_on_another_stream_is_reported(broken_pipe) -> None:
+    """A console knows which stream broke. Only the command's output going away is expected."""
+    app = BrokenPipeApp()
+    app.other_stream = broken_pipe
+    _out, err = run_cmd(app, "other_console")
+    assert any("BrokenPipeError" in line for line in err)
+
+
+@posix_broken_pipe
+def test_broken_pipe_does_not_hide_the_interrupt_it_replaced(broken_pipe) -> None:
+    """Ctrl-C still stops a script when a console hits a broken pipe as the interrupt ends the command."""
+    app = BrokenPipeApp(stdout=broken_pipe)
+    with pytest.raises(KeyboardInterrupt):
+        app.onecmd_plus_hooks("unwind interrupt", raise_keyboard_interrupt=True)
+
+
+@posix_broken_pipe
+def test_broken_pipe_does_not_hide_the_exit_it_replaced(broken_pipe) -> None:
+    app = BrokenPipeApp(stdout=broken_pipe)
+    assert app.onecmd_plus_hooks("unwind exit") is True
+    assert app.exit_code == 5
+
+
+@posix_broken_pipe
+def test_broken_pipe_from_the_console_of_a_finalization_hook_is_ignored(broken_pipe, capsys) -> None:
+    app = BrokenPipeApp(stdout=broken_pipe)
+    app.register_cmdfinalization_hook(app.console_hook)
+    app.onecmd_plus_hooks("quiet")
+    assert not capsys.readouterr().err
 
 
 @pytest.mark.parametrize("redirection", ["", " | sort", " > {file}"])

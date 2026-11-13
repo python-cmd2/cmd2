@@ -59,8 +59,11 @@ conveniences:
    message, put it in `self.broken_pipe_warning` when you initialize `cmd2.Cmd`. A command which
    prints through a `cmd2` console of its own, such as the
    [Cmd2GeneralConsole][cmd2.rich_utils.Cmd2GeneralConsole] used for the progress displays described
-   below, gets the same treatment. Use one of those rather than a plain `rich.console.Console`,
-   which exits the application when it writes to a broken pipe.
+   below, is covered too, with one difference. A command which uses `poutput` carries on after the
+   pipe breaks, but one which prints through its own console ends at the call which found the pipe
+   broken, and its postcommand hooks do not run. Put any cleanup such a command has to do in a
+   `finally` block or a context manager. Use a `cmd2` console rather than a plain
+   `rich.console.Console`, which exits the application when it writes to a broken pipe.
 2. It examines and honors the [allow_style](./settings.md#allow_style) setting. See
    [Colored Output](#colored-output) below for more details.
 3. It allows printing arbitrary `rich` renderable objects which can get visually quite complex.

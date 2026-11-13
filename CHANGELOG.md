@@ -3,9 +3,8 @@
 - Bug Fixes
     - A command which prints through a `cmd2` console of its own, such as a `Cmd2GeneralConsole`
       showing a Rich progress bar, no longer ends with a `BrokenPipeError` message when its output
-      is piped to something that exits early, as `head` does. `cmd2` now handles a broken pipe from
-      such a console the way `poutput()` does: it is ignored, or `broken_pipe_warning` is printed if
-      set.
+      is piped to something that exits early, as `head` does. `cmd2` now ends the command quietly
+      instead, printing `broken_pipe_warning` if it is set.
 - Enhancements
     - Added the
       [rich_progress.py](https://github.com/python-cmd2/cmd2/blob/main/examples/rich_progress.py)
