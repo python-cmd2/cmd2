@@ -1021,9 +1021,13 @@ def test_broken_pipe_from_a_commands_own_console_prints_the_warning(broken_pipe,
 
 @posix_broken_pipe
 def test_broken_pipe_from_a_piped_commands_own_console_is_ignored(running_pipe_process) -> None:
-    """The shell command a command's output is piped to exits without reading it."""
-    out, err = run_cmd(BrokenPipeApp(), "own_console | true")
-    assert not out
+    """The shell command a command's output is piped to exits before reading all of it.
+
+    head cannot exit before the command has written a line, so cmd2 never finds that the pipe process ended before the
+    command could run, however slowly the two start.
+    """
+    out, err = run_cmd(BrokenPipeApp(), "own_console | head -n 1")
+    assert out == ["x" * 1024]
     assert not err
 
 
@@ -1031,8 +1035,8 @@ def test_broken_pipe_from_a_piped_commands_own_console_is_ignored(running_pipe_p
 def test_broken_pipe_from_the_console_of_a_command_in_a_piped_script_is_ignored(tmp_path, running_pipe_process) -> None:
     script = tmp_path / "script.txt"
     script.write_text("own_console\n")
-    out, err = run_cmd(BrokenPipeApp(), f"run_script {script} | true")
-    assert not out
+    out, err = run_cmd(BrokenPipeApp(), f"run_script {script} | head -n 1")
+    assert out == ["x" * 1024]
     assert not err
 
 
