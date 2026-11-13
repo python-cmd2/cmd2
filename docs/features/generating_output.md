@@ -69,6 +69,63 @@ def do_echo(self, args):
     self.poutput(args)
 ```
 
+## Updating Output in Place
+
+Countdowns, progress indicators, and status lines repeatedly overwrite the same line of the
+terminal. The traditional way to do that with `print()` is to embed a carriage return (`\r`) in the
+string, but that does not work with `poutput` or any of the other `cmd2` print methods. `rich`
+removes the carriage return, backspace, bell, vertical tab, and form feed characters from every
+string it renders because they would break its width calculations. Each update is then appended to
+the line instead of overwriting it.
+
+The recommended approach is to let `rich` manage the cursor with a
+[status](https://rich.readthedocs.io/en/stable/console.html#status) or
+[live display](https://rich.readthedocs.io/en/stable/live.html) attached to a console which writes
+to `self.stdout`:
+
+```py
+import time
+
+from cmd2.rich_utils import Cmd2GeneralConsole
+
+
+def do_countdown(self, _):
+    """Count down from 5 on a single line"""
+    console = Cmd2GeneralConsole(file=self.stdout)
+    with console.status("Starting...") as status:
+        for remaining in range(5, 0, -1):
+            status.update(f"Time remaining: {remaining}s")
+            time.sleep(1)
+    self.poutput("Done!")
+```
+
+The status line disappears when the `with` block exits, and nothing is written for it when the
+output of the command is redirected to a file or piped to a shell command. Use
+`rich.live.Live(console=console, transient=True)` in the same way to update any `rich` renderable in
+place without a spinner.
+
+If you would rather write the escape sequences yourself, put the carriage return in the `end`
+parameter, which is written exactly as given:
+
+```py
+CLEAR_LINE = "\x1b[2K"
+
+
+def do_countdown(self, _):
+    """Count down from 5 on a single line"""
+    for remaining in range(5, 0, -1):
+        self.poutput(f"{CLEAR_LINE}Time remaining: {remaining}s", end="\r")
+        time.sleep(1)
+    self.poutput(f"{CLEAR_LINE}Done!")
+```
+
+Unlike the `rich` status and live displays, this writes the escape sequences and carriage returns to
+the file or pipe when the output of the command is redirected.
+
+The print methods flush the stream after every call, so there is no `flush` parameter to pass.
+Strings written directly to `self.stdout` are not processed by `rich`, so control characters in them
+are left alone.
+
 ## Error Messages
 
 When an error occurs in your program, you can display it on `sys.stderr` by calling the
