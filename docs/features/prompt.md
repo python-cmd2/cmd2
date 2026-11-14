@@ -162,6 +162,18 @@ while the command prints output.
 During command execution, `get_bottom_toolbar()` runs in a background UI thread. Keep the callback
 fast and use a lock when reading state that a command or another thread modifies.
 
+!!! warning
+
+    A command must not hold a lock which `get_bottom_toolbar()` acquires while it calls anything
+    that pauses the toolbar: `read_input()`, `read_secret()`, `select()`, `ppaged()`, `do_shell()`,
+    `run_editor()`, an embedded Python shell, or `suspend_bottom_toolbar()`. To pause the toolbar,
+    `cmd2` waits for the refresh in progress to finish. A callback blocked on a lock the command is
+    holding cannot finish, so `cmd2` gives up after ten seconds and the command fails with an error.
+    Copy what you need while holding the lock, release it, and then prompt or page.
+
+If `get_bottom_toolbar()` raises an exception while a command is running, `cmd2` reports the error
+once and the command carries on without the toolbar.
+
 !!! tip
 
     If you want to show more realtime status information than fits in a toolbar, you can run your
@@ -199,6 +211,11 @@ Suspending matters for subprocesses even when they only print. While the toolbar
 terminal is in raw mode, so the kernel generates no signals from keystrokes. cmd2 sends `Ctrl-C` on
 to its own process group, which reaches a subprocess your command started and waits on, but `Ctrl-\`
 (`SIGQUIT`) does nothing, exactly as at the main prompt.
+
+Output which stops in the middle of a line, such as `Working...` or a progress line redrawn with
+carriage returns, stays on the screen and is continued by the output which follows it. A line still
+unfinished when the command ends, or when the toolbar is hidden for one of the operations above, is
+ended there, so whatever comes next starts on a new line.
 
 The command toolbar is used by the interactive command loop, including startup commands and scripts
 launched from that loop. It is disabled for non-interactive input. Calls to `onecmd_plus_hooks()`

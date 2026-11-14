@@ -2164,8 +2164,14 @@ class Cmd:
         Widths are measured in terminal columns; wide characters are never split.
 
         During command execution this callback runs in a background UI thread. Protect shared
-        state with a lock when necessary. The built-in pager shares this toolbar. It is suspended
-        while another prompt, external pager, or interactive shell owns the terminal.
+        state with a lock when necessary, but never hold that lock in a command while it prompts
+        for input, pages output, runs a shell command, or otherwise pauses the toolbar: pausing
+        waits up to ten seconds for this callback to return, and then fails the command. The
+        built-in pager shares this toolbar. It is suspended while another prompt, external pager,
+        or interactive shell owns the terminal.
+
+        If this callback raises an exception during a command, the error is reported once and the
+        command carries on without the toolbar.
 
         :return: Content to populate the bottom toolbar.
         """

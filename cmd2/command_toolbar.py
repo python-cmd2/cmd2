@@ -1,10 +1,12 @@
 """Internal support for displaying a toolbar during synchronous commands."""
 
+import asyncio
 import codecs
 import contextlib
 import contextvars
 import functools
 import os
+import re
 import signal
 import sys
 import threading
@@ -24,7 +26,7 @@ from prompt_toolkit.key_binding.key_processor import KeyPress, KeyPressEvent
 from prompt_toolkit.layout import HSplit, Layout, Window
 from prompt_toolkit.layout.containers import ConditionalContainer
 from prompt_toolkit.patch_stdout import StdoutProxy
-from prompt_toolkit.utils import suspend_to_background_supported
+from prompt_toolkit.utils import get_cwidth, suspend_to_background_supported
 
 from .managed_output import SerializedTerminalWriter
 from .pager import Pager, output_fits
@@ -39,6 +41,10 @@ _STARTUP_TIMEOUT = 10.0
 #: How long to wait for the display's thread to finish. Bounded for the same reason: a render
 #: callback blocked inside it would otherwise hold whoever is tearing the display down.
 _SHUTDOWN_TIMEOUT = 10.0
+
+# Control sequences, operating system commands, and two-character escapes: text which takes
+# no room on the screen.
+_ESCAPE_RE = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\)|[@-Z\\-_])")
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 _R = TypeVar("_R")
@@ -129,13 +135,82 @@ class _DisplayStillRunningError(RuntimeError):
 
 
 class _ContextStdoutProxy(StdoutProxy):
-    """Keep stdout's flush worker in the toolbar's isolated application session."""
+    """Print above the toolbar from its isolated application session, keeping unfinished lines.
+
+    prompt-toolkit draws the toolbar starting at the cursor, and erases it from the first
+    column of that row before printing anything more. Output which stopped in the middle of
+    a line, such as ``Working...`` or a progress line ending in a carriage return, would be
+    erased with it. So a line left unfinished is ended on the screen, which gives the toolbar
+    a row of its own, and it is continued from where it stopped when more output arrives.
+    """
+
+    def __init__(self) -> None:
+        # The line which output last left unfinished, exactly as written. Set before the
+        # base class starts the thread which reads it.
+        self._unfinished = ""
+        # The worker already combines queued writes. A batching sleep would also delay
+        # close(), which runs at each command finalization boundary.
+        super().__init__(raw=True, sleep_between_writes=0)
 
     def _start_write_thread(self) -> threading.Thread:
         context = contextvars.copy_context()
         thread = threading.Thread(target=context.run, args=(self._write_thread,), daemon=True)
         thread.start()
         return thread
+
+    def _write_and_flush(self, loop: asyncio.AbstractEventLoop | None, text: str) -> None:
+        """Write text above the toolbar as the base class does, continuing an unfinished line."""
+
+        def write_and_flush() -> None:
+            output = self._output
+            # See the base class: Windows resets autowrap at each flush.
+            output.enable_autowrap()
+            if self._unfinished:
+                # The cursor is at the start of the row below the unfinished line. Go back
+                # to the row its last carriage return left it on, and write the rest of
+                # it again to put the cursor, and any style it set, where they were.
+                output.cursor_up(self._rows(self._unfinished))
+                output.write_raw(self._unfinished)
+            output.write_raw(text)
+            line = self._last_line(self._unfinished + text)
+            if line:
+                output.write_raw("\r\n")
+            size = output.get_size()
+            # A line whose start has scrolled off the screen can't be found again, so it
+            # stays ended where it is.
+            self._unfinished = line if self._width(line) <= size.rows * size.columns else ""
+            output.flush()
+
+        if loop is None:
+            write_and_flush()
+        else:
+            loop.call_soon_threadsafe(lambda: run_in_terminal(write_and_flush, in_executor=False))
+
+    @staticmethod
+    def _last_line(text: str) -> str:
+        """Return what must be written again to continue the line which text leaves unfinished.
+
+        :param text: everything written since the last finished line
+        :return: the unfinished line from its last carriage return, or "" if the last line is
+            finished
+        """
+        line = text.rpartition("\n")[2]
+        if not line.strip("\r"):
+            # Nothing has been written on this row, wherever the cursor returned to.
+            return ""
+        # A carriage return went back to the start of the row the cursor is on, so nothing
+        # before it is needed to find that place again. Dropping it also keeps a progress
+        # line which is redrawn thousands of times from growing without bound.
+        return line[max(0, line.rfind("\r")) :]
+
+    def _rows(self, line: str) -> int:
+        """Return how many rows below its start the cursor was left after line was ended."""
+        columns = max(1, self._output.get_size().columns)
+        return max(1, -(-self._width(line) // columns))
+
+    @staticmethod
+    def _width(line: str) -> int:
+        return get_cwidth(_ESCAPE_RE.sub("", line))
 
 
 class ToolbarStream:
@@ -242,6 +317,9 @@ class CommandToolbar:
         # was owe a legacy fallback once it closes. Both are read on the display's loop.
         self._paging = False
         self._legacy_fallback_pending = False
+        # Set once the display has stopped after an error. It is reported once and not
+        # restarted, so a callback which keeps failing cannot repeat that at every pause.
+        self._failed = False
 
         session = cmd.main_session
         self.app = session.app
@@ -383,6 +461,8 @@ class CommandToolbar:
             setattr(obj, name, stream.original)
 
     def _resume(self) -> None:
+        if self._failed:
+            return
         self._ready.clear()
         self._error = None
         stack = self._display_stack = contextlib.ExitStack()
@@ -392,6 +472,11 @@ class CommandToolbar:
         # a line the last command left in progress. Its final frame is a suppressed no-op
         # instead, which leaves that output alone.
         erase_when_done = self._reserved_bridge() is None
+        # Replace key_bindings only together with a layout whose focused window prompt-toolkit
+        # has not seen with other bindings. It caches the bindings it merges for each focused
+        # window, application bindings included, and does not notice this attribute being
+        # reassigned, so reusing a window with different bindings would keep the old ones.
+        # This layout, the main prompt's, and each pager's all have windows of their own.
         stack.callback(setattr, self.app, "layout", self.app.layout)
         self._apply_display_layout()
         for name, value in (("key_bindings", self._bindings), ("erase_when_done", erase_when_done)):
@@ -413,12 +498,15 @@ class CommandToolbar:
 
         def run() -> None:
             try:
-                self.app.run(handle_sigint=False, set_exception_handler=False)
+                self.app.run(pre_run=self._handle_loop_errors, handle_sigint=False, set_exception_handler=False)
             except EOFError:
                 pass
             except BaseException as exc:  # noqa: BLE001
-                # Propagate startup/render failures to the command thread.
-                self._error = exc
+                # Propagate startup/render failures to the command thread. Stopping after an
+                # error in the loop draws a last frame, and a failure there is only a
+                # consequence of the error already recorded.
+                if self._error is None:
+                    self._error = exc
             finally:
                 self._ready.set()
                 self._app_exited()
@@ -438,16 +526,13 @@ class CommandToolbar:
 
     def _install_legacy_proxy(self) -> None:
         """Route output through the native toolbar's erase-and-redraw proxy."""
-        # The worker already combines queued writes. A batching sleep would also
-        # delay close(), which runs at each command finalization boundary.
-        #
         # Built with the display's session active. The proxy resolves its output from the
         # current app session; a fallback can be scheduled onto the loop from a context that
         # never entered that session, where the proxy would otherwise create a fresh output
         # and, on a console-less Windows runner, raise.
         token = _current_app_session.set(self._app_session) if self._app_session is not None else None
         try:
-            proxy = _ContextStdoutProxy(raw=True, sleep_between_writes=0)
+            proxy = _ContextStdoutProxy()
         finally:
             if token is not None:
                 _current_app_session.reset(token)
@@ -558,6 +643,27 @@ class CommandToolbar:
         if reserved is not None and reserved.bridge is not None:
             reserved.bridge.set_render_suppressed(suppressed)
 
+    def _handle_loop_errors(self) -> None:
+        """Stop the display on the first unhandled error in its event loop.
+
+        prompt-toolkit's own handler prints the traceback and waits for Enter, which would
+        hold up a command that is still running. With no handler at all, asyncio logs each
+        error to stderr. That write goes through the stdout proxy, whose redraw of the
+        toolbar calls a failing ``get_bottom_toolbar()`` again, so a single faulty callback
+        buries the command's output in tracebacks for as long as the command runs.
+        """
+        asyncio.get_running_loop().set_exception_handler(self._loop_error)
+
+    def _loop_error(self, loop: asyncio.AbstractEventLoop, context: dict[str, Any]) -> None:  # noqa: ARG002
+        """Record the first error for the command thread and end the display.
+
+        ``_resume()`` raises it if the display has not finished starting. After that,
+        ``_app_exited()`` reports it once.
+        """
+        if self._error is None:
+            self._error = context.get("exception") or RuntimeError(context.get("message", "unknown error"))
+        self._exit()
+
     def _app_exited(self) -> None:
         """Give the terminal back to the streams when the display stops on its own.
 
@@ -582,7 +688,13 @@ class CommandToolbar:
         # A proxy exists only once _resume() has handed startup failures to the command
         # thread, so reporting here does not duplicate the exception it raises.
         if started and self._error is not None:
-            self.cmd.perror(f"Bottom toolbar stopped after an error: {self._error!r}")
+            self._report_failure(self._error)
+
+    def _report_failure(self, error: BaseException) -> None:
+        """Say once that the command carries on without its toolbar."""
+        if not self._failed:
+            self._failed = True
+            self.cmd.perror(f"Bottom toolbar stopped after an error: {error!r}")
 
     def _exit(self) -> None:
         """Stop the display unless it has already stopped on its own.
@@ -897,4 +1009,11 @@ class CommandToolbar:
             yield
         finally:
             with self.cmd.sigint_protection:
-                self._resume()
+                try:
+                    self._resume()
+                except Exception as exc:  # noqa: BLE001
+                    # The toolbar is cosmetic. A display that cannot come back must not fail
+                    # the command which paused it, nor escape cmdloop() from command
+                    # finalization. The command carries on without one, and stop() still
+                    # returns the borrowed application to the main prompt.
+                    self._report_failure(exc)
