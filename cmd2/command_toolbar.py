@@ -368,8 +368,11 @@ class CommandToolbar:
             except EOFError:
                 pass
             except BaseException as exc:  # noqa: BLE001
-                # Propagate startup/render failures to the command thread.
-                self._error = exc
+                # Propagate startup/render failures to the command thread. Stopping after an
+                # error in the loop draws a last frame, and a failure there is only a
+                # consequence of the error already recorded.
+                if self._error is None:
+                    self._error = exc
             finally:
                 self._ready.set()
                 self._app_exited()

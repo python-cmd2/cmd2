@@ -809,6 +809,31 @@ def test_command_toolbar_stops_once_after_a_callback_error(toolbar_app, capsys) 
         assert app._command_toolbar.is_active
 
 
+def test_command_toolbar_reports_the_error_which_stopped_it(toolbar_app, capsys) -> None:
+    """Stopping draws a last frame. A failure there must not replace the error which caused the stop."""
+    app, _, _ = toolbar_app
+    frames = []
+
+    def fail(ui):
+        frames.append(None)
+        raise ValueError(f"error {len(frames)}")
+
+    with app._command_toolbar_context():
+        display = app._command_toolbar
+        thread = display._thread
+        display.app.after_render += fail
+        try:
+            thread.join(timeout=2)
+            assert not thread.is_alive()
+        finally:
+            display.app.after_render -= fail
+
+    err = capsys.readouterr().err
+    assert len(frames) == 2
+    assert "ValueError('error 1')" in err
+    assert "error 2" not in err
+
+
 def test_command_toolbar_reports_a_loop_error_without_an_exception(toolbar_app, capsys) -> None:
     app, _, _ = toolbar_app
     with app._command_toolbar_context():
