@@ -992,6 +992,25 @@ class TestPager:
             finally:
                 display.app.before_render -= before_render
 
+    def test_a_line_left_unfinished_is_finished_before_the_pager_erases(self, terminal_harness) -> None:
+        """The pager's first erase deletes whole lines from the cursor's row.
+
+        A line of command output still in progress on that row would be deleted with them,
+        before the pager has even switched to its own screen.
+        """
+        harness, terminal = terminal_harness
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            bridge = harness.app.reserved_toolbar.bridge
+            harness.app.stdout.write("Results: ")
+            harness.app.stdout.flush()
+            assert bridge.has_unfinished_command_output
+            written = len(terminal.getvalue())
+            assert run_pager(harness, terminal)
+
+        # The line is ended before anything else reaches the terminal, the erase included.
+        assert terminal.getvalue()[written:].startswith("\r\n")
+        assert not bridge.has_unfinished_command_output
+
     def test_exact_usable_height_does_not_open_a_pager(self, terminal_harness) -> None:
         harness, terminal = terminal_harness
         with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():

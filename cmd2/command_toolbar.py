@@ -882,6 +882,13 @@ class CommandToolbar:
             self.cmd.stdout.flush()
             return
 
+        bridge = self._reserved_bridge()
+        if bridge is not None:
+            # The pager's first erase deletes whole lines from the cursor's row, before it
+            # switches to its own screen. Move past a line of command output still in
+            # progress there, as before a nested prompt, or that line is deleted with them.
+            bridge.finish_command_output()
+
         pager = Pager(text, chop=chop)
         pager.bindings.add(
             "c-z",
