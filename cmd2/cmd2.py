@@ -2374,7 +2374,7 @@ class Cmd:
 
         # If the search text is blank, then search in the CWD for *
         if not text:
-            search_str = os.path.join(os.getcwd(), "*")
+            search_str = os.path.join(os.getcwd(), "")
             cwd_added = True
         else:
             # Purposely don't match any path containing wildcards
@@ -2384,7 +2384,7 @@ class Cmd:
                     return Completions()
 
             # Start the search string
-            search_str = text + "*"
+            search_str = text
 
             # Handle tilde expansion and completion
             if text.startswith("~"):
@@ -2407,7 +2407,7 @@ class Cmd:
                 cwd_added = True
 
         # Find all matching path completions
-        matches = glob.glob(search_str)
+        matches = glob.glob(glob.escape(search_str) + "*")
 
         # Filter out results that don't belong
         if path_filter is not None:

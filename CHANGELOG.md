@@ -1,3 +1,9 @@
+## Unreleased
+
+- Bug Fixes
+    - Fixed file path completion for names containing square brackets, including bracketed working
+      directories and home directories.
+
 ## 4.4.2 (November 11, 2026)
 
 - Security
