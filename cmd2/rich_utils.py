@@ -414,7 +414,7 @@ class Cmd2BaseConsole(Console):
         return self._config_key == self._build_config_key(file=file, **kwargs)
 
     def on_broken_pipe(self) -> None:
-        """Override which raises a BrokenPipeError instead of SystemExit.
+        """Override which raises a ConsoleBrokenPipeError instead of SystemExit.
 
         cmd2 handles the error if it escapes the command which was printing.
         """
