@@ -1,6 +1,8 @@
 ## 4.5.0 (TBD)
 
 - Bug Fixes
+    - Fixed file path completion for names containing square brackets, including bracketed working
+      directories and home directories.
     - Background output printed above an active reserved prompt through `run_in_terminal()` or
       `patch_stdout()` is preserved when the prompt redraws.
     - Reserved rendering preserves unfinished command output when the main prompt returns by
@@ -60,6 +62,18 @@
       every platform, including Windows where the default external pager (`more`) always wraps.
       Output which already fits on the screen is printed directly rather than paged. Set
       `self.use_builtin_pager = False` to keep using the external `pager`/`pager_chop` commands.
+
+## 4.4.2 (November 11, 2026)
+
+- Security
+    - Fixed shell command injection through file names in the `edit` command and `Cmd.run_editor()`.
+      A file name containing shell syntax such as `$(...)` or backticks was interpreted by the shell
+      instead of being passed to the editor as-is. On Windows, `run_editor()` now raises
+      `ValueError` for an editor or file path containing a double quote, which cannot be passed
+      safely to `cmd.exe`.
+    - The persistent history file is now readable and writable only by its owner (mode `0600` on
+      POSIX), since history can contain secrets typed as command arguments. The permissions of an
+      existing history file are tightened the next time history is saved.
 
 ## 4.4.1 (November 2, 2026)
 

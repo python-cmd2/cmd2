@@ -50,7 +50,7 @@ dev = [
     "pytest-xdist>=3.8",
     "ruff>=0.16.0",
     "textual-tty>=0.4.0 ; sys_platform != 'win32'",
-    "ty>=0.0.75",
+    "ty>=0.0.100",
     "zensical>=0.0.57",
 ]
 docs = [
@@ -72,7 +72,7 @@ test = [
 validate = [
     "ipython>=8.23",
     "mypy>=2.3.1",
-    "ty>=0.0.75",
+    "ty>=0.0.100",
     "types-setuptools>=80.8.0",
 ]
 
