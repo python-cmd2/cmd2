@@ -615,6 +615,59 @@ def test_path_completion_user_path_expansion(cmd_app) -> None:
     assert completions_tilde_slash == completions_home
 
 
+@pytest.mark.parametrize("prefix", ["[ab]", "[!ab]"])
+def test_path_completion_literal_brackets_in_filename(cmd_app, tmp_path, monkeypatch, prefix) -> None:
+    for name in ("[ab].txt", "[!ab].txt", "a.txt", "c.txt"):
+        (tmp_path / name).touch()
+    monkeypatch.chdir(tmp_path)
+    line = f"shell cat {prefix}"
+
+    completions = cmd_app.path_complete(prefix, line, len(line) - len(prefix), len(line))
+
+    assert completions.to_strings() == (prefix + ".txt",)
+
+
+@pytest.mark.parametrize("mode", ["absolute", "relative", "empty_cwd", "cwd_prefix", "tilde"])
+def test_path_completion_literal_brackets_in_directory(cmd_app, tmp_path, monkeypatch, mode) -> None:
+    directory = tmp_path / "project[2026]"
+    directory.mkdir()
+    (directory / "target.txt").touch()
+    monkeypatch.chdir(tmp_path)
+    if mode == "absolute":
+        text = str(directory / "tar")
+        expected = str(directory / "target.txt")
+    elif mode == "relative":
+        text = os.path.join(directory.name, "tar")
+        expected = os.path.join(directory.name, "target.txt")
+    elif mode == "tilde":
+        monkeypatch.setenv("USERPROFILE" if sys.platform == "win32" else "HOME", str(directory))
+        text = os.path.join("~", "tar")
+        expected = os.path.join("~", "target.txt")
+    else:
+        monkeypatch.chdir(directory)
+        text = "" if mode == "empty_cwd" else "tar"
+        expected = "target.txt"
+    line = f"shell cat {text}"
+
+    completions = cmd_app.path_complete(text, line, len(line) - len(text), len(line))
+
+    assert completions.to_strings() == (expected,)
+
+
+def test_path_completion_literal_brackets_directory_filter(cmd_app, tmp_path, monkeypatch) -> None:
+    (tmp_path / "[ab]-dir").mkdir()
+    (tmp_path / "a-dir").mkdir()
+    (tmp_path / "[ab]-file.txt").touch()
+    monkeypatch.chdir(tmp_path)
+    text = "[ab]"
+    line = f"shell cat {text}"
+
+    completions = cmd_app.path_complete(text, line, len(line) - len(text), len(line), path_filter=os.path.isdir)
+
+    assert completions.to_strings() == ("[ab]-dir" + os.path.sep,)
+    assert not completions.allow_finalization
+
+
 def test_basic_completion(cmd_app) -> None:
     text = "P"
     line = f"list_food -f {text}"

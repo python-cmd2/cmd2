@@ -1,6 +1,8 @@
 ## 4.4.3 (TBD)
 
 - Bug Fixes
+    - Fixed file path completion for names containing square brackets, including bracketed working
+      directories and home directories.
     - A command which prints through a `cmd2` console of its own, such as a `Cmd2GeneralConsole`
       showing a Rich progress bar, no longer ends with a `BrokenPipeError` message when its output
       is piped to something that exits early, as `head` does. `cmd2` now ends the command quietly
