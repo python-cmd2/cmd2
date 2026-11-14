@@ -2129,8 +2129,13 @@ class Cmd:
         or even a real-time clock.
 
         During command execution this callback runs in a background UI thread. Protect shared
-        state with a lock when necessary. The built-in pager shares this toolbar. It is suspended
+        state with a lock when necessary, but never hold that lock in a command while it prompts
+        for input, pages output, runs a shell command, or otherwise pauses the toolbar: pausing
+        waits for this callback to return. The built-in pager shares this toolbar. It is suspended
         while another prompt, external pager, or interactive shell owns the terminal.
+
+        If this callback raises an exception during a command, the error is reported once and the
+        command carries on without the toolbar.
 
         :return: Content to populate the bottom toolbar.
         """

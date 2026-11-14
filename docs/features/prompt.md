@@ -132,6 +132,18 @@ while the command prints output.
 During command execution, `get_bottom_toolbar()` runs in a background UI thread. Keep the callback
 fast and use a lock when reading state that a command or another thread modifies.
 
+!!! warning
+
+    A command must not hold a lock which `get_bottom_toolbar()` acquires while it calls anything
+    that pauses the toolbar: `read_input()`, `read_secret()`, `select()`, `ppaged()`, `do_shell()`,
+    `run_editor()`, an embedded Python shell, or `suspend_bottom_toolbar()`. To pause the toolbar,
+    `cmd2` waits for the refresh in progress to finish. A callback blocked on a lock the command is
+    holding never finishes, so the application hangs. Copy what you need while holding the lock,
+    release it, and then prompt or page.
+
+If `get_bottom_toolbar()` raises an exception while a command is running, `cmd2` reports the error
+once and the command carries on without the toolbar.
+
 !!! tip
 
     If you want to show more realtime status information than fits in a toolbar, you can run your

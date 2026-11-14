@@ -276,6 +276,11 @@ class CommandToolbar:
         self._ready.clear()
         self._error = None
         stack = self._display_stack = contextlib.ExitStack()
+        # Replace key_bindings only together with a layout whose focused window prompt-toolkit
+        # has not seen with other bindings. It caches the bindings it merges for each focused
+        # window, application bindings included, and does not notice this attribute being
+        # reassigned, so reusing a window with different bindings would keep the old ones.
+        # This layout, the main prompt's, and each pager's all have windows of their own.
         for name, value in (("layout", self._layout), ("key_bindings", self._bindings), ("erase_when_done", True)):
             stack.callback(setattr, self.app, name, getattr(self.app, name))
             setattr(self.app, name, value)
