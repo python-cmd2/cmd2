@@ -263,6 +263,31 @@ def test_command_toolbar_suspension_and_nested_input(toolbar_app) -> None:
         assert toolbar.app.is_running
 
 
+@pytest.mark.parametrize("launch", ["shell", "editor"])
+def test_command_toolbar_suspended_for_shell_and_editor(toolbar_app, launch) -> None:
+    """The shell command and the editor both hand the terminal to another program."""
+    app, _, _ = toolbar_app
+    app.editor = "vim"
+    running = []
+
+    def popen(*args, **kwargs):
+        running.append(app._command_toolbar.app.is_running)
+        return mock.Mock(returncode=0)
+
+    with (
+        mock.patch("subprocess.Popen", side_effect=popen),
+        mock.patch("cmd2.utils.ProcReader"),
+        app._command_toolbar_context(),
+    ):
+        if launch == "shell":
+            app.do_shell("ls")
+        else:
+            app.run_editor("notes.txt")
+        assert app._command_toolbar.app.is_running
+
+    assert running == [False]
+
+
 class CprOutput(RecordingOutput):
     """A terminal that asks for cursor position reports and never answers them."""
 
