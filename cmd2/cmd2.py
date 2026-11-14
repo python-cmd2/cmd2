@@ -5109,7 +5109,6 @@ class Cmd:
 
     # Preserve quotes since we are passing these strings to the shell
     @with_argparser(_build_shell_parser, preserve_quotes=True)
-    @command_toolbar.suspend_toolbar
     def do_shell(self, args: argparse.Namespace) -> None:
         """Execute a command as if at the OS prompt."""
         # Create a list of arguments to shell
@@ -5119,6 +5118,7 @@ class Cmd:
         utils.expand_user_in_tokens(tokens)
         self._run_shell_command(" ".join(tokens))
 
+    @command_toolbar.suspend_toolbar
     def _run_shell_command(self, command: str) -> None:
         """Run a command line in the OS shell and wait for it to finish.
 
