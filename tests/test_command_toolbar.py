@@ -320,6 +320,104 @@ def test_command_toolbar_suspended_for_shell_and_editor(toolbar_app, launch) -> 
     assert running == [False]
 
 
+class CursorOutput(RecordingOutput):
+    """Record moving the cursor up along with the text written."""
+
+    def cursor_up(self, amount: int) -> None:
+        self.stdout.write(f"<up {amount}>")
+
+
+@pytest.mark.parametrize(
+    ("writes", "expected"),
+    [
+        pytest.param(["one\n", "two\nthree\n"], "one\ntwo\nthree\n", id="finished lines are written as they are"),
+        pytest.param(
+            ["Working...", " finished\n"],
+            "Working...\r\n<up 1>Working... finished\n",
+            id="an unfinished line is ended for the toolbar and continued",
+        ),
+        pytest.param(
+            ["\rprogress 10%", "\rprogress 20%", "\n"],
+            "\rprogress 10%\r\n<up 1>\rprogress 10%\rprogress 20%\r\n<up 1>\rprogress 20%\n",
+            id="a redrawn progress line is continued from its last carriage return",
+        ),
+        pytest.param(
+            ["progress 10%\r", "progress 20%\r", "done\n"],
+            "progress 10%\r\r\n<up 1>\rprogress 20%\r\r\n<up 1>\rdone\n",
+            id="a line ending in a carriage return is still unfinished",
+        ),
+        pytest.param(["one\n\r", "two\n"], "one\n\rtwo\n", id="a carriage return on an empty row leaves nothing unfinished"),
+        pytest.param(
+            ["x" * 200, "END\n"],
+            "x" * 200 + "\r\n<up 3>" + "x" * 200 + "END\n",
+            id="a wrapped line is continued from the row it started on",
+        ),
+        pytest.param(
+            ["y" * 80, "Z\n"],
+            "y" * 80 + "\r\n<up 1>" + "y" * 80 + "Z\n",
+            id="a line as wide as the screen has not wrapped yet",
+        ),
+        pytest.param(
+            ["漢" * 41, "END\n"],
+            "漢" * 41 + "\r\n<up 2>" + "漢" * 41 + "END\n",
+            id="wide characters take two columns",
+        ),
+        pytest.param(
+            ["\x1b[31mred\x1b]8;;http://example.com\x07", " still\x1b[0m\n"],
+            "\x1b[31mred\x1b]8;;http://example.com\x07\r\n<up 1>\x1b[31mred\x1b]8;;http://example.com\x07 still\x1b[0m\n",
+            id="escape sequences take no room and are written again",
+        ),
+        pytest.param(
+            ["z" * (24 * 80 + 1), "END\n"],
+            "z" * (24 * 80 + 1) + "\r\nEND\n",
+            id="a line longer than the screen stays ended",
+        ),
+    ],
+)
+def test_stdout_proxy_continues_unfinished_lines(writes, expected) -> None:
+    """Output which stops in the middle of a line survives the toolbar being drawn below it."""
+    stream = Terminal()
+    with create_pipe_input() as pipe, create_app_session(input=pipe, output=CursorOutput(stream)):
+        proxy = command_toolbar._ContextStdoutProxy()
+        try:
+            # No application is running, so each write reaches the output before the next.
+            for text in writes:
+                proxy._write_and_flush(None, text)
+        finally:
+            proxy.close()
+
+    assert stream.getvalue() == expected
+
+
+@pytest.mark.parametrize("flushed", [True, False])
+def test_command_toolbar_keeps_an_unfinished_line(toolbar_app, flushed) -> None:
+    """An unfinished line is continued by later output, and ended when the toolbar stops."""
+    app, _, output = toolbar_app
+    terminal = CursorOutput(output)
+    app.main_session.app.output = terminal
+    with app._command_toolbar_context():
+        proxy = app._command_toolbar._proxy
+        app.stdout.write("Working...")
+        if flushed:
+            app.stdout.flush()
+            # Let the display print this much before any more is written.
+            deadline = time.monotonic() + 2
+            while "Working..." not in output.getvalue() and time.monotonic() < deadline:
+                time.sleep(0.01)
+        app.stdout.write(" finished\n")
+        app.stdout.write("last line")
+    assert proxy.closed
+
+    text = output.getvalue()
+    if flushed:
+        assert "Working...\r\n" in text
+        assert "<up 1>Working... finished\n" in text
+    else:
+        assert "Working... finished\n" in text
+    # The prompt which follows starts on a row of its own.
+    assert "last line\r\n" in text
+
+
 class CprOutput(RecordingOutput):
     """A terminal that asks for cursor position reports and never answers them."""
 

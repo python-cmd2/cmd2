@@ -182,6 +182,11 @@ terminal is in raw mode, so the kernel generates no signals from keystrokes. cmd
 to its own process group, which reaches a subprocess your command started and waits on, but `Ctrl-\`
 (`SIGQUIT`) does nothing, exactly as at the main prompt.
 
+Output which stops in the middle of a line, such as `Working...` or a progress line redrawn with
+carriage returns, stays on the screen and is continued by the output which follows it. A line still
+unfinished when the command ends, or when the toolbar is hidden for one of the operations above, is
+ended there, so whatever comes next starts on a new line.
+
 The command toolbar is used by the interactive command loop, including startup commands and scripts
 launched from that loop. It is disabled for non-interactive input. Calls to `onecmd_plus_hooks()`
 outside the command loop do not start a toolbar.

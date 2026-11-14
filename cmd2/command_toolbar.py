@@ -6,6 +6,7 @@ import contextlib
 import contextvars
 import functools
 import os
+import re
 import signal
 import sys
 import threading
@@ -24,12 +25,16 @@ from prompt_toolkit.key_binding.key_processor import KeyPress, KeyPressEvent
 from prompt_toolkit.layout import HSplit, Layout, Window
 from prompt_toolkit.layout.containers import ConditionalContainer
 from prompt_toolkit.patch_stdout import StdoutProxy
-from prompt_toolkit.utils import suspend_to_background_supported
+from prompt_toolkit.utils import get_cwidth, suspend_to_background_supported
 
 from .pager import Pager, output_fits
 
 if TYPE_CHECKING:
     from .cmd2 import Cmd
+
+# Control sequences, operating system commands, and two-character escapes: text which takes
+# no room on the screen.
+_ESCAPE_RE = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\)|[@-Z\\-_])")
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 _R = TypeVar("_R")
@@ -91,13 +96,82 @@ def pipe_target(stream: Any) -> Any:
 
 
 class _ContextStdoutProxy(StdoutProxy):
-    """Keep stdout's flush worker in the toolbar's isolated application session."""
+    """Print above the toolbar from its isolated application session, keeping unfinished lines.
+
+    prompt-toolkit draws the toolbar starting at the cursor, and erases it from the first
+    column of that row before printing anything more. Output which stopped in the middle of
+    a line, such as ``Working...`` or a progress line ending in a carriage return, would be
+    erased with it. So a line left unfinished is ended on the screen, which gives the toolbar
+    a row of its own, and it is continued from where it stopped when more output arrives.
+    """
+
+    def __init__(self) -> None:
+        # The line which output last left unfinished, exactly as written. Set before the
+        # base class starts the thread which reads it.
+        self._unfinished = ""
+        # The worker already combines queued writes. A batching sleep would also delay
+        # close(), which runs at each command finalization boundary.
+        super().__init__(raw=True, sleep_between_writes=0)
 
     def _start_write_thread(self) -> threading.Thread:
         context = contextvars.copy_context()
         thread = threading.Thread(target=context.run, args=(self._write_thread,), daemon=True)
         thread.start()
         return thread
+
+    def _write_and_flush(self, loop: asyncio.AbstractEventLoop | None, text: str) -> None:
+        """Write text above the toolbar as the base class does, continuing an unfinished line."""
+
+        def write_and_flush() -> None:
+            output = self._output
+            # See the base class: Windows resets autowrap at each flush.
+            output.enable_autowrap()
+            if self._unfinished:
+                # The cursor is at the start of the row below the unfinished line. Go back
+                # to the row its last carriage return left it on, and write the rest of
+                # it again to put the cursor, and any style it set, where they were.
+                output.cursor_up(self._rows(self._unfinished))
+                output.write_raw(self._unfinished)
+            output.write_raw(text)
+            line = self._last_line(self._unfinished + text)
+            if line:
+                output.write_raw("\r\n")
+            size = output.get_size()
+            # A line whose start has scrolled off the screen can't be found again, so it
+            # stays ended where it is.
+            self._unfinished = line if self._width(line) <= size.rows * size.columns else ""
+            output.flush()
+
+        if loop is None:
+            write_and_flush()
+        else:
+            loop.call_soon_threadsafe(lambda: run_in_terminal(write_and_flush, in_executor=False))
+
+    @staticmethod
+    def _last_line(text: str) -> str:
+        """Return what must be written again to continue the line which text leaves unfinished.
+
+        :param text: everything written since the last finished line
+        :return: the unfinished line from its last carriage return, or "" if the last line is
+            finished
+        """
+        line = text.rpartition("\n")[2]
+        if not line.strip("\r"):
+            # Nothing has been written on this row, wherever the cursor returned to.
+            return ""
+        # A carriage return went back to the start of the row the cursor is on, so nothing
+        # before it is needed to find that place again. Dropping it also keeps a progress
+        # line which is redrawn thousands of times from growing without bound.
+        return line[max(0, line.rfind("\r")) :]
+
+    def _rows(self, line: str) -> int:
+        """Return how many rows below its start the cursor was left after line was ended."""
+        columns = max(1, self._output.get_size().columns)
+        return max(1, -(-self._width(line) // columns))
+
+    @staticmethod
+    def _width(line: str) -> int:
+        return get_cwidth(_ESCAPE_RE.sub("", line))
 
 
 class ToolbarStream:
@@ -305,9 +379,7 @@ class CommandToolbar:
         self._ready.wait()
         if self._error is not None:
             raise self._error
-        # The worker already combines queued writes. A batching sleep would also
-        # delay close(), which runs at each command finalization boundary.
-        proxy = _ContextStdoutProxy(raw=True, sleep_between_writes=0)
+        proxy = _ContextStdoutProxy()
         with self._lock:
             self._proxy = proxy
             for stream in self._streams:

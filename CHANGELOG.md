@@ -6,7 +6,8 @@
 
 - Enhancements
     - `enable_bottom_toolbar=True` now keeps the toolbar visible and refreshing during command
-      execution
+      execution. Command output appears above it. A line of output left unfinished when a command
+      ends is ended there, so the next prompt starts on a new line while the toolbar is enabled.
     - `Cmd.read_input()` and `Cmd.read_secret()` now keep the bottom toolbar visible while they wait
       for input, refreshing at the same `refresh_interval` as the main prompt, instead of the
       toolbar disappearing for the duration of the nested prompt. `Cmd.select()` is unchanged, since
