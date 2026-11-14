@@ -427,7 +427,7 @@ def get_exes_in_path(starts_with: str) -> list[str]:
     # Find every executable file in the user's path that matches the pattern
     for path in paths:
         full_path = os.path.join(path, starts_with)
-        matches = files_from_glob_pattern(full_path + "*", access=os.X_OK)
+        matches = files_from_glob_pattern(glob.escape(full_path) + "*", access=os.X_OK)
 
         for match in matches:
             exes_set.add(os.path.basename(match))

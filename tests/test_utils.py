@@ -1981,3 +1981,29 @@ def test_proc_reader_relays_producer_stop(resolved, foreground_group) -> None:
         foreground.assert_called_once_with(10, pipeline._original_group)
     else:
         foreground.assert_not_called()
+
+
+@pytest.mark.parametrize("prefix", ["[ab]", "[!ab]"])
+def test_get_exes_in_path_literal_brackets_in_name(tmp_path, monkeypatch, prefix: str) -> None:
+    for name in ("[ab]-tool", "[!ab]-tool", "a-tool", "c-tool"):
+        exe = tmp_path / name
+        exe.touch()
+        exe.chmod(0o755)
+    monkeypatch.setenv("PATH", str(tmp_path))
+
+    assert cu.get_exes_in_path(prefix) == [f"{prefix}-tool"]
+
+
+def test_get_exes_in_path_literal_brackets_in_directory(tmp_path, monkeypatch) -> None:
+    bin_dir = tmp_path / "bin[2026]"
+    bin_dir.mkdir()
+    for name in ("mytool", "other"):
+        exe = bin_dir / name
+        exe.touch()
+        exe.chmod(0o755)
+    monkeypatch.setenv("PATH", str(bin_dir))
+
+    assert sorted(cu.get_exes_in_path("")) == ["mytool", "other"]
+    assert cu.get_exes_in_path("my") == ["mytool"]
+    assert cu.get_exes_in_path("my*") == []
+    assert cu.get_exes_in_path("my?") == []

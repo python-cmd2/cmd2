@@ -2364,7 +2364,7 @@ class Cmd:
         if endidx == len(line) or (endidx < len(line) and line[endidx] != os.path.sep):
             add_trailing_sep_if_dir = True
 
-        # Used to replace cwd in the final results
+        # Used to replace CWD in the final results
         cwd = os.getcwd()
         cwd_added = False
 
@@ -2372,7 +2372,7 @@ class Cmd:
         orig_tilde_path = ""
         expanded_tilde_path = ""
 
-        # If the search text is blank, then search in the CWD for *
+        # If the search text is blank, then complete all entries in the CWD
         if not text:
             search_str = os.path.join(os.getcwd(), "")
             cwd_added = True
@@ -2401,7 +2401,7 @@ class Cmd:
                 orig_tilde_path = text[:sep_index]
                 expanded_tilde_path = os.path.expanduser(orig_tilde_path)
 
-            # If the search text does not have a directory, then use the cwd
+            # If the search text does not have a directory, then use the CWD
             elif not os.path.dirname(text):
                 search_str = os.path.join(os.getcwd(), search_str)
                 cwd_added = True
@@ -2430,7 +2430,7 @@ class Cmd:
                 matches[index] += os.path.sep
                 display_matches[index] += os.path.sep
 
-        # Remove cwd if it was added to match the text prompt-toolkit expects
+        # Remove CWD if it was added to match the text prompt-toolkit expects
         if cwd_added:
             to_replace = cwd if cwd == os.path.sep else cwd + os.path.sep
             matches = [cur_path.replace(to_replace, "", 1) for cur_path in matches]
@@ -2466,7 +2466,7 @@ class Cmd:
         if not complete_blank and not text:
             return Completions()
 
-        # If there are no path characters in the search text, then do shell command completion in the user's path
+        # If the search text is a bare command name (no '~' or path separator), complete executables from PATH
         if not text.startswith("~") and os.path.sep not in text:
             items = [CompletionItem(exe) for exe in utils.get_exes_in_path(text)]
             return Completions(items=items)
