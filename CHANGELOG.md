@@ -3,6 +3,11 @@
 - Bug Fixes
     - Fixed file path completion for names containing square brackets, including bracketed working
       directories and home directories.
+    - The built-in pager (used by `Cmd.ppaged()`) now appears at once in reserved toolbar mode. Its
+      first page had waited for the next toolbar refresh, and without a `refresh_interval` did not
+      appear until a key was pressed.
+    - A line of command output left unfinished before `Cmd.ppaged()` opens the built-in pager is no
+      longer deleted in reserved toolbar mode.
     - Background output printed above an active reserved prompt through `run_in_terminal()` or
       `patch_stdout()` is preserved when the prompt redraws.
     - Reserved rendering preserves unfinished command output when the main prompt returns by
@@ -56,8 +61,12 @@
       is enabled.
     - `Cmd.read_input()` and `Cmd.read_secret()` now keep the bottom toolbar visible while they wait
       for input, refreshing at the same `refresh_interval` as the main prompt, instead of the
-      toolbar disappearing for the duration of the nested prompt. `Cmd.select()` is unchanged, since
-      prompt-toolkit's `choice()` offers no way to configure a refresh interval
+      toolbar disappearing for the duration of the nested prompt. With reserved rendering they keep
+      the reserved rows, and so does `Cmd.select()`. With legacy rendering `Cmd.select()` is
+      unchanged, since prompt-toolkit's `choice()` offers no way to configure a refresh interval
+    - With reserved rendering, Ctrl-Z gives the reserved rows back to the shell before the process
+      stops and takes them again when it resumes, and the built-in pager keeps the toolbar visible
+      while it prepares a large first page.
     - Added an embedded pager which `Cmd.ppaged()` uses while the bottom toolbar is running, so the
       toolbar stays visible and refreshing instead of the terminal being handed to an external
       pager. It supports vertical and horizontal scrolling, incremental search, and chopped lines on
