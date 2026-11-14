@@ -665,6 +665,95 @@ def test_command_toolbar_failure_after_startup_is_reported(toolbar_app, capsys) 
     assert "after failure\n" in output.getvalue()
 
 
+def test_command_toolbar_stops_once_after_a_callback_error(toolbar_app, capsys) -> None:
+    """An error from the toolbar callback ends the display instead of being logged at every redraw."""
+    app, _, output = toolbar_app
+    broken = threading.Event()
+    failures = []
+
+    def toolbar():
+        if broken.is_set():
+            failures.append(None)
+            raise ValueError("broken toolbar")
+        return "STATUS"
+
+    app.main_session.bottom_toolbar = toolbar
+    with app._command_toolbar_context():
+        display = app._command_toolbar
+        thread = display._thread
+        broken.set()
+        thread.join(timeout=2)
+        assert not thread.is_alive()
+
+        # Output must still reach the terminal rather than a proxy nothing is draining.
+        assert all(stream.proxy is None for stream in display._streams)
+        app.poutput("after failure")
+
+        # A display which failed is not restarted, so a later pause neither calls the
+        # callback again nor repeats the report.
+        seen = len(failures)
+        with app.suspend_bottom_toolbar():
+            pass
+        assert display._thread is None
+        assert not display.is_active
+        assert len(failures) == seen
+
+    err = capsys.readouterr().err
+    assert err.count("Bottom toolbar stopped after an error") == 1
+    assert "broken toolbar" in err
+    assert "Traceback" not in err
+    assert "after failure\n" in output.getvalue()
+    assert app.main_session.app.layout is app.main_session.layout
+
+    # The next command starts a display of its own.
+    broken.clear()
+    with app._command_toolbar_context():
+        assert app._command_toolbar.is_active
+
+
+def test_command_toolbar_reports_a_loop_error_without_an_exception(toolbar_app, capsys) -> None:
+    app, _, _ = toolbar_app
+    with app._command_toolbar_context():
+        display = app._command_toolbar
+        thread = display._thread
+        loop = display.app.loop
+        loop.call_soon_threadsafe(loop.call_exception_handler, {"message": "loop misbehaved"})
+        thread.join(timeout=2)
+        assert not thread.is_alive()
+
+    assert "loop misbehaved" in capsys.readouterr().err
+
+
+def test_command_toolbar_failing_to_resume_does_not_fail_the_command(toolbar_app, capsys) -> None:
+    """A display which cannot come back after a pause is reported, not raised into the command."""
+    app, _, output = toolbar_app
+    broken = threading.Event()
+
+    def toolbar():
+        if broken.is_set():
+            raise ValueError("broken toolbar")
+        return "STATUS"
+
+    app.main_session.bottom_toolbar = toolbar
+    with app._command_toolbar_context():
+        display = app._command_toolbar
+        with app.suspend_bottom_toolbar():
+            broken.set()
+        assert not display.is_active
+        app.poutput("after failure")
+
+        # Command finalization pauses the display as well, at the end of every command.
+        assert app._run_cmdfinalization_hooks(False, None) is False
+
+    err = capsys.readouterr().err
+    assert err.count("Bottom toolbar stopped after an error") == 1
+    assert "broken toolbar" in err
+    assert "after failure\n" in output.getvalue()
+    assert app.main_session.app.layout is app.main_session.layout
+    assert app.stdout is output
+    assert app._command_toolbar is None
+
+
 def test_command_toolbar_input_eof_is_not_reported(toolbar_app, capsys) -> None:
     app, pipe, output = toolbar_app
 

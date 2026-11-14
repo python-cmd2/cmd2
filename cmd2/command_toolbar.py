@@ -1,5 +1,6 @@
 """Internal support for displaying a toolbar during synchronous commands."""
 
+import asyncio
 import codecs
 import contextlib
 import contextvars
@@ -169,6 +170,9 @@ class CommandToolbar:
         self._proxy: StdoutProxy | None = None
         self._lock = threading.RLock()
         self._pausing = False
+        # Set once the display has stopped after an error. It is reported once and not
+        # restarted, so a callback which keeps failing cannot repeat that at every pause.
+        self._failed = False
 
         session = cmd.main_session
         self.app = session.app
@@ -267,6 +271,8 @@ class CommandToolbar:
             setattr(obj, name, stream.original)
 
     def _resume(self) -> None:
+        if self._failed:
+            return
         self._ready.clear()
         self._error = None
         stack = self._display_stack = contextlib.ExitStack()
@@ -279,7 +285,7 @@ class CommandToolbar:
 
         def run() -> None:
             try:
-                self.app.run(handle_sigint=False, set_exception_handler=False)
+                self.app.run(pre_run=self._handle_loop_errors, handle_sigint=False, set_exception_handler=False)
             except EOFError:
                 pass
             except BaseException as exc:  # noqa: BLE001
@@ -301,6 +307,27 @@ class CommandToolbar:
             self._proxy = proxy
             for stream in self._streams:
                 stream.proxy = proxy
+
+    def _handle_loop_errors(self) -> None:
+        """Stop the display on the first unhandled error in its event loop.
+
+        prompt-toolkit's own handler prints the traceback and waits for Enter, which would
+        hold up a command that is still running. With no handler at all, asyncio logs each
+        error to stderr. That write goes through the stdout proxy, whose redraw of the
+        toolbar calls a failing ``get_bottom_toolbar()`` again, so a single faulty callback
+        buries the command's output in tracebacks for as long as the command runs.
+        """
+        asyncio.get_running_loop().set_exception_handler(self._loop_error)
+
+    def _loop_error(self, loop: asyncio.AbstractEventLoop, context: dict[str, Any]) -> None:  # noqa: ARG002
+        """Record the first error for the command thread and end the display.
+
+        ``_resume()`` raises it if the display has not finished starting. After that,
+        ``_app_exited()`` reports it once.
+        """
+        if self._error is None:
+            self._error = context.get("exception") or RuntimeError(context.get("message", "unknown error"))
+        self._exit()
 
     def _app_exited(self) -> None:
         """Give the terminal back to the streams when the display stops on its own.
@@ -324,7 +351,13 @@ class CommandToolbar:
         # A proxy exists only once _resume() has handed startup failures to the command
         # thread, so reporting here does not duplicate the exception it raises.
         if started and self._error is not None:
-            self.cmd.perror(f"Bottom toolbar stopped after an error: {self._error!r}")
+            self._report_failure(self._error)
+
+    def _report_failure(self, error: BaseException) -> None:
+        """Say once that the command carries on without its toolbar."""
+        if not self._failed:
+            self._failed = True
+            self.cmd.perror(f"Bottom toolbar stopped after an error: {error!r}")
 
     def _exit(self) -> None:
         """Stop the display unless it has already stopped on its own.
@@ -505,4 +538,11 @@ class CommandToolbar:
             yield
         finally:
             with self.cmd.sigint_protection:
-                self._resume()
+                try:
+                    self._resume()
+                except Exception as exc:  # noqa: BLE001
+                    # The toolbar is cosmetic. A display that cannot come back must not fail
+                    # the command which paused it, nor escape cmdloop() from command
+                    # finalization. The command carries on without one, and stop() still
+                    # returns the borrowed application to the main prompt.
+                    self._report_failure(exc)
