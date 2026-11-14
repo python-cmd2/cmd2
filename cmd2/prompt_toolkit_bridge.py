@@ -44,6 +44,11 @@ if TYPE_CHECKING:  # pragma: no cover
     from .terminal_display import TerminalDisplay
 
 
+#: How many frames in a row may fail to prepare and still be retried at once. One is
+#: expected: a full-screen layout's first frame enters the alternate screen, which cannot be
+#: recorded in a frame.
+_MAX_PREPARATION_RETRIES = 2
+
 #: Trailing control that moves nothing the user can see: carriage returns, CSI sequences such
 #: as an SGR reset, and OSC sequences such as a window title. Stripped before deciding whether
 #: output ended on a fresh line, so a reset emitted after the newline does not count as text
@@ -133,6 +138,9 @@ class PromptToolkitBridge:
         self._reserved_emission_stopped = False
         self._redraw_pending = False
         self._redraw_scheduler: Callable[[], None] | None = None
+        # Frames in a row whose preparation raised. A layout which raises every time is
+        # retried only so often; see _retry_frame().
+        self._failed_preparations = 0
         self._pending_error: BaseException | None = None
         self._prompt_anchor: int | None = None
         self._resynchronization_reason: str | None = None
@@ -429,6 +437,26 @@ class PromptToolkitBridge:
         if self._redraw_scheduler is not None:
             self._redraw_scheduler()
 
+    def _retry_frame(self) -> None:
+        """Ask for another frame from inside one which emitted nothing.
+
+        Not through ``_request_redraw()``. A request made before this frame began is still
+        marked pending, because only a committed frame clears it and the command display's
+        suppressed frames never commit. The scheduling which went with that request is what
+        ran this frame, so a retry coalesced into it would never be scheduled at all: the
+        built-in pager's first frame, which cannot be prepared because it enters the
+        alternate screen, would not be followed by a second until a key or a refresh timer
+        caused one.
+
+        A frame whose preparation keeps raising is retried only a few times. Its layout is
+        broken until something changes, and whatever changes it causes a frame of its own.
+        """
+        if self._failed_preparations > _MAX_PREPARATION_RETRIES:
+            return
+        self._redraw_pending = True
+        if self._redraw_scheduler is not None:
+            self._redraw_scheduler()
+
     def _retire(self) -> None:
         """Drop the in-flight frame and the baseline it would have become."""
         self._in_flight = None
@@ -577,10 +605,10 @@ class PromptToolkitBridge:
 
         prepared = self.prepare(app, layout, is_done=is_done)
         if prepared is None:
-            self._request_redraw()
+            self._retry_frame()
             return
         if not self.commit(prepared):
-            self._request_redraw()
+            self._retry_frame()
             return
         self._last_emission_committed = True
         if self._frame_committed_handler is not None:
@@ -772,11 +800,13 @@ class PromptToolkitBridge:
             render(app, app.layout if layout is None else layout, is_done)
         except Exception as error:  # noqa: BLE001 - a layout callback must not end a command
             self._pending_error = error
+            self._failed_preparations += 1
             self.require_resynchronization("preparing the frame raised")
             return None
         finally:
             self._renderer.output = original
             self._preparing = False
+        self._failed_preparations = 0
 
         with self._lock.transaction("publish"):
             # Checking and publishing are one step. Apart, they are two, and a writer that

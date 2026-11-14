@@ -1253,6 +1253,59 @@ class TestRenderInterception:
         assert harness.stream_recorder.getvalue() == ""
         assert redraws
 
+    def test_a_frame_which_fails_after_command_output_asks_for_another(self) -> None:
+        """A redraw requested before a frame began must not swallow the retry that frame needs.
+
+        Command output requests a redraw which stays pending until a frame commits, and the
+        command display's frames never do. The pager's first frame cannot be prepared -- it
+        enters the alternate screen -- and relies on being asked for again. Dropped as a
+        duplicate of the request already pending, the retry never came and the pager stayed
+        blank until a key or a refresh timer caused another frame.
+        """
+        redraws: list[int] = []
+        failures = [1]
+
+        def content() -> str:
+            if failures[0]:
+                failures[0] -= 1
+                raise RuntimeError("cannot be prepared this time")
+            return "hello"
+
+        harness = self.bound(content=content)
+        harness.bridge.set_redraw_scheduler(lambda: redraws.append(1))
+        harness.bridge.note_managed_write()
+        assert redraws == [1]
+        assert harness.bridge.redraw_pending is True
+
+        # The scheduled redraw runs, and fails to prepare its frame.
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+        assert harness.stream_recorder.getvalue() == ""
+        assert redraws == [1, 1]
+        harness.bridge.unbind()
+
+    def test_a_frame_which_keeps_failing_is_not_retried_without_end(self) -> None:
+        """A layout callback which always raises must not turn into a redraw loop."""
+        redraws: list[int] = []
+
+        def content() -> str:
+            raise RuntimeError("never renders")
+
+        harness = self.bound(content=content)
+
+        def redraw() -> None:
+            # Serve each request at once, as the event loop would.
+            redraws.append(1)
+            if len(redraws) < 50:
+                harness.resynchronize()
+                harness.renderer.render(harness.app, harness.app.layout)
+
+        harness.bridge.set_redraw_scheduler(redraw)
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+        assert 1 <= len(redraws) <= 3
+        harness.bridge.unbind()
+
     def test_binding_twice_keeps_the_first_interception(self) -> None:
         """A second bind would save the wrapper as the original and never unwind."""
         harness = self.bound()
