@@ -68,7 +68,9 @@ def test_pager_long_line_navigation_resize_and_typeahead(toolbar_app, chop) -> N
         # Check the rendered frame, not the stream of incremental terminal
         # writes, to verify both toolbar rows survive navigation and resizing.
         screen = ui.renderer._last_screen
-        size = ui.output.get_size()
+        # Use the size this frame was drawn at. The terminal may have been resized since,
+        # and an error raised here stops the display.
+        size = ui.renderer._last_size
         bottom = "".join(screen.data_buffer[size.rows - 1][x].char for x in range(size.columns))
         assert bottom.startswith("STATUS TWO")
         entered.set()

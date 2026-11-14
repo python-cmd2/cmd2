@@ -225,6 +225,51 @@ def test_command_toolbar_ctrl_z(toolbar_app, supported, enabled) -> None:
     assert [key.key for key in keys] == ([] if supported and enabled else [Keys.ControlZ])
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX job control")
+@pytest.mark.parametrize("stopped", [True, False])
+def test_suspend_process_group_waits_for_the_stop_to_take_its_thread(stopped) -> None:
+    """The sender sleeps until the stop reaches it, or gives up once nothing has happened.
+
+    A stop shows as time passing while asleep, so a clock that jumps across the first sleep
+    stands in for a job that was stopped and then resumed. A signal that was ignored, or
+    discarded for an orphaned group, lets the clock advance only by what was slept.
+    """
+    import signal
+
+    clock = [100.0]
+    sleeps = []
+
+    def sleep(seconds):
+        sleeps.append(seconds)
+        clock[0] += 5.0 if stopped and len(sleeps) == 1 else seconds
+
+    with (
+        mock.patch("cmd2.command_toolbar.time", SimpleNamespace(monotonic=lambda: clock[0], sleep=sleep)),
+        mock.patch("cmd2.command_toolbar.os.kill") as kill,
+    ):
+        command_toolbar.suspend_process_group()
+    kill.assert_called_once_with(0, signal.SIGTSTP)
+    if stopped:
+        assert sleeps == [0.01]
+    else:
+        assert len(sleeps) > 1
+        assert clock[0] >= 100.25 - 1e-6
+
+
+def test_command_toolbar_suspends_through_its_own_stop(toolbar_app) -> None:
+    """Ctrl-Z during a command stops the process with the helper which holds the display's thread."""
+    app, _, _ = toolbar_app
+    with app._command_toolbar_context():
+        toolbar = app._command_toolbar
+        assert vars(toolbar.app)["suspend_to_background"] == toolbar._suspend_to_background
+        with mock.patch("cmd2.command_toolbar.run_in_terminal") as run_in_terminal:
+            toolbar.app.suspend_to_background(suspend_group=False)
+
+    (stop,) = run_in_terminal.call_args.args
+    assert stop.func is command_toolbar.suspend_process_group
+    assert stop.args == (False,)
+
+
 def test_command_toolbar_script_output_has_no_batching_delay(toolbar_app) -> None:
     app, _, output = toolbar_app
     sleep = mock.Mock()
@@ -286,6 +331,104 @@ def test_command_toolbar_suspended_for_shell_and_editor(toolbar_app, launch) -> 
         assert app._command_toolbar.app.is_running
 
     assert running == [False]
+
+
+class CursorOutput(RecordingOutput):
+    """Record moving the cursor up along with the text written."""
+
+    def cursor_up(self, amount: int) -> None:
+        self.stdout.write(f"<up {amount}>")
+
+
+@pytest.mark.parametrize(
+    ("writes", "expected"),
+    [
+        pytest.param(["one\n", "two\nthree\n"], "one\ntwo\nthree\n", id="finished lines are written as they are"),
+        pytest.param(
+            ["Working...", " finished\n"],
+            "Working...\r\n<up 1>Working... finished\n",
+            id="an unfinished line is ended for the toolbar and continued",
+        ),
+        pytest.param(
+            ["\rprogress 10%", "\rprogress 20%", "\n"],
+            "\rprogress 10%\r\n<up 1>\rprogress 10%\rprogress 20%\r\n<up 1>\rprogress 20%\n",
+            id="a redrawn progress line is continued from its last carriage return",
+        ),
+        pytest.param(
+            ["progress 10%\r", "progress 20%\r", "done\n"],
+            "progress 10%\r\r\n<up 1>\rprogress 20%\r\r\n<up 1>\rdone\n",
+            id="a line ending in a carriage return is still unfinished",
+        ),
+        pytest.param(["one\n\r", "two\n"], "one\n\rtwo\n", id="a carriage return on an empty row leaves nothing unfinished"),
+        pytest.param(
+            ["x" * 200, "END\n"],
+            "x" * 200 + "\r\n<up 3>" + "x" * 200 + "END\n",
+            id="a wrapped line is continued from the row it started on",
+        ),
+        pytest.param(
+            ["y" * 80, "Z\n"],
+            "y" * 80 + "\r\n<up 1>" + "y" * 80 + "Z\n",
+            id="a line as wide as the screen has not wrapped yet",
+        ),
+        pytest.param(
+            ["漢" * 41, "END\n"],
+            "漢" * 41 + "\r\n<up 2>" + "漢" * 41 + "END\n",
+            id="wide characters take two columns",
+        ),
+        pytest.param(
+            ["\x1b[31mred\x1b]8;;http://example.com\x07", " still\x1b[0m\n"],
+            "\x1b[31mred\x1b]8;;http://example.com\x07\r\n<up 1>\x1b[31mred\x1b]8;;http://example.com\x07 still\x1b[0m\n",
+            id="escape sequences take no room and are written again",
+        ),
+        pytest.param(
+            ["z" * (24 * 80 + 1), "END\n"],
+            "z" * (24 * 80 + 1) + "\r\nEND\n",
+            id="a line longer than the screen stays ended",
+        ),
+    ],
+)
+def test_stdout_proxy_continues_unfinished_lines(writes, expected) -> None:
+    """Output which stops in the middle of a line survives the toolbar being drawn below it."""
+    stream = Terminal()
+    with create_pipe_input() as pipe, create_app_session(input=pipe, output=CursorOutput(stream)):
+        proxy = command_toolbar._ContextStdoutProxy()
+        try:
+            # No application is running, so each write reaches the output before the next.
+            for text in writes:
+                proxy._write_and_flush(None, text)
+        finally:
+            proxy.close()
+
+    assert stream.getvalue() == expected
+
+
+@pytest.mark.parametrize("flushed", [True, False])
+def test_command_toolbar_keeps_an_unfinished_line(toolbar_app, flushed) -> None:
+    """An unfinished line is continued by later output, and ended when the toolbar stops."""
+    app, _, output = toolbar_app
+    terminal = CursorOutput(output)
+    app.main_session.app.output = terminal
+    with app._command_toolbar_context():
+        proxy = app._command_toolbar._proxy
+        app.stdout.write("Working...")
+        if flushed:
+            app.stdout.flush()
+            # Let the display print this much before any more is written.
+            deadline = time.monotonic() + 2
+            while "Working..." not in output.getvalue() and time.monotonic() < deadline:
+                time.sleep(0.01)
+        app.stdout.write(" finished\n")
+        app.stdout.write("last line")
+    assert proxy.closed
+
+    text = output.getvalue()
+    if flushed:
+        assert "Working...\r\n" in text
+        assert "<up 1>Working... finished\n" in text
+    else:
+        assert "Working... finished\n" in text
+    # The prompt which follows starts on a row of its own.
+    assert "last line\r\n" in text
 
 
 class CprOutput(RecordingOutput):
@@ -684,6 +827,120 @@ def test_command_toolbar_failure_after_startup_is_reported(toolbar_app, capsys) 
 
     assert "broken display" in capsys.readouterr().err
     assert "after failure\n" in output.getvalue()
+
+
+def test_command_toolbar_stops_once_after_a_callback_error(toolbar_app, capsys) -> None:
+    """An error from the toolbar callback ends the display instead of being logged at every redraw."""
+    app, _, output = toolbar_app
+    broken = threading.Event()
+    failures = []
+
+    def toolbar():
+        if broken.is_set():
+            failures.append(None)
+            raise ValueError("broken toolbar")
+        return "STATUS"
+
+    app.main_session.bottom_toolbar = toolbar
+    with app._command_toolbar_context():
+        display = app._command_toolbar
+        thread = display._thread
+        broken.set()
+        thread.join(timeout=2)
+        assert not thread.is_alive()
+
+        # Output must still reach the terminal rather than a proxy nothing is draining.
+        assert all(stream.proxy is None for stream in display._streams)
+        app.poutput("after failure")
+
+        # A display which failed is not restarted, so a later pause neither calls the
+        # callback again nor repeats the report.
+        seen = len(failures)
+        with app.suspend_bottom_toolbar():
+            pass
+        assert display._thread is None
+        assert not display.is_active
+        assert len(failures) == seen
+
+    err = capsys.readouterr().err
+    assert err.count("Bottom toolbar stopped after an error") == 1
+    assert "broken toolbar" in err
+    assert "Traceback" not in err
+    assert "after failure\n" in output.getvalue()
+    assert app.main_session.app.layout is app.main_session.layout
+
+    # The next command starts a display of its own.
+    broken.clear()
+    with app._command_toolbar_context():
+        assert app._command_toolbar.is_active
+
+
+def test_command_toolbar_reports_the_error_which_stopped_it(toolbar_app, capsys) -> None:
+    """Stopping draws a last frame. A failure there must not replace the error which caused the stop."""
+    app, _, _ = toolbar_app
+    frames = []
+
+    def fail(ui):
+        frames.append(None)
+        raise ValueError(f"error {len(frames)}")
+
+    with app._command_toolbar_context():
+        display = app._command_toolbar
+        thread = display._thread
+        display.app.after_render += fail
+        try:
+            thread.join(timeout=2)
+            assert not thread.is_alive()
+        finally:
+            display.app.after_render -= fail
+
+    err = capsys.readouterr().err
+    assert len(frames) == 2
+    assert "ValueError('error 1')" in err
+    assert "error 2" not in err
+
+
+def test_command_toolbar_reports_a_loop_error_without_an_exception(toolbar_app, capsys) -> None:
+    app, _, _ = toolbar_app
+    with app._command_toolbar_context():
+        display = app._command_toolbar
+        thread = display._thread
+        loop = display.app.loop
+        loop.call_soon_threadsafe(loop.call_exception_handler, {"message": "loop misbehaved"})
+        thread.join(timeout=2)
+        assert not thread.is_alive()
+
+    assert "loop misbehaved" in capsys.readouterr().err
+
+
+def test_command_toolbar_failing_to_resume_does_not_fail_the_command(toolbar_app, capsys) -> None:
+    """A display which cannot come back after a pause is reported, not raised into the command."""
+    app, _, output = toolbar_app
+    broken = threading.Event()
+
+    def toolbar():
+        if broken.is_set():
+            raise ValueError("broken toolbar")
+        return "STATUS"
+
+    app.main_session.bottom_toolbar = toolbar
+    with app._command_toolbar_context():
+        display = app._command_toolbar
+        with app.suspend_bottom_toolbar():
+            broken.set()
+        assert not display.is_active
+        app.poutput("after failure")
+
+        # Command finalization pauses the display as well, at the end of every command.
+        assert app._run_cmdfinalization_hooks(False, None) is False
+
+    err = capsys.readouterr().err
+    assert err.count("Bottom toolbar stopped after an error") == 1
+    assert "broken toolbar" in err
+    assert "after failure\n" in output.getvalue()
+    assert app.main_session.app.layout is app.main_session.layout
+    assert app.stdout is output
+    assert app._command_toolbar is None
 
 
 def test_command_toolbar_input_eof_is_not_reported(toolbar_app, capsys) -> None:
