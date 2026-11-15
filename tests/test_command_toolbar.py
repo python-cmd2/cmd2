@@ -372,6 +372,16 @@ class CursorOutput(RecordingOutput):
             "z" * (24 * 80 + 1) + "\r\nEND\n",
             id="a line longer than the screen stays ended",
         ),
+        pytest.param(
+            ["z" * (23 * 80 + 1), "END\n"],
+            "z" * (23 * 80 + 1) + "\r\nEND\n",
+            id="a line which reaches the last row stays ended",
+        ),
+        pytest.param(
+            ["z" * (23 * 80), "END\n"],
+            "z" * (23 * 80) + "\r\n<up 23>" + "z" * (23 * 80) + "END\n",
+            id="a line which stops above the last row is continued",
+        ),
     ],
 )
 def test_stdout_proxy_continues_unfinished_lines(writes, expected) -> None:
@@ -387,6 +397,37 @@ def test_stdout_proxy_continues_unfinished_lines(writes, expected) -> None:
             proxy.close()
 
     assert stream.getvalue() == expected
+
+
+@pytest.mark.parametrize(
+    ("width", "expected"),
+    [
+        pytest.param(22 * 80, "\r\n<up 22>" + "z" * (22 * 80) + "END\n", id="continued while the toolbar fits below it"),
+        pytest.param(22 * 80 + 1, "\r\nEND\n", id="stays ended once the toolbar would scroll its first row off"),
+    ],
+)
+def test_stdout_proxy_leaves_room_for_every_row_of_the_toolbar(width, expected) -> None:
+    """A toolbar of several rows scrolls the screen sooner than one row does."""
+    stream = Terminal()
+    with create_pipe_input() as pipe, create_app_session(input=pipe, output=CursorOutput(stream)):
+        proxy = command_toolbar._ContextStdoutProxy(lambda: 2)
+        try:
+            proxy._write_and_flush(None, "z" * width)
+            proxy._write_and_flush(None, "END\n")
+        finally:
+            proxy.close()
+
+    assert stream.getvalue() == "z" * width + expected
+
+
+def test_command_toolbar_tells_the_proxy_how_many_rows_it_takes(toolbar_app) -> None:
+    app, _, _ = toolbar_app
+    app.main_session.bottom_toolbar = "one\ntwo"
+    # Nothing has been drawn yet.
+    assert command_toolbar.CommandToolbar(app)._toolbar_rows() == 0
+    with app._command_toolbar_context():
+        assert app._command_toolbar._toolbar_rows() == 2
+        assert app._command_toolbar._proxy._toolbar_rows() == 2
 
 
 class WindowsConsoleOutput(CursorOutput):

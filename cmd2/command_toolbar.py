@@ -105,10 +105,15 @@ class _ContextStdoutProxy(StdoutProxy):
     a row of its own, and it is continued from where it stopped when more output arrives.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, toolbar_rows: Callable[[], int] = lambda: 1) -> None:
+        """Start printing above a toolbar.
+
+        :param toolbar_rows: returns how many rows the toolbar takes below the output
+        """
         # The line which output last left unfinished, exactly as written. Set before the
         # base class starts the thread which reads it.
         self._unfinished = ""
+        self._toolbar_rows = toolbar_rows
         # The worker already combines queued writes. A batching sleep would also delay
         # close(), which runs at each command finalization boundary.
         super().__init__(raw=True, sleep_between_writes=0)
@@ -136,10 +141,12 @@ class _ContextStdoutProxy(StdoutProxy):
             line = self._last_line(self._unfinished + text)
             if line:
                 output.write_raw("\r\n")
-            size = output.get_size()
             # A line whose start has scrolled off the screen can't be found again, so it
-            # stays ended where it is.
-            self._unfinished = line if self._width(line) <= size.rows * size.columns else ""
+            # stays ended where it is. Its first row scrolls off once the screen has no
+            # room for the whole line and the toolbar below it. A row is needed below the
+            # line even with no toolbar, for the cursor which ended it.
+            room = output.get_size().rows - max(1, self._toolbar_rows())
+            self._unfinished = line if self._rows(line) <= room else ""
             output.flush()
 
         if loop is None:
@@ -279,6 +286,7 @@ class CommandToolbar:
             and self.toolbar.content.style == "class:bottom-toolbar"
         ):
             raise RuntimeError("Cannot locate PromptSession bottom toolbar")
+        self._toolbar_window = self.toolbar.content
         self._layout = Layout(HSplit([Window(height=0), Window(), self.toolbar]))
         self._display_stack: contextlib.ExitStack | None = None
         bindings = KeyBindings()
@@ -327,6 +335,11 @@ class CommandToolbar:
 
     def _after_render(self, app: Application[str]) -> None:  # noqa: ARG002
         self._ready.set()
+
+    def _toolbar_rows(self) -> int:
+        """Return how many rows the toolbar took when it was last drawn."""
+        info = self._toolbar_window.render_info
+        return info.window_height if info is not None else 0
 
     def start(self) -> None:
         """Start rendering and protect terminal output."""
@@ -393,7 +406,7 @@ class CommandToolbar:
         self._ready.wait()
         if self._error is not None:
             raise self._error
-        proxy = _ContextStdoutProxy()
+        proxy = _ContextStdoutProxy(self._toolbar_rows)
         with self._lock:
             self._proxy = proxy
             for stream in self._streams:
