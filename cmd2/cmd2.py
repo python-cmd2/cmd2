@@ -2061,8 +2061,7 @@ class Cmd:
             if not self._pager_failed_to_start(pager, pipe_proc.returncode):
                 return
 
-            # The shell has said why. Nothing was shown, and only the pager was going to, so print without one.
-
+        # For some reason we are unable to start the pager, so print without one.
         self.poutput(
             *objects,
             sep=sep,
