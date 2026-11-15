@@ -17,6 +17,9 @@
       summary and a second toolbar row in the scrollback.
     - Command output wider than the terminal wraps in reserved toolbar mode on Windows, as it does
       in legacy mode. Everything past the last column of such a line was lost.
+    - In reserved toolbar mode, output written while a frame of the built-in pager or a prompt is
+      being prepared no longer leaves that frame, which is never shown, as the one the next frame is
+      compared with. The next frame could draw nothing and leave the screen as it was.
     - Background output printed above an active reserved prompt through `run_in_terminal()` or
       `patch_stdout()` is preserved when the prompt redraws.
     - Reserved rendering preserves unfinished command output when the main prompt returns by

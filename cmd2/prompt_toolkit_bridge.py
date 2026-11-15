@@ -802,6 +802,9 @@ class PromptToolkitBridge:
         # A full-screen frame begins by entering the alternate screen, and the renderer marks
         # itself as there before anything is emitted.
         in_alternate_screen = self._renderer._in_alternate_screen
+        # What the terminal was last sent, and where that left the cursor. The renderer takes
+        # the frame it is about to prepare as both, whether or not the frame is emitted.
+        baseline = (self._renderer._last_screen, self._renderer._cursor_pos)
         try:
             render(app, app.layout if layout is None else layout, is_done)
         except Exception as error:  # noqa: BLE001 - a layout callback must not end a command
@@ -834,7 +837,14 @@ class PromptToolkitBridge:
                 # recovery of its own -- command output leaves the empty command display's
                 # baseline correct -- but the frame was recorded against the cursor and content
                 # that write moved, so it must not be published as current.
+                #
+                # Nor may it stay the renderer's baseline. The write put back the last
+                # committed screen, but the renderer was still preparing and has since taken
+                # this frame in its place. Diffed against a frame the terminal never received,
+                # the next one would find nothing to draw where the two agree, and what is on
+                # the terminal would stay as it was.
                 self._in_flight = None
+                self._renderer._last_screen, self._renderer._cursor_pos = baseline
                 self._forget_screen_switch(in_alternate_screen)
                 return None
 

@@ -1253,6 +1253,51 @@ class TestRenderInterception:
         assert harness.stream_recorder.getvalue() == ""
         assert redraws
 
+    @pytest.mark.parametrize("full_screen", [False, True])
+    def test_a_frame_dropped_while_it_was_prepared_is_not_the_next_baseline(self, full_screen) -> None:
+        """A write which lands while a frame is prepared drops the frame, and what it drew too.
+
+        The renderer has taken the dropped frame as its last screen by then, and its cursor
+        as where the cursor is. Diffed against that, the frame prepared next finds nothing to
+        draw, and the terminal goes on showing the frame before.
+        """
+        frame: list[Any] = ["hello"]
+        write_lands = [False]
+
+        def content() -> Any:
+            if write_lands[0]:
+                write_lands[0] = False
+                harness.bridge.note_managed_write()
+            return frame[0]
+
+        harness = self.bound(content=content)
+        harness.app.full_screen = harness.renderer.full_screen = full_screen
+
+        def render() -> str:
+            # The control keeps its content until the application counts another render.
+            harness.app.render_counter += 1
+            harness.stream_recorder.truncate(0)
+            harness.stream_recorder.seek(0)
+            harness.renderer.render(harness.app, harness.app.layout)
+            return harness.stream_recorder.getvalue()
+
+        with set_app(harness.app):
+            assert "hello" in render()
+            committed = (harness.renderer._last_screen, harness.renderer._cursor_pos)
+
+            # No character in common with the frame before, so all of it has to be drawn.
+            frame[0] = [("", "WORLD\n"), ("[SetCursorPosition]", ""), ("", "SECOND")]
+            write_lands[0] = True
+            assert render() == ""
+            assert harness.renderer._last_screen is committed[0]
+            assert harness.renderer._cursor_pos == committed[1]
+
+            emitted = render()
+        assert "WORLD" in emitted
+        assert "SECOND" in emitted
+        assert harness.renderer._cursor_pos == Point(x=0, y=1)
+        harness.bridge.unbind()
+
     def test_a_frame_which_fails_after_command_output_asks_for_another(self) -> None:
         """A redraw requested before a frame began must not swallow the retry that frame needs.
 
