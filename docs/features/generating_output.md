@@ -56,7 +56,14 @@ conveniences:
 1. Since users can pipe output to a shell command, it catches `BrokenPipeError` and outputs the
    contents of `self.broken_pipe_warning` to `stderr`. `self.broken_pipe_warning` defaults to an
    empty string so this method will just swallow the exception. If you want to show an error
-   message, put it in `self.broken_pipe_warning` when you initialize `cmd2.Cmd`.
+   message, put it in `self.broken_pipe_warning` when you initialize `cmd2.Cmd`. A command which
+   prints through a `cmd2` console of its own, such as the
+   [Cmd2GeneralConsole][cmd2.rich_utils.Cmd2GeneralConsole] used for the progress displays described
+   below, is covered too, with one difference. A command which uses `poutput` carries on after the
+   pipe breaks, but one which prints through its own console ends at the call which found the pipe
+   broken, and its postcommand hooks do not run. Put any cleanup such a command has to do in a
+   `finally` block or a context manager. Use a `cmd2` console rather than a plain
+   `rich.console.Console`, which exits the application when it writes to a broken pipe.
 2. It examines and honors the [allow_style](./settings.md#allow_style) setting. See
    [Colored Output](#colored-output) below for more details.
 3. It allows printing arbitrary `rich` renderable objects which can get visually quite complex.
@@ -68,6 +75,134 @@ def do_echo(self, args):
     """A simple command showing how poutput() works"""
     self.poutput(args)
 ```
+
+## Updating Output in Place
+
+Countdowns, progress indicators, and status lines repeatedly overwrite the same line of the
+terminal. The traditional way to do that with `print()` is to embed a carriage return (`\r`) in the
+string, but that does not work with `poutput` or any of the other `cmd2` print methods. `rich`
+removes the carriage return, backspace, bell, vertical tab, and form feed characters from every
+string it renders because they would break its width calculations, so the cursor never returns to
+the start of the line.
+
+`rich` can manage the cursor for you instead. Its status spinners and progress bars work inside a
+command when you give them a console which writes to `self.stdout`. Create one with
+[Cmd2GeneralConsole][cmd2.rich_utils.Cmd2GeneralConsole] so the display uses the `cmd2` theme and
+follows the [allow_style](./settings.md#allow_style) setting. The
+[rich_progress.py](https://github.com/python-cmd2/cmd2/blob/main/examples/rich_progress.py) example
+demonstrates everything described below.
+
+### Status Messages
+
+For work of an unknown length, show a spinner and a message with a
+[status](https://rich.readthedocs.io/en/stable/console.html#status):
+
+```py
+import time
+
+from cmd2.rich_utils import Cmd2GeneralConsole
+
+
+def do_countdown(self, _):
+    """Count down from 5 on a single line"""
+    console = Cmd2GeneralConsole(file=self.stdout)
+    with console.status("Starting...") as status:
+        for remaining in range(5, 0, -1):
+            status.update(f"Time remaining: {remaining}s")
+            time.sleep(1)
+    self.poutput("Done!")
+```
+
+The status line disappears when the `with` block exits.
+
+### Progress Bars
+
+When you know how much work there is, show a
+[progress bar](https://rich.readthedocs.io/en/stable/progress.html):
+
+```py
+import time
+
+from rich.progress import Progress
+
+from cmd2.rich_utils import Cmd2GeneralConsole
+
+
+def do_process(self, _):
+    """Process some files while showing a progress bar"""
+    files = [f"file_{i}.dat" for i in range(1, 11)]
+    console = Cmd2GeneralConsole(file=self.stdout)
+    with Progress(console=console) as progress:
+        task_id = progress.add_task("Processing files", total=len(files))
+        for file in files:
+            time.sleep(0.4)
+            progress.console.print(f"Processed {file}")
+            progress.advance(task_id)
+    self.poutput("All files processed.")
+```
+
+A few things to know when using a progress bar in a command:
+
+- While the bar is active, print with `progress.console.print()` as shown above. The message then
+  appears above the bar. `poutput` and the other print methods do not know about the bar: their
+  output lands on the end of its line and a stale copy of the bar is left behind. Once the `with`
+  block exits, they are safe to use again.
+- The finished bar is left on the screen. Pass `transient=True` to `Progress` to erase it instead.
+- Call `add_task` more than once to show several bars at the same time, and pass
+  [columns](https://rich.readthedocs.io/en/stable/progress.html#columns) to `Progress` to change
+  what is shown for each one.
+- To add a bar to a simple loop, wrap the sequence being iterated over with
+  `rich.progress.track(sequence, console=console)`.
+
+### Styles, Redirection, and Markup
+
+Status messages and progress bars differ from the print methods in two ways:
+
+- **They are only animated where `allow_style` allows it.** With the default setting of `Terminal`,
+  they are animated on a terminal. When the output of the command is redirected to a file or piped
+  to a shell command, a status writes nothing and a progress bar writes only its final state, or
+  just a blank line if it is transient. With `Never`, that is what happens on a terminal too. With
+  `Always`, redirected output also contains the escape sequences which hide and show the cursor and
+  style the bar.
+- **Their text is parsed as [console markup](https://rich.readthedocs.io/en/stable/markup.html).** A
+  status message or the description of a progress bar task is searched for markup tags such as
+  `[bold]` and emoji codes such as `:warning:`, even though both are off by default in the print
+  methods. So `report[draft].txt` is displayed as `report.txt`, `user:id:42` as `user🆔42`, and an
+  unmatched closing tag such as `[/b]` raises a `MarkupError`. To display text you do not control,
+  such as a file name, exactly as it is, give a status a `rich.text.Text` object instead of a
+  string, and show task descriptions with a `TextColumn("{task.description}", markup=False)`
+  [column](https://rich.readthedocs.io/en/stable/progress.html#columns).
+
+### Carriage Returns
+
+If you would rather write the escape sequences yourself, put the carriage return in the `end`
+parameter, which `rich` does not strip:
+
+```py
+import time
+
+CLEAR_LINE = "\x1b[2K"
+
+
+def do_countdown(self, _):
+    """Count down from 5 on a single line"""
+    for remaining in range(5, 0, -1):
+        self.poutput(f"{CLEAR_LINE}Time remaining: {remaining}s", end="\r")
+        time.sleep(1)
+    self.poutput(f"{CLEAR_LINE}Done!")
+```
+
+Use the `style` parameter if you want to color text printed this way. A string which already
+contains ANSI style sequences is parsed as ANSI text, which discards every other kind of escape
+sequence in it, including the one that clears the line.
+
+Unlike the `rich` displays, this always writes the escape sequences and carriage returns, including
+when the output of the command is redirected to a file or pipe.
+
+The print methods flush the stream after every call, so there is no `flush` parameter to pass.
+Strings written directly to `self.stdout` are not processed by `rich`, so control characters in them
+are left alone. They are not flushed either, so call `self.stdout.flush()` after writing a line
+which does not end with a newline.
 
 ## Error Messages
 
