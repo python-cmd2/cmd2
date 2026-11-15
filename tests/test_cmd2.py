@@ -9,9 +9,11 @@ import sys
 import tempfile
 import threading
 from code import InteractiveConsole
+from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from typing import (
     NoReturn,
+    TextIO,
     cast,
 )
 from unittest import mock
@@ -965,6 +967,138 @@ def test_pipe_to_shell_and_redirect(redirection_app, running_pipe_process) -> No
     assert not err
     assert os.path.exists(filename)
     os.remove(filename)
+
+
+class BrokenPipeApp(cmd2.Cmd):
+    """Commands which hit a broken pipe without going through one of cmd2's print methods."""
+
+    def do_own_console(self, _: str) -> None:
+        """Print through a console of its own, for longer than the reader of its output stays around."""
+        console = ru.Cmd2GeneralConsole(file=self.stdout)
+
+        # More than fits in a pipe, so the command is still writing when the reader goes away
+        for _line in range(4096):
+            console.print("x" * 1024)
+        self.perror("the pipe never broke")
+
+    def do_raise_broken_pipe(self, _: str) -> None:
+        """Raise the error a write to a closed pipe or socket raises."""
+        raise BrokenPipeError
+
+    def do_other_console(self, _: str) -> None:
+        """Print through a console which writes somewhere other than the command's output."""
+        ru.Cmd2GeneralConsole(file=self.other_stream).print("x")
+
+    def do_unwind(self, how: str) -> None:
+        """Have a console write as an exception ends the command, as the with block of a progress display does."""
+        try:
+            raise KeyboardInterrupt if how == "interrupt" else SystemExit(5)
+        finally:
+            ru.Cmd2GeneralConsole(file=self.stdout).print("x")
+
+    def do_quiet(self, _: str) -> None:
+        """Write nothing."""
+
+    def console_hook(self, data: cmd2.plugin.CommandFinalizationData) -> cmd2.plugin.CommandFinalizationData:
+        """Print through a console of its own once a command has finished."""
+        ru.Cmd2GeneralConsole(file=self.stdout).print("x")
+        return data
+
+
+@pytest.fixture
+def broken_pipe() -> Iterator[TextIO]:
+    """A stream which writes to a pipe nothing reads."""
+    read_fd, write_fd = os.pipe()
+    os.close(read_fd)
+    stream = open(write_fd, "w")  # noqa: SIM115
+    yield stream
+
+    # Closing flushes what a failed write left in the buffer, which fails again
+    with contextlib.suppress(BrokenPipeError):
+        stream.close()
+
+
+#: A closed pipe raises BrokenPipeError on POSIX. On Windows it can raise another OSError, which no part of cmd2 handles.
+posix_broken_pipe = pytest.mark.skipif(sys.platform == "win32", reason="a write to a closed pipe raises another OSError")
+
+
+@posix_broken_pipe
+def test_broken_pipe_from_a_commands_own_console_is_ignored(broken_pipe, capsys) -> None:
+    """Whatever stdout is a pipe to, a command ends quietly when its reader goes away, as one which uses poutput() does."""
+    app = BrokenPipeApp(stdout=broken_pipe)
+    app.onecmd_plus_hooks("own_console")
+    assert not capsys.readouterr().err
+
+
+@posix_broken_pipe
+def test_broken_pipe_from_a_commands_own_console_prints_the_warning(broken_pipe, capsys) -> None:
+    app = BrokenPipeApp(stdout=broken_pipe)
+    app.broken_pipe_warning = "The pipe broke"
+    app.onecmd_plus_hooks("own_console")
+    assert capsys.readouterr().err == "The pipe broke\n"
+
+
+@posix_broken_pipe
+def test_broken_pipe_from_a_piped_commands_own_console_is_ignored(running_pipe_process) -> None:
+    """The shell command a command's output is piped to exits before reading all of it.
+
+    head cannot exit before the command has written a line, so cmd2 never finds that the pipe process ended before the
+    command could run, however slowly the two start.
+    """
+    out, err = run_cmd(BrokenPipeApp(), "own_console | head -n 1")
+    assert out == ["x" * 1024]
+    assert not err
+
+
+@posix_broken_pipe
+def test_broken_pipe_from_the_console_of_a_command_in_a_piped_script_is_ignored(tmp_path, running_pipe_process) -> None:
+    script = tmp_path / "script.txt"
+    script.write_text("own_console\n")
+    out, err = run_cmd(BrokenPipeApp(), f"run_script {script} | head -n 1")
+    assert out == ["x" * 1024]
+    assert not err
+
+
+@posix_broken_pipe
+def test_broken_pipe_from_a_console_on_another_stream_is_reported(broken_pipe) -> None:
+    """A console knows which stream broke. Only the command's output going away is expected."""
+    app = BrokenPipeApp()
+    app.other_stream = broken_pipe
+    _out, err = run_cmd(app, "other_console")
+    assert any("BrokenPipeError" in line for line in err)
+
+
+@posix_broken_pipe
+def test_broken_pipe_does_not_hide_the_interrupt_it_replaced(broken_pipe) -> None:
+    """Ctrl-C still stops a script when a console hits a broken pipe as the interrupt ends the command."""
+    app = BrokenPipeApp(stdout=broken_pipe)
+    with pytest.raises(KeyboardInterrupt):
+        app.onecmd_plus_hooks("unwind interrupt", raise_keyboard_interrupt=True)
+
+
+@posix_broken_pipe
+def test_broken_pipe_does_not_hide_the_exit_it_replaced(broken_pipe) -> None:
+    app = BrokenPipeApp(stdout=broken_pipe)
+    assert app.onecmd_plus_hooks("unwind exit") is True
+    assert app.exit_code == 5
+
+
+@posix_broken_pipe
+def test_broken_pipe_from_the_console_of_a_finalization_hook_is_ignored(broken_pipe, capsys) -> None:
+    app = BrokenPipeApp(stdout=broken_pipe)
+    app.register_cmdfinalization_hook(app.console_hook)
+    app.onecmd_plus_hooks("quiet")
+    assert not capsys.readouterr().err
+
+
+@pytest.mark.parametrize("redirection", ["", " | sort", " > {file}"])
+def test_broken_pipe_raised_by_a_command_is_reported(tmp_path, running_pipe_process, redirection) -> None:
+    """Only a console knows that it was the command's output which broke. Any other BrokenPipeError is not hidden."""
+    app = BrokenPipeApp()
+    app.broken_pipe_warning = "The pipe broke"
+    _out, err = run_cmd(app, "raise_broken_pipe" + redirection.format(file=tmp_path / "out.txt"))
+    assert "BrokenPipeError" in err[0]
+    assert "The pipe broke" not in err
 
 
 @pytest.mark.parametrize(
