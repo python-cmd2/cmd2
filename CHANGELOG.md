@@ -20,6 +20,9 @@
     - In reserved toolbar mode, output written while a frame of the built-in pager or a prompt is
       being prepared no longer leaves that frame, which is never shown, as the one the next frame is
       compared with. The next frame could draw nothing and leave the screen as it was.
+    - In reserved toolbar mode, output written after such a frame is prepared and before it is shown
+      no longer leaves the cursor recorded where that frame would have put it. The next frame could
+      be drawn in the wrong rows.
     - Background output printed above an active reserved prompt through `run_in_terminal()` or
       `patch_stdout()` is preserved when the prompt redraws.
     - Reserved rendering preserves unfinished command output when the main prompt returns by

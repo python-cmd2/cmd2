@@ -101,6 +101,11 @@ class PreparedRender:
     #: believing what it did before.
     in_alternate_screen: bool = False
 
+    #: Where the renderer had the cursor before it prepared this frame. It takes the frame's
+    #: cursor as the terminal's while the frame is only prepared, and one which is not emitted
+    #: has moved nothing.
+    cursor_before: Point | None = None
+
 
 @dataclass(frozen=True)
 class TerminalModePolicy:
@@ -292,8 +297,12 @@ class PromptToolkitBridge:
         # reset to the last committed screen -- not left as the advance a pending preparation
         # made, which the terminal never received, and not cleared, which would force the next
         # frame to erase down over the output just written.
-        self._in_flight = None
+        dropped, self._in_flight = self._in_flight, None
         self._renderer._last_screen = self._committed_screen
+        if dropped is not None and dropped.cursor_before is not None:
+            # The renderer's cursor is likewise where the dropped frame would have left it.
+            # The next frame moves from there, so it goes back to where it was before.
+            self._renderer._cursor_pos = dropped.cursor_before
         self._request_redraw()
 
     @property
@@ -848,7 +857,12 @@ class PromptToolkitBridge:
                 self._forget_screen_switch(in_alternate_screen)
                 return None
 
-            prepared = PreparedRender(batch=recorder.batch(), generations=generations, in_alternate_screen=in_alternate_screen)
+            prepared = PreparedRender(
+                batch=recorder.batch(),
+                generations=generations,
+                in_alternate_screen=in_alternate_screen,
+                cursor_before=baseline[1],
+            )
             self._in_flight = prepared
             return prepared
 
