@@ -988,6 +988,32 @@ class TestPager:
         assert emitted.count("\x1b[?1049l") == 1
         assert emitted.index("\x1b[?1049h") < emitted.index("row 000") < emitted.index("\x1b[?1049l")
 
+    def test_the_pager_never_erases_its_screen_from_the_corner(self, terminal_harness) -> None:
+        """iTerm2 keeps a screen which is erased from its top-left corner, the pager's included.
+
+        The renderer erases from there when the pager closes and when the terminal is resized.
+        Here the erase reaches the terminal through the reserved adapter, or replayed from a
+        recorded frame.
+        """
+        harness, terminal = terminal_harness
+        careful = command_toolbar.ERASE_DOWN_FROM_FIRST_COLUMN
+
+        def resize() -> None:
+            display = harness.app._command_toolbar
+            before = terminal.getvalue().count(careful)
+            display.app.loop.call_soon_threadsafe(display.app._on_resize)
+            assert wait_for(lambda: terminal.getvalue().count(careful) > before)
+
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            backend = harness.app.reserved_toolbar.display.terminal.output
+            assert run_pager(harness, terminal, while_open=resize)
+            # The terminal's own way of erasing is back once the pager has closed.
+            assert "erase_down" not in vars(backend)
+        emitted = terminal.getvalue()
+        paged = emitted[emitted.index("\x1b[?1049h") : emitted.rindex("\x1b[?1049l")]
+        assert paged.count("\x1b[J") >= 3
+        assert paged.count("\x1b[J") == paged.count(careful)
+
     def test_the_pager_returns_to_the_alternate_screen_after_lending_the_terminal(self, terminal_harness) -> None:
         """What Ctrl-Z does: the renderer leaves the alternate screen, and has to enter it again."""
         harness, terminal = terminal_harness
