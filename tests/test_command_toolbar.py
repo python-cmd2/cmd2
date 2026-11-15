@@ -568,6 +568,33 @@ def test_command_toolbar_flushes_writes_waiting_on_cursor_reports() -> None:
     assert "last words\n" in output.getvalue()
 
 
+def test_command_toolbar_remembers_the_rows_its_toolbar_took_before_it_is_drawn_again() -> None:
+    """A command's first output can arrive before the toolbar has been drawn for that command.
+
+    Each run of the application forgets what it drew, and prompt-toolkit leaves the toolbar
+    out until the terminal has reported where its cursor is. Until then the toolbar counts
+    for the rows the main prompt drew it with, which are the rows it is about to take again.
+    """
+    app = Cmd(allow_cli_args=False)
+    output = Terminal()
+    app.stdout = output
+
+    with create_pipe_input() as pipe:
+        app.main_session = PromptSession(
+            input=pipe,
+            output=CprOutput(output),
+            bottom_toolbar="one\ntwo",
+            refresh_interval=0.01,
+        )
+        window = app.main_session.layout.container.children[-1].content
+        # What the main prompt leaves behind after drawing a toolbar of two rows.
+        window.render_info = SimpleNamespace(window_height=2)
+        with app._command_toolbar_context():
+            assert window.render_info is None
+            assert app._command_toolbar._toolbar_rows() == 2
+            assert app._command_toolbar._proxy._toolbar_rows() == 2
+
+
 def test_command_toolbar_suspension_waits_for_in_flight_writes(toolbar_app) -> None:
     app, _, output = toolbar_app
     writing = threading.Event()

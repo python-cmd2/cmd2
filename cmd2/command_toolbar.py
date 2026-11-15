@@ -302,6 +302,12 @@ class CommandToolbar:
         ):
             raise RuntimeError("Cannot locate PromptSession bottom toolbar")
         self._toolbar_window = self.toolbar.content
+        # The rows the toolbar took when it was last drawn, to begin with by the main prompt.
+        # Each run of the application forgets what it drew, and prompt-toolkit leaves the
+        # toolbar out until the terminal has reported where its cursor is, which can be after
+        # a command's first output. The toolbar is about to take these rows again.
+        self._toolbar_height = 0
+        self._note_toolbar_height()
         self._layout = Layout(HSplit([Window(height=0), Window(), self.toolbar]))
         self._display_stack: contextlib.ExitStack | None = None
         bindings = KeyBindings()
@@ -349,12 +355,18 @@ class CommandToolbar:
         run_in_terminal(functools.partial(suspend_process_group, suspend_group))
 
     def _after_render(self, app: Application[str]) -> None:  # noqa: ARG002
+        self._note_toolbar_height()
         self._ready.set()
+
+    def _note_toolbar_height(self) -> None:
+        """Remember how many rows the toolbar took, if the last frame drew it."""
+        info = self._toolbar_window.render_info
+        if info is not None:
+            self._toolbar_height = info.window_height
 
     def _toolbar_rows(self) -> int:
         """Return how many rows the toolbar took when it was last drawn."""
-        info = self._toolbar_window.render_info
-        return info.window_height if info is not None else 0
+        return self._toolbar_height
 
     def start(self) -> None:
         """Start rendering and protect terminal output."""
