@@ -143,6 +143,19 @@ class TestStyles:
         frame = ToolbarFrame.build([("bold", "ab"), ("italic", "c")], width=4, height=1, default_style="base")
         assert styles_of(frame) == ["bold", "bold", "italic", "base"]
 
+    def test_the_text_style_is_under_the_style_of_every_fragment(self) -> None:
+        """As a window's style is: text in a bar keeps the bar, whatever style of its own it has."""
+        frame = ToolbarFrame.build(
+            [("bold", "ab"), ("", "c")], width=5, height=1, default_style="bar", text_style="bar bar.text"
+        )
+        assert [style.split() for style in styles_of(frame)] == [
+            ["bar", "bar.text", "bold"],
+            ["bar", "bar.text", "bold"],
+            ["bar", "bar.text"],
+            ["bar"],
+            ["bar"],
+        ]
+
     def test_a_zero_width_escape_fragment_is_dropped(self) -> None:
         """Passing arbitrary cursor control through the painter would move the real cursor."""
         content = [("", "a"), ("[ZeroWidthEscape]", "\x1b[6n"), ("", "b")]

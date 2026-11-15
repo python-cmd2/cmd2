@@ -125,6 +125,7 @@ class ToolbarFrame:
         width: int,
         height: int,
         default_style: str = "",
+        text_style: str = "",
     ) -> "ToolbarFrame":
         """Lay content out into a frame of exactly ``height`` by ``width`` cells.
 
@@ -141,6 +142,8 @@ class ToolbarFrame:
         :param width: the terminal width in columns
         :param height: the height of the reserved band in rows
         :param default_style: the style for padding and truncation-indicator cells
+        :param text_style: the style under every fragment's own, as a window's style is under
+            the text it holds
         :return: the frame
         :raises ValueError: if ``width`` or ``height`` is not positive
         """
@@ -153,7 +156,7 @@ class ToolbarFrame:
         # value, and this runs on every refresh, where constructing one per column was most
         # of the cost of laying out a short toolbar.
         pad = Cell(" ", default_style)
-        lines = list(split_lines(to_formatted_text(content)))
+        lines = list(split_lines(to_formatted_text(content, style=text_style)))
         rows: list[list[Cell]] = []
         for line in lines[:height]:
             row, clipped = _clip_line(line, width, pad)
@@ -325,6 +328,7 @@ class ToolbarPainter:
         style: "BaseStyle",
         color_depth: ColorDepth,
         default_style: str = "",
+        text_style: str = "",
         autowrap_after_paint: bool = True,
     ) -> None:
         """Bind a painter to the display that owns the reservation.
@@ -342,6 +346,7 @@ class ToolbarPainter:
         :param style: the style rules used to resolve fragment styles
         :param color_depth: the color depth to render attributes at
         :param default_style: the style for padding and truncation-indicator cells
+        :param text_style: the style under every fragment's own
         :param autowrap_after_paint: the committed autowrap policy to restore afterwards.
             Upstream's renderer leaves autowrap enabled between frames, which is the default
             here; a bridge that has committed a different policy passes it instead.
@@ -352,6 +357,7 @@ class ToolbarPainter:
         self._style = style
         self._color_depth = color_depth
         self._default_style = default_style
+        self._text_style = text_style
         self._autowrap_after_paint = autowrap_after_paint
         self._last_frame: ToolbarFrame | None = None
         self._last_attrs: Mapping[str, Attrs] | None = None
@@ -410,6 +416,7 @@ class ToolbarPainter:
             width=geometry.columns,
             height=geometry.reserved_rows,
             default_style=self._default_style,
+            text_style=self._text_style,
         )
         styles = {cell.style for row in frame.rows for cell in row}
         return PreparedFrame(

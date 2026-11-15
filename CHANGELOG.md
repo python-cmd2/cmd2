@@ -23,6 +23,9 @@
     - In reserved toolbar mode, output written after such a frame is prepared and before it is shown
       no longer leaves the cursor recorded where that frame would have put it. The next frame could
       be drawn in the wrong rows.
+    - The reserved bottom toolbar is drawn as a reverse-video bar, as the toolbar is in legacy mode.
+      It was drawn as plain text. Theme rules for `bottom-toolbar` and `bottom-toolbar.text` now
+      apply to its text as well as to the rest of the row.
     - Background output printed above an active reserved prompt through `run_in_terminal()` or
       `patch_stdout()` is preserved when the prompt redraws.
     - Reserved rendering preserves unfinished command output when the main prompt returns by

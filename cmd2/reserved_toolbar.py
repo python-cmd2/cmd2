@@ -26,7 +26,7 @@ from prompt_toolkit.application import run_in_terminal
 from prompt_toolkit.filters import Condition, Never
 from prompt_toolkit.layout import HSplit, Window
 from prompt_toolkit.layout.containers import ConditionalContainer
-from prompt_toolkit.styles import DynamicStyle
+from prompt_toolkit.styles import DynamicStyle, default_ui_style, merge_styles
 from prompt_toolkit.utils import suspend_to_background_supported
 
 from .command_toolbar import suspend_process_group
@@ -213,12 +213,16 @@ class ReservedToolbar:
             # invalidations, its key presses -- rather than inventing a second timer, and it
             # paints after the prompt rather than into the middle of it.
             self._bridge.set_frame_committed_handler(self.refresh)
+            # Styled as prompt-toolkit styles the toolbar it draws itself. An application's
+            # style is laid over prompt-toolkit's default one, which is what makes that
+            # toolbar a reverse-video bar; its window has one class and its text another.
             self._painter = ToolbarPainter(
                 display=display,
                 lock=self._lock,
-                style=DynamicStyle(get_pt_theme),
+                style=merge_styles([default_ui_style(), DynamicStyle(get_pt_theme)]),
                 color_depth=app.color_depth,
                 default_style="class:bottom-toolbar",
+                text_style="class:bottom-toolbar class:bottom-toolbar.text",
             )
             # Strict on the way in: a band that cannot be painted at all is a reservation
             # that cannot be established, and the rollback below hands the terminal back
