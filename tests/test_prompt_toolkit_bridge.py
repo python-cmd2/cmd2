@@ -1306,6 +1306,51 @@ class TestRenderInterception:
         assert 1 <= len(redraws) <= 3
         harness.bridge.unbind()
 
+    def test_a_full_screen_frame_enters_the_alternate_screen_as_it_is_emitted(self) -> None:
+        """The switch and the frame drawn after it reach the terminal together, and once."""
+        harness = self.bound()
+        harness.app.full_screen = harness.renderer.full_screen = True
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+            harness.renderer.render(harness.app, harness.app.layout)
+        emitted = harness.stream_recorder.getvalue()
+        assert emitted.count("\x1b[?1049h") == 1
+        assert emitted.index("\x1b[?1049h") < emitted.index("hello")
+        assert harness.renderer._in_alternate_screen is True
+        harness.bridge.unbind()
+
+    @pytest.mark.parametrize("fault", ["retired", "raised"])
+    def test_a_full_screen_frame_which_is_not_emitted_has_not_switched_screens(self, fault) -> None:
+        """The renderer notes the switch while the frame is prepared. A frame dropped must undo that.
+
+        Otherwise the frame prepared next believes the terminal is already on the alternate
+        screen, and is drawn over the main one.
+        """
+        faults = [fault]
+
+        def content() -> str:
+            if faults:
+                if faults.pop() == "raised":
+                    raise RuntimeError("cannot be prepared this time")
+                harness.bridge.note_managed_write()
+            return "hello"
+
+        harness = self.bound(content=content)
+        harness.app.full_screen = harness.renderer.full_screen = True
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+            assert harness.stream_recorder.getvalue() == ""
+            assert harness.renderer._in_alternate_screen is False
+
+            if fault == "raised":
+                harness.resynchronize()
+            harness.renderer.render(harness.app, harness.app.layout)
+        emitted = harness.stream_recorder.getvalue()
+        assert emitted.count("\x1b[?1049h") == 1
+        assert emitted.index("\x1b[?1049h") < emitted.index("hello")
+        assert harness.renderer._in_alternate_screen is True
+        harness.bridge.unbind()
+
     def test_binding_twice_keeps_the_first_interception(self) -> None:
         """A second bind would save the wrapper as the original and never unwind."""
         harness = self.bound()

@@ -141,12 +141,29 @@ class TestRecording:
         recorder = make_recorder()
         assert not any(isinstance(value, Vt100_Output) for value in vars(recorder).values())
 
-    def test_a_screen_buffer_transition_cannot_be_recorded(self) -> None:
-        """Buffer transitions are ownership boundaries, taken before a frame is prepared."""
+    def test_entering_the_alternate_screen_is_recorded_with_the_frame_drawn_there(self) -> None:
+        """A full-screen frame begins by entering the alternate screen, and is emitted as one piece.
+
+        Refused, the renderer had already noted itself as switched, so the frame it prepared
+        next was drawn on the main screen.
+        """
         recorder = make_recorder()
-        for transition in (recorder.enter_alternate_screen, recorder.quit_alternate_screen):
-            with pytest.raises(UnrecordableOperationError):
-                transition()
+        recorder.enter_alternate_screen()
+        recorder.write("first page")
+        assert recorder.operations == (Operation("enter_alternate_screen"), Operation("write", ("first page",)))
+
+        stream = io.StringIO()
+        backend = Vt100_Output(stream, lambda: Size(rows=24, columns=80), term="xterm")
+        recorder.batch().replay(backend)
+        backend.flush()
+        assert stream.getvalue().startswith("\x1b[?1049h")
+        assert stream.getvalue().endswith("first page")
+
+    def test_leaving_the_alternate_screen_cannot_be_recorded(self) -> None:
+        """A renderer leaves the alternate screen when it is reset, never in the middle of a frame."""
+        recorder = make_recorder()
+        with pytest.raises(UnrecordableOperationError):
+            recorder.quit_alternate_screen()
 
     def test_a_viewport_move_cannot_be_recorded(self) -> None:
         recorder = make_recorder()
@@ -157,7 +174,7 @@ class TestRecording:
         recorder = make_recorder()
         recorder.write("hello")
         with pytest.raises(UnrecordableOperationError):
-            recorder.enter_alternate_screen()
+            recorder.quit_alternate_screen()
         assert recorder.operations == (Operation("write", ("hello",)),)
 
 

@@ -974,6 +974,43 @@ class TestPager:
             assert reserved.display._deferred_band is None
             assert terminal.screen.display[-1].startswith("STATUS")
 
+    def test_the_pager_is_drawn_on_the_alternate_screen(self, terminal_harness) -> None:
+        """One switch to the alternate screen before the first page, and one back after the last.
+
+        The pager used to be drawn on the main screen, over the command's earlier output, and
+        left its last page and its key summary in the scrollback.
+        """
+        harness, terminal = terminal_harness
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            assert run_pager(harness, terminal)
+        emitted = terminal.getvalue()
+        assert emitted.count("\x1b[?1049h") == 1
+        assert emitted.count("\x1b[?1049l") == 1
+        assert emitted.index("\x1b[?1049h") < emitted.index("row 000") < emitted.index("\x1b[?1049l")
+
+    def test_the_pager_returns_to_the_alternate_screen_after_lending_the_terminal(self, terminal_harness) -> None:
+        """What Ctrl-Z does: the renderer leaves the alternate screen, and has to enter it again."""
+        harness, terminal = terminal_harness
+
+        def lend_the_terminal() -> None:
+            display = harness.app._command_toolbar
+
+            def lend(app) -> None:
+                # From a handler of the application's own, to be in its context.
+                app.after_render -= lend
+                run_in_terminal(lambda: None)
+
+            display.app.after_render += lend
+            display.app.invalidate()
+            assert wait_for(lambda: terminal.getvalue().count("\x1b[?1049h") == 2)
+            assert wait_for(lambda: terminal.getvalue().rindex("row 000") > terminal.getvalue().rindex("\x1b[?1049h"))
+
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            assert run_pager(harness, terminal, while_open=lend_the_terminal)
+        emitted = terminal.getvalue()
+        assert emitted.count("\x1b[?1049h") == 2
+        assert emitted.count("\x1b[?1049l") == 2
+
     def test_first_pager_frame_uses_full_geometry(self, terminal_harness) -> None:
         harness, terminal = terminal_harness
         with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():

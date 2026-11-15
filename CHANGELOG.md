@@ -8,6 +8,9 @@
       appear until a key was pressed.
     - A line of command output left unfinished before `Cmd.ppaged()` opens the built-in pager is no
       longer deleted in reserved toolbar mode.
+    - The built-in pager now uses the terminal's alternate screen in reserved toolbar mode, as it
+      does in legacy mode. It was drawn over the main screen, and left a page of paged rows, its key
+      summary and a second toolbar row in the scrollback.
     - Background output printed above an active reserved prompt through `run_in_terminal()` or
       `patch_stdout()` is preserved when the prompt redraws.
     - Reserved rendering preserves unfinished command output when the main prompt returns by
