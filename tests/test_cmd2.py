@@ -4053,6 +4053,16 @@ def test_ppaged_shows_the_output_when_the_pager_cannot_be_run(paging_app, capfd,
     assert "cmd2-no-such-pager-program" in capfd.readouterr().err
 
 
+def test_ppaged_without_a_pager_wraps_as_the_caller_asked(paging_app) -> None:
+    """Chopping turns soft wrap on for a pager to scroll sideways. With no pager, the caller's choice stands."""
+    app, shown = paging_app
+    app.pager_chop = "cmd2-no-such-pager-program"
+
+    app.ppaged("word " * 400, chop=True, soft_wrap=False)
+
+    assert len(shown().splitlines()) > 1
+
+
 def test_ppaged_does_not_repeat_output_after_a_pager_which_ran_and_failed(paging_app) -> None:
     """Only a pager which could not be started is made up for: one which ran has had the output."""
     app, shown = paging_app

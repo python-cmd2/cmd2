@@ -2002,9 +2002,8 @@ class Cmd:
 
         # Check if we are outputting to a pager.
         if functional_terminal and can_block:
-            # Chopping overrides soft_wrap
-            if chop:
-                soft_wrap = True
+            # Chopping overrides soft_wrap, but only for what the pager is given
+            pager_soft_wrap = soft_wrap or chop
 
             # Generate the bytes to send to the pager
             console = self._get_core_print_console(
@@ -2020,7 +2019,7 @@ class Cmd:
                     end=end,
                     style=style,
                     justify=justify,
-                    soft_wrap=soft_wrap,
+                    soft_wrap=pager_soft_wrap,
                     **(rich_print_kwargs if rich_print_kwargs is not None else {}),
                 )
             output = capture.get()
@@ -2059,24 +2058,23 @@ class Cmd:
                     except (OSError, termios.error):
                         pass
 
-            if self._pager_failed_to_start(pager, pipe_proc.returncode):
-                # The shell has said why. Nothing was shown, and only the pager was going to.
-                self.stdout.write(output)
-                self.stdout.flush()
+            if not self._pager_failed_to_start(pager, pipe_proc.returncode):
+                return
 
-        else:
-            self.poutput(
-                *objects,
-                sep=sep,
-                end=end,
-                style=style,
-                soft_wrap=soft_wrap,
-                justify=justify,
-                emoji=emoji,
-                markup=markup,
-                highlight=highlight,
-                rich_print_kwargs=rich_print_kwargs,
-            )
+            # The shell has said why. Nothing was shown, and only the pager was going to, so print without one.
+
+        self.poutput(
+            *objects,
+            sep=sep,
+            end=end,
+            style=style,
+            soft_wrap=soft_wrap,
+            justify=justify,
+            emoji=emoji,
+            markup=markup,
+            highlight=highlight,
+            rich_print_kwargs=rich_print_kwargs,
+        )
 
     def ppretty(
         self,
