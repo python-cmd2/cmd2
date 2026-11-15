@@ -15,6 +15,8 @@
     - The built-in pager now uses the terminal's alternate screen in reserved toolbar mode, as it
       does in legacy mode. It was drawn over the main screen, and left a page of paged rows, its key
       summary and a second toolbar row in the scrollback.
+    - Command output wider than the terminal wraps in reserved toolbar mode on Windows, as it does
+      in legacy mode. Everything past the last column of such a line was lost.
     - Background output printed above an active reserved prompt through `run_in_terminal()` or
       `patch_stdout()` is preserved when the prompt redraws.
     - Reserved rendering preserves unfinished command output when the main prompt returns by
