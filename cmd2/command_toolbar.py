@@ -173,7 +173,22 @@ class _ContextStdoutProxy(StdoutProxy):
 
     def _rows(self, line: str) -> int:
         """Return how many rows below its start the cursor was left after line was ended."""
-        return max(1, -(-self._width(line) // self._wrap_columns()))
+        width = self._width(line)
+        columns = self._wrap_columns()
+        if self._wraps_at_once():
+            # A line which has just filled a row has put the cursor on the next one.
+            return width // columns + 1
+        return max(1, -(-width // columns))
+
+    def _wraps_at_once(self) -> bool:
+        """Return whether the terminal moves to the next row as soon as a row is full.
+
+        A terminal which understands escape sequences waits for the next character. A legacy
+        Windows console does not wait. It gets prompt-toolkit's Win32Output which, unlike its
+        other Windows outputs, has no vt100 output to write escape sequences with.
+        """
+        output = self._output
+        return hasattr(output, "get_win32_screen_buffer_info") and not hasattr(output, "vt100_output")
 
     def _wrap_columns(self) -> int:
         """Return how many columns the terminal fits on a row before it wraps a line.

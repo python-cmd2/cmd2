@@ -430,8 +430,11 @@ def test_command_toolbar_tells_the_proxy_how_many_rows_it_takes(toolbar_app) -> 
         assert app._command_toolbar._proxy._toolbar_rows() == 2
 
 
-class WindowsConsoleOutput(CursorOutput):
-    """Report a size the way prompt-toolkit's Windows outputs do, one column short of the console's."""
+class LegacyConsoleOutput(CursorOutput):
+    """Report a size the way prompt-toolkit's Windows outputs do, one column short of the console's.
+
+    Like prompt-toolkit's Win32Output, which a legacy console gets, it has no vt100 output.
+    """
 
     def __init__(self, stream: Terminal) -> None:
         super().__init__(stream)
@@ -439,6 +442,14 @@ class WindowsConsoleOutput(CursorOutput):
 
     def get_win32_screen_buffer_info(self) -> SimpleNamespace:
         return SimpleNamespace(dwSize=SimpleNamespace(X=80, Y=24))
+
+
+class WindowsConsoleOutput(LegacyConsoleOutput):
+    """A console which understands escape sequences, as prompt-toolkit's Windows10_Output writes to."""
+
+    def __init__(self, stream: Terminal) -> None:
+        super().__init__(stream)
+        self.vt100_output = self
 
 
 @pytest.mark.parametrize(
@@ -458,6 +469,35 @@ def test_stdout_proxy_counts_rows_by_the_width_a_windows_console_wraps_at(width,
     """
     stream = Terminal()
     with create_pipe_input() as pipe, create_app_session(input=pipe, output=WindowsConsoleOutput(stream)):
+        proxy = command_toolbar._ContextStdoutProxy()
+        try:
+            proxy._write_and_flush(None, "x" * width)
+            proxy._write_and_flush(None, "END\n")
+        finally:
+            proxy.close()
+
+    assert stream.getvalue() == "x" * width + f"\r\n<up {rows}>" + "x" * width + "END\n"
+
+
+@pytest.mark.parametrize(
+    ("width", "rows"),
+    [
+        pytest.param(79, 1, id="a line one column short of the console's width"),
+        pytest.param(80, 2, id="a line as wide as the console has already wrapped"),
+        pytest.param(81, 2, id="a line which reaches a second row"),
+        pytest.param(159, 2, id="a line one column short of two rows"),
+        pytest.param(160, 3, id="a line which fills two rows has already wrapped"),
+    ],
+)
+def test_stdout_proxy_counts_the_row_a_legacy_windows_console_has_wrapped_to(width, rows) -> None:
+    """A legacy console moves to the next row as soon as a row is full, not at the next character.
+
+    Ending a line which exactly fills its rows therefore leaves the cursor a row lower than
+    on a terminal which waits. Going up one row too few wrote the line again a row below
+    itself, which showed its last row twice.
+    """
+    stream = Terminal()
+    with create_pipe_input() as pipe, create_app_session(input=pipe, output=LegacyConsoleOutput(stream)):
         proxy = command_toolbar._ContextStdoutProxy()
         try:
             proxy._write_and_flush(None, "x" * width)
