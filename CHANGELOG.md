@@ -26,6 +26,13 @@
     - The reserved bottom toolbar is drawn as a reverse-video bar, as the toolbar is in legacy mode.
       It was drawn as plain text. Theme rules for `bottom-toolbar` and `bottom-toolbar.text` now
       apply to its text as well as to the rest of the row.
+    - Resizing the terminal while a command is printing damages its output far less often in
+      reserved toolbar mode. In iTerm2, a line was printed over the old toolbar and the rest of the
+      toolbar left in the output, and growing the window erased a line of output. A resize during a
+      command is now acted on at once where there is a window-change signal, instead of within half
+      a second, and the old toolbar is cleared from wherever the terminal has moved it. A line can
+      still be printed over the old toolbar when a command is printing hundreds of lines a second as
+      the window is resized.
     - Background output printed above an active reserved prompt through `run_in_terminal()` or
       `patch_stdout()` is preserved when the prompt redraws.
     - Reserved rendering preserves unfinished command output when the main prompt returns by

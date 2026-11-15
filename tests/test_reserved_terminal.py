@@ -293,11 +293,94 @@ def resize(harness, terminal, rows: int, columns: int) -> None:
     harness.size = Size(rows=rows, columns=columns)
 
 
+@pytest.mark.skipif(not hasattr(signal, "SIGWINCH"), reason="this platform has no window-change signal")
+class TestResizeSignal:
+    """A resize during a command is passed to the display from the thread the signal comes to.
+
+    A terminal sets its scroll region back to the whole screen when it is resized. Until the
+    display has installed it again, command output runs on to the toolbar's row and is written
+    over it. Left to prompt-toolkit's look at the size twice a second, that is most resizes.
+    """
+
+    def test_the_region_is_installed_again_without_waiting_for_the_size_poll(self, terminal_harness) -> None:
+        harness, terminal = terminal_harness
+        if threading.current_thread() is not threading.main_thread():  # pragma: no cover
+            pytest.skip("signals are delivered to the main thread")
+        # Nothing else which would have the display look at the size: no poll of it, and no
+        # toolbar refresh to draw a frame. Only the signal can bring the news.
+        ui = harness.app.main_session.app
+        ui.terminal_size_polling_interval = None
+        ui.refresh_interval = 0
+        before = signal.getsignal(signal.SIGWINCH)
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            display = harness.app.reserved_toolbar.display
+            assert display.geometry.physical_rows == 24
+            # The frames a display draws as it starts would see the new size too. Wait them out.
+            drawn = -1
+            while drawn != ui.render_counter:
+                drawn = ui.render_counter
+                time.sleep(0.2)
+            resize(harness, terminal, 30, 80)
+            time.sleep(0.2)
+            assert display.geometry.physical_rows == 24
+            signal.raise_signal(signal.SIGWINCH)
+            assert wait_for(lambda: display.geometry is not None and display.geometry.physical_rows == 30, timeout=2)
+            assert wait_for(lambda: terminal.screen.display[-1].startswith("STATUS"))
+            assert terminal.screen.margins == pyte.screens.Margins(0, 28)
+        assert signal.getsignal(signal.SIGWINCH) is before
+
+    def test_a_handler_which_was_already_there_still_hears_of_it(self, terminal_harness) -> None:
+        harness, _ = terminal_harness
+        if threading.current_thread() is not threading.main_thread():  # pragma: no cover
+            pytest.skip("signals are delivered to the main thread")
+        heard: list[int] = []
+
+        def earlier(signum: int, _frame: Any) -> None:
+            heard.append(signum)
+
+        before = signal.signal(signal.SIGWINCH, earlier)
+        try:
+            with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+                assert signal.getsignal(signal.SIGWINCH) is not earlier
+                signal.raise_signal(signal.SIGWINCH)
+                assert heard == [signal.SIGWINCH]
+            assert signal.getsignal(signal.SIGWINCH) is earlier
+        finally:
+            signal.signal(signal.SIGWINCH, before)
+
+    def test_a_handler_which_python_cannot_put_back_is_left_alone(self, terminal_harness, monkeypatch) -> None:
+        """One installed from C is reported as None, which cannot be given to signal() again."""
+        harness, _ = terminal_harness
+        installed: list[Any] = []
+        monkeypatch.setattr(signal, "getsignal", lambda _signum: None)
+        monkeypatch.setattr(signal, "signal", lambda *args: installed.append(args))
+        with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+            pass
+        assert not [args for args in installed if args[0] == signal.SIGWINCH]
+
+    def test_a_display_started_off_the_main_thread_leaves_the_signal_alone(self, terminal_harness) -> None:
+        """Only the main thread may install a handler, or be sent the signal."""
+        harness, _ = terminal_harness
+        before = signal.getsignal(signal.SIGWINCH)
+        during: list[Any] = []
+
+        def command() -> None:
+            with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+                during.append(signal.getsignal(signal.SIGWINCH))
+
+        thread = threading.Thread(target=command)
+        thread.start()
+        thread.join(timeout=10)
+        assert during == [before]
+        assert signal.getsignal(signal.SIGWINCH) is before
+
+
 class TestResize:
-    """A resize during a command reaches the display only through prompt-toolkit's size poll.
+    """A resize during a command reaches a display off the main thread through the size poll.
 
     The command display runs on its own thread, where no window-change signal can be
-    attached, so the poll on ``output.get_size()`` is the only way a resize arrives there.
+    attached, so the poll on ``output.get_size()`` is how a resize arrives there unless the
+    main thread passes the signal on. These tests are of the poll.
     """
 
     @pytest.mark.parametrize("terminal_harness", [2, 3], indirect=True)
