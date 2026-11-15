@@ -177,6 +177,10 @@ class PromptToolkitBridge:
         self._after_render_installed: Any = None
         self._render_suppressed = False
         self._unfinished_command_output = False
+        # Whether the last thing to move the cursor was command output ending a line, which
+        # leaves it at the start of a row holding none of that output. Not the opposite of the
+        # flag above: after a guest program or an erase, neither is known.
+        self._command_output_ended_a_line = False
 
     # -- what is known ---------------------------------------------------------------------
 
@@ -291,6 +295,7 @@ class PromptToolkitBridge:
             visible = _TRAILING_CONTROL.sub("", data)
             if visible:
                 self._unfinished_command_output = not visible.endswith("\n")
+                self._command_output_ended_a_line = visible.endswith("\n")
         self._prompt_anchor = prompt_anchor
         # Only the frame in flight goes; it was prepared against the cursor and content this
         # write moved, so committing it would emit a stale frame. The renderer's baseline is
@@ -320,6 +325,7 @@ class PromptToolkitBridge:
         the guest's to finish, as it was before the reservation existed.
         """
         self._unfinished_command_output = False
+        self._command_output_ended_a_line = False
 
     def before_managed_write(self) -> None:
         """Remove retained pager-startup cells before output can scroll them into history.
@@ -656,7 +662,9 @@ class PromptToolkitBridge:
             elif self._display.terminal.physical_size() == geometry.physical_size:
                 return
             else:
-                self._display.reconfigure()
+                # While a command has the terminal, the row output has just moved on to may be
+                # the old band's: the terminal dropped the scroll region when it was resized.
+                self._display.reconfigure(cursor_row_is_fresh=self._render_suppressed and self._command_output_ended_a_line)
         self.forget_prompt_anchor()
         # A prompt owes recovery: its origin has to be re-established from the terminal, and
         # its frame repainted. A command does not -- it owns the cursor and is still writing

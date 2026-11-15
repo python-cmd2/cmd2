@@ -1170,6 +1170,48 @@ class TestRenderInterception:
         assert harness.display.geometry is not None
         assert harness.display.geometry.physical_rows == 12
 
+    @pytest.mark.parametrize(
+        ("suppressed", "written", "fresh"),
+        [
+            # A command has the terminal, and its last line ended: the cursor is at the start
+            # of a row it has written nothing on, which may be the old band's.
+            (True, ["one\n"], True),
+            (True, ["one\n", "\x1b[0m"], True),
+            # The line is still in progress, so the cursor's row is the command's.
+            (True, ["one\n", "two"], False),
+            # Nothing is known of where the cursor is: no output yet, or a guest has had it.
+            (True, [], False),
+            (True, ["one\n", None], False),
+            # A prompt has the terminal. Its rows are its own to redraw.
+            (False, ["one\n"], False),
+        ],
+    )
+    def test_a_resize_says_whether_output_has_just_moved_on_to_the_cursor_s_row(self, suppressed, written, fresh) -> None:
+        """A terminal drops the scroll region when it is resized, and output then runs on to the band."""
+        harness = self.bound()
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+        harness.bridge.set_render_suppressed(suppressed)
+        for data in written:
+            if data is None:
+                harness.bridge.forget_unfinished_command_output()
+            else:
+                harness.bridge.note_managed_write(data=data)
+        asked: list[bool] = []
+        reconfigure = harness.display.reconfigure
+
+        def record(*, cursor_row_is_fresh: bool = False) -> bool:
+            asked.append(cursor_row_is_fresh)
+            return reconfigure(cursor_row_is_fresh=cursor_row_is_fresh)
+
+        harness.display.reconfigure = record  # type: ignore[method-assign]
+        harness.size = Size(rows=30, columns=80)
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+        assert asked == [fresh]
+        assert harness.display.geometry is not None
+        assert harness.display.geometry.physical_rows == 30
+
     def test_a_suppressed_render_below_the_floor_is_a_no_op(self) -> None:
         """With no reservation there is nothing to remeasure and nothing of its own to draw."""
         harness = self.bound()
