@@ -44,6 +44,10 @@ system.
 
 Output of any command can be displayed one page at a time using the [cmd2.Cmd.ppaged][] method.
 
+The pager is the command in `self.pager`, or `self.pager_chop` when chopping long lines: `less` on
+POSIX systems and `more` on Windows by default. If that program cannot be run, for example because
+it is not installed, the output is printed without paging.
+
 Alternatively, a terminal pager can be invoked directly using the ability to run shell commands with
 the `!` shortcut like so:
 

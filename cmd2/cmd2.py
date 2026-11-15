@@ -1926,6 +1926,31 @@ class Cmd:
                 rich_print_kwargs=rich_print_kwargs,
             )
 
+    @staticmethod
+    def _pager_failed_to_start(command: str, returncode: int) -> bool:
+        """Return whether the shell could not run a pager at all, so that it showed nothing.
+
+        A pager which did run has had the output, whatever status it exited with.
+
+        :param command: the pager command given to the shell
+        :param returncode: the status the shell exited with
+        """
+        if returncode == 0:
+            return False
+        if sys.platform.startswith("win"):
+            # cmd.exe exits with 1 for a command it cannot find, which a pager may also do for
+            # reasons of its own. Tell them apart by whether there is such a program.
+            import shlex
+            import shutil
+
+            try:
+                words = shlex.split(command, posix=False)
+            except ValueError:
+                return False
+            return bool(words) and shutil.which(words[0].strip('"')) is None
+        # What a POSIX shell exits with for a command it cannot find, or cannot execute.
+        return returncode in (126, 127)
+
     def ppaged(
         self,
         *objects: Any,
@@ -1946,6 +1971,9 @@ class Cmd:
         A pager is used when the terminal is interactive and may exit immediately if the output
         fits on the screen. A pager is not used inside a script (Python or text) or when output is
         redirected or piped, and in these cases, output is sent to `poutput`.
+
+        If the pager program cannot be run, for example because it is not installed, the output
+        is printed without one.
 
         :param chop: True -> causes lines longer than the screen width to be chopped (truncated) rather than wrapped
                               - truncated text is still accessible by scrolling with the right & left arrow keys
@@ -1995,8 +2023,10 @@ class Cmd:
                     soft_wrap=soft_wrap,
                     **(rich_print_kwargs if rich_print_kwargs is not None else {}),
                 )
+            output = capture.get()
             # As for a pipe: the pager gets UTF-8, and on Windows the console is UTF-8 while it runs.
-            output_bytes = capture.get().encode("utf-8", "replace")
+            output_bytes = output.encode("utf-8", "replace")
+            pager = self.pager_chop if chop else self.pager
 
             # Prevent KeyboardInterrupts while in the pager. The pager application will
             # still receive the SIGINT since it is in the same process group as us.
@@ -2004,7 +2034,7 @@ class Cmd:
                 import subprocess
 
                 pipe_proc = subprocess.Popen(  # noqa: S602
-                    self.pager_chop if chop else self.pager,
+                    pager,
                     shell=True,
                     stdin=subprocess.PIPE,
                     stdout=self.stdout,
@@ -2028,6 +2058,11 @@ class Cmd:
 
                     except (OSError, termios.error):
                         pass
+
+            if self._pager_failed_to_start(pager, pipe_proc.returncode):
+                # The shell has said why. Nothing was shown, and only the pager was going to.
+                self.stdout.write(output)
+                self.stdout.flush()
 
         else:
             self.poutput(

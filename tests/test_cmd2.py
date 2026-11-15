@@ -4010,6 +4010,89 @@ def test_ppaged_pages_utf8_in_a_utf8_console(outsim_app, monkeypatch) -> None:
     assert events == ["utf-8 console", "pager started", "pager exited", "restored"]
 
 
+class FakeTerminal(io.TextIOWrapper):
+    """A real file which says it is a terminal, so that a pager's shell can be given it to write to."""
+
+    def isatty(self) -> bool:
+        return True
+
+
+@pytest.fixture
+def paging_app(outsim_app, monkeypatch, tmp_path):
+    """An application which will page, and whatever reaches its terminal."""
+    stdin_mock = mock.MagicMock()
+    stdin_mock.isatty.return_value = True
+    monkeypatch.setattr(outsim_app, "stdin", stdin_mock)
+    if not sys.platform.startswith("win") and os.environ.get("TERM") is None:
+        monkeypatch.setenv("TERM", "simulated")
+    with FakeTerminal((tmp_path / "terminal").open("w+b"), encoding="utf-8") as terminal:
+        monkeypatch.setattr(outsim_app, "stdout", terminal)
+
+        def shown() -> str:
+            terminal.flush()
+            terminal.seek(0)
+            return terminal.read()
+
+        yield outsim_app, shown
+
+
+@pytest.mark.parametrize("chop", [True, False])
+def test_ppaged_shows_the_output_when_the_pager_cannot_be_run(paging_app, capfd, chop) -> None:
+    """A pager which is not installed must not cost the user the output.
+
+    The shell reports the missing program and exits. Nothing has been shown by then, and
+    without the pager there is nobody else to show it.
+    """
+    app, shown = paging_app
+    app.pager = app.pager_chop = "cmd2-no-such-pager-program --some-option"
+
+    app.ppaged("first line\nsecond line", chop=chop)
+
+    assert shown() == "first line\nsecond line\n"
+    # The shell said why there was no pager.
+    assert "cmd2-no-such-pager-program" in capfd.readouterr().err
+
+
+def test_ppaged_does_not_repeat_output_after_a_pager_which_ran_and_failed(paging_app) -> None:
+    """Only a pager which could not be started is made up for: one which ran has had the output."""
+    app, shown = paging_app
+    app.pager = f'"{sys.executable}" -c "import sys; sys.stdin.read(); sys.exit(1)"'
+
+    app.ppaged("first line\nsecond line")
+
+    assert shown() == ""
+
+
+@pytest.mark.parametrize(
+    ("platform", "command", "returncode", "found", "expected"),
+    [
+        pytest.param("linux", "less -RXF", 127, True, True, id="a POSIX shell found no such command"),
+        pytest.param("linux", "less -RXF", 126, True, True, id="a POSIX shell could not execute it"),
+        pytest.param("linux", "less -RXF", 1, False, False, id="a POSIX pager failed by itself"),
+        pytest.param("linux", "less -RXF", 0, False, False, id="a POSIX pager succeeded"),
+        pytest.param("win32", "less -RXF", 1, False, True, id="cmd.exe found no such command"),
+        pytest.param("win32", '"C:\\Program Files\\less.exe" -R', 1, False, True, id="cmd.exe found no such quoted path"),
+        pytest.param("win32", "more", 1, True, False, id="a Windows pager failed by itself"),
+        pytest.param("win32", "less -RXF", 0, False, False, id="a Windows pager succeeded"),
+        pytest.param("win32", 'less "unbalanced', 1, False, False, id="a Windows command which cannot be taken apart"),
+        pytest.param("win32", "", 1, False, False, id="no Windows command at all"),
+    ],
+)
+def test_pager_failed_to_start(monkeypatch, platform, command, returncode, found, expected) -> None:
+    looked_for = []
+
+    def which(program: str) -> str | None:
+        looked_for.append(program)
+        return program if found else None
+
+    monkeypatch.setattr(sys, "platform", platform)
+    monkeypatch.setattr("shutil.which", which)
+
+    assert cmd2.Cmd._pager_failed_to_start(command, returncode) is expected
+    # A quoted program is looked for by its name, not with its quotes.
+    assert all(not program.startswith('"') for program in looked_for)
+
+
 def test_ppaged_no_pager(outsim_app) -> None:
     """Since we're not in a fully-functional terminal, ppaged() will just call poutput()."""
     msg = "testing..."

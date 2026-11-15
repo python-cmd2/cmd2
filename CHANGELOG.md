@@ -3,6 +3,9 @@
 - Bug Fixes
     - Fixed file path completion for names containing square brackets, including bracketed working
       directories and home directories.
+    - `ppaged()` now prints its output when the configured pager program cannot be run, for example
+      where `less` is not installed. Previously only the shell's error was shown and the output was
+      lost.
 
 ## 4.4.2 (November 11, 2026)
 
