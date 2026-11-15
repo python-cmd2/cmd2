@@ -1,8 +1,10 @@
 ## Unreleased
 
 - Bug Fixes
-    - Fixed file path and `PATH` executable completion (`path_complete()` and `get_exes_in_path()`)
-      for names and directories containing literal glob metacharacters such as square brackets.
+    - Fixed file path completion for names containing square brackets, including bracketed working
+      directories and home directories.
+    - Fixed `get_exes_in_path()` when executable names or `PATH` directories contain square
+      brackets.
 
 ## 4.4.2 (November 11, 2026)
 
