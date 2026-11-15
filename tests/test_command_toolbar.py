@@ -389,6 +389,44 @@ def test_stdout_proxy_continues_unfinished_lines(writes, expected) -> None:
     assert stream.getvalue() == expected
 
 
+class WindowsConsoleOutput(CursorOutput):
+    """Report a size the way prompt-toolkit's Windows outputs do, one column short of the console's."""
+
+    def __init__(self, stream: Terminal) -> None:
+        super().__init__(stream)
+        self.size = Size(rows=24, columns=79)
+
+    def get_win32_screen_buffer_info(self) -> SimpleNamespace:
+        return SimpleNamespace(dwSize=SimpleNamespace(X=80, Y=24))
+
+
+@pytest.mark.parametrize(
+    ("width", "rows"),
+    [
+        pytest.param(80, 1, id="a line as wide as the console"),
+        pytest.param(159, 2, id="a line one column short of two rows"),
+        pytest.param(160, 2, id="a line which fills two rows"),
+        pytest.param(161, 3, id="a line which reaches a third row"),
+    ],
+)
+def test_stdout_proxy_counts_rows_by_the_width_a_windows_console_wraps_at(width, rows) -> None:
+    """A line which fills the last column of a Windows console is continued from its own row.
+
+    prompt-toolkit reports such a console as one column narrower than the width it wraps at.
+    Counting rows by that size went up one row too many, and wrote over the line above.
+    """
+    stream = Terminal()
+    with create_pipe_input() as pipe, create_app_session(input=pipe, output=WindowsConsoleOutput(stream)):
+        proxy = command_toolbar._ContextStdoutProxy()
+        try:
+            proxy._write_and_flush(None, "x" * width)
+            proxy._write_and_flush(None, "END\n")
+        finally:
+            proxy.close()
+
+    assert stream.getvalue() == "x" * width + f"\r\n<up {rows}>" + "x" * width + "END\n"
+
+
 @pytest.mark.parametrize("flushed", [True, False])
 def test_command_toolbar_keeps_an_unfinished_line(toolbar_app, flushed) -> None:
     """An unfinished line is continued by later output, and ended when the toolbar stops."""

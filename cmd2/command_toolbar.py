@@ -166,8 +166,19 @@ class _ContextStdoutProxy(StdoutProxy):
 
     def _rows(self, line: str) -> int:
         """Return how many rows below its start the cursor was left after line was ended."""
-        columns = max(1, self._output.get_size().columns)
-        return max(1, -(-self._width(line) // columns))
+        return max(1, -(-self._width(line) // self._wrap_columns()))
+
+    def _wrap_columns(self) -> int:
+        """Return how many columns the terminal fits on a row before it wraps a line.
+
+        prompt-toolkit's Windows outputs report one column fewer than the console has, which
+        keeps what prompt-toolkit draws out of the last column. Text written raw is wrapped by
+        the console itself, at the width of its screen buffer.
+        """
+        screen_buffer_info = getattr(self._output, "get_win32_screen_buffer_info", None)
+        if screen_buffer_info is not None:
+            return max(1, int(screen_buffer_info().dwSize.X))
+        return max(1, self._output.get_size().columns)
 
     @staticmethod
     def _width(line: str) -> int:
