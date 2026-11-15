@@ -24,6 +24,7 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.key_binding.key_processor import KeyPress, KeyPressEvent
 from prompt_toolkit.layout import HSplit, Layout, Window
 from prompt_toolkit.layout.containers import ConditionalContainer
+from prompt_toolkit.output.vt100 import Vt100_Output
 from prompt_toolkit.patch_stdout import StdoutProxy
 from prompt_toolkit.utils import get_cwidth, suspend_to_background_supported
 
@@ -35,6 +36,11 @@ if TYPE_CHECKING:
 # Control sequences, operating system commands, and two-character escapes: text which takes
 # no room on the screen.
 _ESCAPE_RE = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\)|[@-Z\\-_])")
+
+# Erases what "erase down" does when the cursor is in the first column of a row, without
+# erasing from the top-left corner of the screen: the row itself, then from its second column
+# to the end of the screen, and back.
+ERASE_DOWN_FROM_FIRST_COLUMN = "\x1b[K\x1b[C\x1b[J\x1b[D"
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 _R = TypeVar("_R")
@@ -76,6 +82,32 @@ def suspend_toolbar(func: _F) -> _F:
             return func(self, *args, **kwargs)
 
     return cast(_F, wrapped)
+
+
+@contextlib.contextmanager
+def erasing_from_the_second_column(output: Any) -> Generator[None]:
+    """Have a terminal erase its screen without iTerm2 keeping what was on it.
+
+    iTerm2 saves a screen which is erased from its top-left corner to its scrollback, as a
+    shell's ``clear`` expects, and the alternate screen is no exception. A renderer erases its
+    screen from there when it is reset, which a full-screen one is when it closes, when the
+    terminal is resized and when it lends the terminal. Each would leave a page in the
+    scrollback of the screen the pager was started from.
+
+    The renderer always erases from the first column of a row, which is what lets the same
+    cells be erased starting from the second. Only an output which writes escape sequences
+    itself is changed, and it is put back afterwards.
+
+    :param output: the output the pager is drawn on
+    """
+    if not isinstance(output, Vt100_Output):
+        yield
+        return
+    vars(output)["erase_down"] = functools.partial(output.write_raw, ERASE_DOWN_FROM_FIRST_COLUMN)
+    try:
+        yield
+    finally:
+        vars(output).pop("erase_down", None)
 
 
 def pipe_target(stream: Any) -> Any:
@@ -615,11 +647,14 @@ class CommandToolbar:
         layout = Layout(HSplit([pager.container, self.toolbar]), focused_element=pager.text)
         previous = (self.app.layout, self.app.key_bindings, self.app.editing_mode, self.app.full_screen)
         entered = False
+        # Open for as long as the pager has a screen of its own to erase.
+        own_screen = contextlib.ExitStack()
 
         def enter() -> None:
             nonlocal entered
             entered = True
             self.app.renderer.erase()
+            own_screen.enter_context(erasing_from_the_second_column(self.app.output))
             self.app.layout = layout
             self.app.key_bindings = pager.bindings
             self.app.editing_mode = EditingMode.EMACS
@@ -631,7 +666,10 @@ class CommandToolbar:
             if not entered:
                 return
             entered = False
-            self.app.renderer.erase()
+            try:
+                self.app.renderer.erase()
+            finally:
+                own_screen.close()
             self.app.layout, self.app.key_bindings, self.app.editing_mode, self.app.full_screen = previous
             self.app.renderer.full_screen = self.app.full_screen
             self.app.renderer.request_absolute_cursor_position()
@@ -654,6 +692,7 @@ class CommandToolbar:
                 self._call_in_ui(leave)
             else:
                 # The application's shutdown already reset the renderer.
+                own_screen.close()
                 self.app.layout, self.app.key_bindings, self.app.editing_mode, self.app.full_screen = previous
                 self.app.renderer.full_screen = self.app.full_screen
 

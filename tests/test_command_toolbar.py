@@ -1274,6 +1274,69 @@ def test_external_pager_suspends_shared_application(toolbar_app, monkeypatch) ->
         assert app._command_toolbar.is_active
 
 
+def test_builtin_pager_never_erases_its_screen_from_the_corner(monkeypatch) -> None:
+    """iTerm2 keeps a screen which is erased from its top-left corner, and so each page so erased.
+
+    A renderer erases its screen that way when it is reset, which it is when the pager closes
+    and each time the terminal is resized.
+    """
+    stream = Terminal()
+    entered, resized = threading.Event(), threading.Event()
+    with create_pipe_input() as pipe:
+        terminal = Vt100_Output(stream, lambda: Size(rows=24, columns=80), enable_cpr=False)
+        with create_app_session(input=pipe, output=terminal):
+            app = Cmd(allow_cli_args=False)
+            app.stdout = stream
+            app.use_builtin_pager = True
+            monkeypatch.setattr(app, "stdin", Terminal())
+            app.main_session = PromptSession(input=pipe, output=terminal, bottom_toolbar="STATUS", refresh_interval=0.01)
+            ui = app.main_session.app
+
+            def resize() -> None:
+                ui._on_resize()
+                resized.set()
+
+            def interact() -> None:
+                try:
+                    assert entered.wait(2)
+                    ui.loop.call_soon_threadsafe(resize)
+                    assert resized.wait(2)
+                finally:
+                    pipe.send_text("q")
+
+            ui.after_render += lambda _: entered.set() if ui.full_screen else None
+            with ThreadPoolExecutor() as executor:
+                interaction = executor.submit(interact)
+                with app._command_toolbar_context():
+                    app.ppaged("\n".join(f"row {i:03d}" for i in range(100)))
+                    interaction.result(timeout=2)
+
+    written = stream.getvalue()
+    paged = written[written.index("\x1b[?1049h") : written.rindex("\x1b[?1049l")]
+    # Once for the pager's first frame, once for the resize, once for the frame after it, once to close.
+    assert paged.count("\x1b[J") >= 4
+    assert paged.count("\x1b[J") == paged.count(command_toolbar.ERASE_DOWN_FROM_FIRST_COLUMN)
+    # The terminal's own way of erasing is back once the pager has closed.
+    assert "erase_down" not in vars(terminal)
+
+
+@pytest.mark.parametrize("row", [0, 1, 11, 23])
+def test_erase_down_from_first_column_erases_what_erase_down_does(row) -> None:
+    """The longer way round leaves the same screen, and the cursor where it was."""
+    import pyte
+
+    def shown(erase: str) -> tuple[list[str], int, int]:
+        screen = pyte.Screen(20, 24)
+        stream = pyte.Stream(screen)
+        stream.feed("\r\n".join(f"row {number:02d} filled to the edge"[:20] for number in range(24)))
+        stream.feed(f"\x1b[{row + 1};1H{erase}")
+        return list(screen.display), screen.cursor.x, screen.cursor.y
+
+    kept = [f"row {number:02d} filled to the edge"[:20] for number in range(row)]
+    assert shown(command_toolbar.ERASE_DOWN_FROM_FIRST_COLUMN) == shown("\x1b[J")
+    assert shown(command_toolbar.ERASE_DOWN_FROM_FIRST_COLUMN) == (kept + [" " * 20] * (24 - row), 0, row)
+
+
 def test_builtin_pager_eof_restores_prompt(toolbar_app) -> None:
     app, pipe, output = toolbar_app
     layout = app.main_session.app.layout
