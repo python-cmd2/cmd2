@@ -508,14 +508,19 @@ def test_pipeline_from_worker_thread_stays_isolated(tmp_path) -> None:
         process.wait(timeout=5)
 
 
-@pytest.mark.parametrize("mode", ["reserved", "legacy"])
-def test_pager_resumes_with_raw_terminal_after_suspend(tmp_path, mode) -> None:
-    """Ctrl-Z in the built-in pager, then fg, must bring the pager back, not echoed cursor reports.
+def suspend_and_resume(tmp_path, mode, command_source, command, waiting, finish) -> None:
+    """Start a command under an interactive bash, stop it with Ctrl-Z, resume it with fg, and let it finish.
 
     The display thread sends the stop signal, which the kernel may hand to the main
     thread. Unless the sending thread stops synchronously too, it restores raw mode
     before the job has stopped, the shell puts its own modes back on fg, and every
     cursor-position query afterwards is echoed as ^[[row;colR.
+
+    :param mode: the bottom toolbar mode to run the application with
+    :param command_source: source of the application's ``do_`` method for the command
+    :param command: the command to type
+    :param waiting: returns whether the screen it is given shows the command waiting
+    :param finish: given ``send``, makes the waiting command finish
     """
     import fcntl
     import pty
@@ -529,8 +534,7 @@ def test_pager_resumes_with_raw_terminal_after_suspend(tmp_path, mode) -> None:
     application.write_text(
         "from cmd2 import Cmd, ToolbarMode\n"
         "class App(Cmd):\n"
-        "    def do_page(self, statement):\n"
-        "        self.ppaged('\\n'.join(f'line {n:04d}' for n in range(400)))\n"
+        f"{command_source}"
         # A refreshing toolbar, as in the examples: its periodic redraws are what turn a cooked terminal into a stream of echoed
         # cursor reports.
         f"app = App(bottom_toolbar_mode=ToolbarMode.{mode.upper()}, refresh_interval=0.5)\n"
@@ -571,8 +575,8 @@ def test_pager_resumes_with_raw_terminal_after_suspend(tmp_path, mode) -> None:
                 return True
         return predicate()
 
-    def pager_shown():
-        return any("q: quit" in line for line in screen.display)
+    def command_waiting():
+        return waiting(screen)
 
     try:
         assert pump(10, lambda: "OUTER> " in transcript)
@@ -580,30 +584,69 @@ def test_pager_resumes_with_raw_terminal_after_suspend(tmp_path, mode) -> None:
         assert pump(10, lambda: "TEST>" in "\n".join(screen.display)), transcript
         # Let the prompt finish its cursor-position handshake before typing at it.
         pump(0.5)
-        send("page\n")
-        assert pump(10, pager_shown), transcript
+        send(f"{command}\n")
+        assert pump(10, command_waiting), transcript
         start = len(transcript)
         send("\x1a")
         assert pump(10, lambda: "OUTER> " in transcript[start:]), transcript
         start = len(transcript)
         send("fg\n")
-        assert pump(10, pager_shown), transcript[start:]
+        assert pump(10, command_waiting), transcript[start:]
         # Give a broken resume time to start looping before judging the transcript.
         pump(1.5)
         resumed = transcript[start:]
         echoed = re.findall(r"\^\[\[\d+;\d+R", resumed)
         assert not echoed, f"cursor position reports were echoed after fg: {echoed[:5]}\n{resumed}"
-        assert pager_shown(), "\n".join(screen.display)
-        # A cooked terminal would hold the key back until Enter: the pager must quit on q alone.
+        assert command_waiting(), "\n".join(screen.display)
         start = len(transcript)
-        send("q")
-        assert pump(10, lambda: "TEST>" in transcript[start:]), f"pager did not quit on q after fg:\n{transcript[start:]}"
+        finish(send)
+        assert pump(10, lambda: "TEST>" in transcript[start:]), f"the command did not finish after fg:\n{transcript[start:]}"
         send("quit\n")
         pump(5, lambda: os.tcgetpgrp(master) == process.pid)
     finally:
         os.close(master)
         process.kill()
         process.wait(timeout=5)
+
+
+@pytest.mark.parametrize("mode", ["reserved", "legacy"])
+def test_command_resumes_with_raw_terminal_after_suspend(tmp_path, mode) -> None:
+    """Ctrl-Z while a command runs under the toolbar, then fg, must leave the terminal raw.
+
+    The command keeps printing, and the display asks the terminal where its cursor is as it
+    puts each line above the toolbar. A terminal left cooked would echo every answer.
+    """
+    release = tmp_path / "release"
+
+    def printing(screen):
+        return any(line.startswith("waiting") for line in screen.display)
+
+    suspend_and_resume(
+        tmp_path,
+        mode,
+        "    def do_wait(self, statement):\n"
+        "        import os, time\n"
+        f"        while not os.path.exists({str(release)!r}):\n"
+        "            self.poutput('waiting')\n"
+        "            time.sleep(0.2)\n",
+        "wait",
+        printing,
+        lambda send: release.touch(),
+    )
+
+
+@pytest.mark.parametrize("mode", ["reserved", "legacy"])
+def test_pager_resumes_with_raw_terminal_after_suspend(tmp_path, mode) -> None:
+    """Ctrl-Z in the built-in pager, then fg, must bring the pager back, not echoed cursor reports."""
+    suspend_and_resume(
+        tmp_path,
+        mode,
+        "    def do_page(self, statement):\n        self.ppaged('\\n'.join(f'line {n:04d}' for n in range(400)))\n",
+        "page",
+        lambda screen: any("q: quit" in line for line in screen.display),
+        # A cooked terminal would hold the key back until Enter: the pager must quit on q alone.
+        lambda send: send("q"),
+    )
 
 
 @pytest.mark.parametrize("mode", ["off", "reserved"])
