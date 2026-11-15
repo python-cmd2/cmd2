@@ -153,14 +153,8 @@ once and the command carries on without the toolbar.
 
 ### Commands That Take Over the Terminal
 
-While the toolbar is running, `ppaged()` uses an embedded pager which keeps the same toolbar visible
-and refreshing instead of handing the terminal to an external pager. Short output is printed
-directly above the toolbar, and longer output becomes a scrollable, searchable view. Set
-`self.use_builtin_pager = False` to opt out and use your configured external `pager`/`pager_chop`
-commands. See [Embedded pager](./os.md#embedded-pager) for the key bindings and full details.
-
-cmd2 temporarily hides the toolbar for external pagers, Python environments, and shell commands. It
-also hides it while a command's output is piped to another process, since that process may be
+cmd2 temporarily hides the toolbar for pagers, Python environments, and shell commands. It also
+hides it while a command's output is piped to another process, since that process may be
 interactive, as `less` and `fzf` are. It restores the toolbar when those operations finish.
 
 [cmd2.Cmd.read_input][] and [cmd2.Cmd.read_secret][] keep the toolbar visible, and it continues to

@@ -631,18 +631,6 @@ def test_command_resumes_with_raw_terminal_after_suspend(tmp_path) -> None:
     )
 
 
-def test_pager_resumes_with_raw_terminal_after_suspend(tmp_path) -> None:
-    """Ctrl-Z in the built-in pager, then fg, must bring the pager back, not echoed cursor reports."""
-    suspend_and_resume(
-        tmp_path,
-        "    def do_page(self, statement):\n        self.ppaged('\\n'.join(f'line {n:04d}' for n in range(400)))\n",
-        "page",
-        lambda screen: any("q: quit" in line for line in screen.display),
-        # A cooked terminal would hold the key back until Enter: the pager must quit on q alone.
-        lambda send: send("q"),
-    )
-
-
 @pytest.mark.parametrize("parent_delay", [False, True])
 def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path, parent_delay) -> None:
     """A pager such as less puts the terminal in raw mode as it starts, before reading its pipe.
