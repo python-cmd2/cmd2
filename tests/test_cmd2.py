@@ -4073,6 +4073,55 @@ def test_ppaged_does_not_repeat_output_after_a_pager_which_ran_and_failed(paging
     assert shown() == ""
 
 
+class RendersOnce:
+    """A renderable which only has its lines to give the first time it is rendered."""
+
+    def __init__(self, *lines: str) -> None:
+        self._lines = iter(lines)
+
+    def __rich_console__(self, console, options):
+        yield from self._lines
+
+
+@pytest.mark.parametrize("chop", [True, False])
+def test_ppaged_renders_once_when_the_pager_cannot_be_run(paging_app, chop) -> None:
+    """What was rendered for the pager is what gets shown: not everything can be rendered a second time."""
+    app, shown = paging_app
+    app.pager = app.pager_chop = "cmd2-no-such-pager-program"
+
+    app.ppaged(RendersOnce("first line", "second line"), chop=chop)
+
+    assert shown() == "first line\nsecond line\n"
+
+
+def test_ppaged_does_not_try_again_a_pager_which_cannot_be_run(paging_app, capfd) -> None:
+    """The shell says once that there is no such pager, not every time something is paged."""
+    app, shown = paging_app
+    app.pager = "cmd2-no-such-pager-program"
+
+    app.ppaged("first")
+    assert "cmd2-no-such-pager-program" in capfd.readouterr().err
+
+    with mock.patch("subprocess.Popen") as popen_mock:
+        app.ppaged(RendersOnce("second"))
+
+    popen_mock.assert_not_called()
+    assert capfd.readouterr().err == ""
+    assert shown() == "first\nsecond\n"
+
+
+def test_ppaged_tries_another_pager_after_one_which_cannot_be_run(paging_app) -> None:
+    """Only the command which could not be run is given up on, so setting a pager which works is enough."""
+    app, shown = paging_app
+    app.pager = "cmd2-no-such-pager-program"
+    app.ppaged("unpaged")
+
+    app.pager = f'"{sys.executable}" -c "import sys; sys.stdout.write(sys.stdin.read().upper())"'
+    app.ppaged("paged")
+
+    assert shown() == "unpaged\nPAGED\n"
+
+
 @pytest.mark.parametrize(
     ("platform", "command", "returncode", "found", "expected"),
     [

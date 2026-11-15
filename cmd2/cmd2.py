@@ -668,6 +668,9 @@ class Cmd:
             self.pager = "less -RXF"
             self.pager_chop = "less -SRXF"
 
+        # Pager commands which the shell could not run. Each is tried, and reported by the shell, only once.
+        self._unrunnable_pagers: set[str] = set()
+
         # This boolean flag stores whether cmd2 will allow clipboard related features
         self.allow_clipboard = allow_clipboard
 
@@ -1973,7 +1976,7 @@ class Cmd:
         redirected or piped, and in these cases, output is sent to `poutput`.
 
         If the pager program cannot be run, for example because it is not installed, the output
-        is printed without one.
+        is printed without one. That pager command is not tried again while the application runs.
 
         :param chop: True -> causes lines longer than the screen width to be chopped (truncated) rather than wrapped
                               - truncated text is still accessible by scrolling with the right & left arrow keys
@@ -2000,8 +2003,10 @@ class Cmd:
         # A pager application blocks, so only run one if not redirecting or running a script (either text or Python).
         can_block = not (self._redirecting or self.in_pyscript() or self.in_script())
 
-        # Check if we are outputting to a pager.
-        if functional_terminal and can_block:
+        pager = self.pager_chop if chop else self.pager
+
+        # Check if we are outputting to a pager. One which the shell could not run is not tried again.
+        if functional_terminal and can_block and pager not in self._unrunnable_pagers:
             # Chopping overrides soft_wrap, but only for what the pager is given
             pager_soft_wrap = soft_wrap or chop
 
@@ -2025,7 +2030,6 @@ class Cmd:
             output = capture.get()
             # As for a pipe: the pager gets UTF-8, and on Windows the console is UTF-8 while it runs.
             output_bytes = output.encode("utf-8", "replace")
-            pager = self.pager_chop if chop else self.pager
 
             # Prevent KeyboardInterrupts while in the pager. The pager application will
             # still receive the SIGINT since it is in the same process group as us.
@@ -2061,7 +2065,19 @@ class Cmd:
             if not self._pager_failed_to_start(pager, pipe_proc.returncode):
                 return
 
-        # For some reason we are unable to start the pager, so print without one.
+            # The shell has said why there is no pager. Remember that, so it is not asked every time.
+            self._unrunnable_pagers.add(pager)
+
+            if pager_soft_wrap == soft_wrap:
+                # What was rendered for the pager is what poutput() would print. Write that instead
+                # of rendering the objects a second time, which not all of them can be.
+                self.stdout.write(output)
+                self.stdout.flush()
+                return
+
+            # Chopping changed the wrapping for the pager, so render again as the caller asked.
+
+        # Nothing is paging the output, so print it.
         self.poutput(
             *objects,
             sep=sep,
