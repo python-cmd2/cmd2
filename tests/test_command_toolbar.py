@@ -385,6 +385,16 @@ class CursorOutput(RecordingOutput):
             "z" * (24 * 80 + 1) + "\r\nEND\n",
             id="a line longer than the screen stays ended",
         ),
+        pytest.param(
+            ["z" * (23 * 80 + 1), "END\n"],
+            "z" * (23 * 80 + 1) + "\r\nEND\n",
+            id="a line which reaches the last row stays ended",
+        ),
+        pytest.param(
+            ["z" * (23 * 80), "END\n"],
+            "z" * (23 * 80) + "\r\n<up 23>" + "z" * (23 * 80) + "END\n",
+            id="a line which stops above the last row is continued",
+        ),
     ],
 )
 def test_stdout_proxy_continues_unfinished_lines(writes, expected) -> None:
@@ -400,6 +410,115 @@ def test_stdout_proxy_continues_unfinished_lines(writes, expected) -> None:
             proxy.close()
 
     assert stream.getvalue() == expected
+
+
+@pytest.mark.parametrize(
+    ("width", "expected"),
+    [
+        pytest.param(22 * 80, "\r\n<up 22>" + "z" * (22 * 80) + "END\n", id="continued while the toolbar fits below it"),
+        pytest.param(22 * 80 + 1, "\r\nEND\n", id="stays ended once the toolbar would scroll its first row off"),
+    ],
+)
+def test_stdout_proxy_leaves_room_for_every_row_of_the_toolbar(width, expected) -> None:
+    """A toolbar of several rows scrolls the screen sooner than one row does."""
+    stream = Terminal()
+    with create_pipe_input() as pipe, create_app_session(input=pipe, output=CursorOutput(stream)):
+        proxy = command_toolbar._ContextStdoutProxy(lambda: 2)
+        try:
+            proxy._write_and_flush(None, "z" * width)
+            proxy._write_and_flush(None, "END\n")
+        finally:
+            proxy.close()
+
+    assert stream.getvalue() == "z" * width + expected
+
+
+def test_command_toolbar_tells_the_proxy_how_many_rows_it_takes(toolbar_app) -> None:
+    app, _, _ = toolbar_app
+    app.main_session.bottom_toolbar = "one\ntwo"
+    # Nothing has been drawn yet.
+    assert command_toolbar.CommandToolbar(app)._toolbar_rows() == 0
+    with app._command_toolbar_context():
+        assert app._command_toolbar._toolbar_rows() == 2
+        assert app._command_toolbar._proxy._toolbar_rows() == 2
+
+
+class LegacyConsoleOutput(CursorOutput):
+    """Report a size the way prompt-toolkit's Windows outputs do, one column short of the console's.
+
+    Like prompt-toolkit's Win32Output, which a legacy console gets, it has no vt100 output.
+    """
+
+    def __init__(self, stream: Terminal) -> None:
+        super().__init__(stream)
+        self.size = Size(rows=24, columns=79)
+
+    def get_win32_screen_buffer_info(self) -> SimpleNamespace:
+        return SimpleNamespace(dwSize=SimpleNamespace(X=80, Y=24))
+
+
+class WindowsConsoleOutput(LegacyConsoleOutput):
+    """A console which understands escape sequences, as prompt-toolkit's Windows10_Output writes to."""
+
+    def __init__(self, stream: Terminal) -> None:
+        super().__init__(stream)
+        self.vt100_output = self
+
+
+@pytest.mark.parametrize(
+    ("width", "rows"),
+    [
+        pytest.param(80, 1, id="a line as wide as the console"),
+        pytest.param(159, 2, id="a line one column short of two rows"),
+        pytest.param(160, 2, id="a line which fills two rows"),
+        pytest.param(161, 3, id="a line which reaches a third row"),
+    ],
+)
+def test_stdout_proxy_counts_rows_by_the_width_a_windows_console_wraps_at(width, rows) -> None:
+    """A line which fills the last column of a Windows console is continued from its own row.
+
+    prompt-toolkit reports such a console as one column narrower than the width it wraps at.
+    Counting rows by that size went up one row too many, and wrote over the line above.
+    """
+    stream = Terminal()
+    with create_pipe_input() as pipe, create_app_session(input=pipe, output=WindowsConsoleOutput(stream)):
+        proxy = command_toolbar._ContextStdoutProxy()
+        try:
+            proxy._write_and_flush(None, "x" * width)
+            proxy._write_and_flush(None, "END\n")
+        finally:
+            proxy.close()
+
+    assert stream.getvalue() == "x" * width + f"\r\n<up {rows}>" + "x" * width + "END\n"
+
+
+@pytest.mark.parametrize(
+    ("width", "rows"),
+    [
+        pytest.param(79, 1, id="a line one column short of the console's width"),
+        pytest.param(80, 2, id="a line as wide as the console has already wrapped"),
+        pytest.param(81, 2, id="a line which reaches a second row"),
+        pytest.param(159, 2, id="a line one column short of two rows"),
+        pytest.param(160, 3, id="a line which fills two rows has already wrapped"),
+    ],
+)
+def test_stdout_proxy_counts_the_row_a_legacy_windows_console_has_wrapped_to(width, rows) -> None:
+    """A legacy console moves to the next row as soon as a row is full, not at the next character.
+
+    Ending a line which exactly fills its rows therefore leaves the cursor a row lower than
+    on a terminal which waits. Going up one row too few wrote the line again a row below
+    itself, which showed its last row twice.
+    """
+    stream = Terminal()
+    with create_pipe_input() as pipe, create_app_session(input=pipe, output=LegacyConsoleOutput(stream)):
+        proxy = command_toolbar._ContextStdoutProxy()
+        try:
+            proxy._write_and_flush(None, "x" * width)
+            proxy._write_and_flush(None, "END\n")
+        finally:
+            proxy.close()
+
+    assert stream.getvalue() == "x" * width + f"\r\n<up {rows}>" + "x" * width + "END\n"
 
 
 @pytest.mark.parametrize("flushed", [True, False])
@@ -469,6 +588,33 @@ def test_command_toolbar_flushes_writes_waiting_on_cursor_reports(monkeypatch) -
             app.poutput("last words")
 
     assert "last words\n" in output.getvalue()
+
+
+def test_command_toolbar_remembers_the_rows_its_toolbar_took_before_it_is_drawn_again() -> None:
+    """A command's first output can arrive before the toolbar has been drawn for that command.
+
+    Each run of the application forgets what it drew, and prompt-toolkit leaves the toolbar
+    out until the terminal has reported where its cursor is. Until then the toolbar counts
+    for the rows the main prompt drew it with, which are the rows it is about to take again.
+    """
+    app = Cmd(allow_cli_args=False)
+    output = Terminal()
+    app.stdout = output
+
+    with create_pipe_input() as pipe:
+        app.main_session = PromptSession(
+            input=pipe,
+            output=CprOutput(output),
+            bottom_toolbar="one\ntwo",
+            refresh_interval=0.01,
+        )
+        window = app.main_session.layout.container.children[-1].content
+        # What the main prompt leaves behind after drawing a toolbar of two rows.
+        window.render_info = SimpleNamespace(window_height=2)
+        with app._command_toolbar_context():
+            assert window.render_info is None
+            assert app._command_toolbar._toolbar_rows() == 2
+            assert app._command_toolbar._proxy._toolbar_rows() == 2
 
 
 def test_command_toolbar_suspension_waits_for_in_flight_writes(toolbar_app, monkeypatch) -> None:

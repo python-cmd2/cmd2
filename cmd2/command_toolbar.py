@@ -144,10 +144,15 @@ class _ContextStdoutProxy(StdoutProxy):
     a row of its own, and it is continued from where it stopped when more output arrives.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, toolbar_rows: Callable[[], int] = lambda: 1) -> None:
+        """Start printing above a toolbar.
+
+        :param toolbar_rows: returns how many rows the toolbar takes below the output
+        """
         # The line which output last left unfinished, exactly as written. Set before the
         # base class starts the thread which reads it.
         self._unfinished = ""
+        self._toolbar_rows = toolbar_rows
         # The worker already combines queued writes. A batching sleep would also delay
         # close(), which runs at each command finalization boundary.
         super().__init__(raw=True, sleep_between_writes=0)
@@ -175,10 +180,12 @@ class _ContextStdoutProxy(StdoutProxy):
             line = self._last_line(self._unfinished + text)
             if line:
                 output.write_raw("\r\n")
-            size = output.get_size()
             # A line whose start has scrolled off the screen can't be found again, so it
-            # stays ended where it is.
-            self._unfinished = line if self._width(line) <= size.rows * size.columns else ""
+            # stays ended where it is. Its first row scrolls off once the screen has no
+            # room for the whole line and the toolbar below it. A row is needed below the
+            # line even with no toolbar, for the cursor which ended it.
+            room = output.get_size().rows - max(1, self._toolbar_rows())
+            self._unfinished = line if self._rows(line) <= room else ""
             output.flush()
 
         if loop is None:
@@ -205,8 +212,34 @@ class _ContextStdoutProxy(StdoutProxy):
 
     def _rows(self, line: str) -> int:
         """Return how many rows below its start the cursor was left after line was ended."""
-        columns = max(1, self._output.get_size().columns)
-        return max(1, -(-self._width(line) // columns))
+        width = self._width(line)
+        columns = self._wrap_columns()
+        if self._wraps_at_once():
+            # A line which has just filled a row has put the cursor on the next one.
+            return width // columns + 1
+        return max(1, -(-width // columns))
+
+    def _wraps_at_once(self) -> bool:
+        """Return whether the terminal moves to the next row as soon as a row is full.
+
+        A terminal which understands escape sequences waits for the next character. A legacy
+        Windows console does not wait. It gets prompt-toolkit's Win32Output which, unlike its
+        other Windows outputs, has no vt100 output to write escape sequences with.
+        """
+        output = self._output
+        return hasattr(output, "get_win32_screen_buffer_info") and not hasattr(output, "vt100_output")
+
+    def _wrap_columns(self) -> int:
+        """Return how many columns the terminal fits on a row before it wraps a line.
+
+        prompt-toolkit's Windows outputs report one column fewer than the console has, which
+        keeps what prompt-toolkit draws out of the last column. Text written raw is wrapped by
+        the console itself, at the width of its screen buffer.
+        """
+        screen_buffer_info = getattr(self._output, "get_win32_screen_buffer_info", None)
+        if screen_buffer_info is not None:
+            return max(1, int(screen_buffer_info().dwSize.X))
+        return max(1, self._output.get_size().columns)
 
     @staticmethod
     def _width(line: str) -> int:
@@ -341,6 +374,13 @@ class CommandToolbar:
             and self.toolbar.content.style == "class:bottom-toolbar"
         ):
             raise RuntimeError("Cannot locate PromptSession bottom toolbar")
+        self._toolbar_window = self.toolbar.content
+        # The rows the toolbar took when it was last drawn, to begin with by the main prompt.
+        # Each run of the application forgets what it drew, and prompt-toolkit leaves the
+        # toolbar out until the terminal has reported where its cursor is, which can be after
+        # a command's first output. The toolbar is about to take these rows again.
+        self._toolbar_height = 0
+        self._note_toolbar_height()
         # In reserved mode the command display has nothing of its own to draw -- the toolbar
         # is painted independently into rows outside the scroll region. A full-height filler
         # window would make the renderer reserve the whole usable region and scroll to claim
@@ -399,6 +439,7 @@ class CommandToolbar:
 
     def _display_started(self, app: Application[str]) -> None:  # noqa: ARG002
         """Report that the display is up and has finished its first frame."""
+        self._note_toolbar_height()
         self._ready.set()
 
     def _display_started_without_app(self) -> None:
@@ -419,6 +460,16 @@ class CommandToolbar:
         if reserved is None:
             return None
         return reserved.bridge
+
+    def _note_toolbar_height(self) -> None:
+        """Remember how many rows the toolbar took, if the last frame drew it."""
+        info = self._toolbar_window.render_info
+        if info is not None:
+            self._toolbar_height = info.window_height
+
+    def _toolbar_rows(self) -> int:
+        """Return how many rows the toolbar took when it was last drawn."""
+        return self._toolbar_height
 
     def start(self) -> None:
         """Start rendering and protect terminal output."""
@@ -530,7 +581,7 @@ class CommandToolbar:
         # and, on a console-less Windows runner, raise.
         token = _current_app_session.set(self._app_session) if self._app_session is not None else None
         try:
-            proxy = _ContextStdoutProxy()
+            proxy = _ContextStdoutProxy(self._toolbar_rows)
         finally:
             if token is not None:
                 _current_app_session.reset(token)
