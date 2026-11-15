@@ -62,7 +62,7 @@ def describe_processes(root: int, master: int) -> str:
         pytest.param("exit_sigint", True, True, "sh", "shell", "worker", id="wrapper-stop-and-interrupt-busy-shell-producer"),
         pytest.param("read_input", False, False, "direct", "command", "main", id="nested-prompt"),
         pytest.param("shell_input", False, True, "direct", "command", "main", id="shell-input"),
-        pytest.param("direct_input", False, False, "sh", "command", "main", id="wrapper-direct-input"),
+        pytest.param("direct_input", False, False, "sh", "command", "main", id="direct-input-with-toolbar-off"),
         pytest.param("direct_input", False, False, "exec", "command", "main", id="direct-input-in-orphaned-session"),
         pytest.param("interrupts", False, False, "exec", "command", "main", id="orphaned-job-control"),
     ],
@@ -140,7 +140,7 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
     interrupt_request = tmp_path / "interrupt.request"
     last_result = tmp_path / "last_result"
     application.write_text(
-        "from cmd2 import Cmd\n"
+        "from cmd2 import Cmd, ToolbarMode\n"
         "from cmd2.plugin import CommandFinalizationData\n"
         "import getpass, os, pathlib, signal, threading, time\n"
         "signal.signal(signal.SIGTSTP, signal.SIG_DFL)\n"
@@ -171,10 +171,11 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
         "    def record_result(self, data: CommandFinalizationData) -> CommandFinalizationData:\n"
         f"        pathlib.Path({str(last_result)!r}).write_text(repr(self.last_result))\n"
         "        return data\n"
-        "app = App()\n"
+        f"app = App(bottom_toolbar_mode=ToolbarMode.{'OFF' if finish == 'direct_input' else 'RESERVED'})\n"
         "app.register_cmdfinalization_hook(app.record_result)\n"
         "app.prompt = 'TEST> '\n"
         "app.debug = True\n"
+        "app.main_session.bottom_toolbar = 'STATUS'\n"
         f"if {finish == 'interrupts'!r}:\n"
         "    def interrupt_from_worker():\n"
         f"        request = pathlib.Path({str(interrupt_request)!r})\n"
@@ -507,7 +508,8 @@ def test_pipeline_from_worker_thread_stays_isolated(tmp_path) -> None:
         process.wait(timeout=5)
 
 
-def test_pager_resumes_with_raw_terminal_after_suspend(tmp_path) -> None:
+@pytest.mark.parametrize("mode", ["reserved", "legacy"])
+def test_pager_resumes_with_raw_terminal_after_suspend(tmp_path, mode) -> None:
     """Ctrl-Z in the built-in pager, then fg, must bring the pager back, not echoed cursor reports.
 
     The display thread sends the stop signal, which the kernel may hand to the main
@@ -531,7 +533,7 @@ def test_pager_resumes_with_raw_terminal_after_suspend(tmp_path) -> None:
         "        self.ppaged('\\n'.join(f'line {n:04d}' for n in range(400)))\n"
         # A refreshing toolbar, as in the examples: its periodic redraws are what turn a cooked terminal into a stream of echoed
         # cursor reports.
-        "app = App(bottom_toolbar_mode=ToolbarMode.LEGACY, refresh_interval=0.5)\n"
+        f"app = App(bottom_toolbar_mode=ToolbarMode.{mode.upper()}, refresh_interval=0.5)\n"
         "app.prompt = 'TEST> '\n"
         "app.main_session.bottom_toolbar = 'STATUS'\n"
         "app.cmdloop()\n",
@@ -604,8 +606,9 @@ def test_pager_resumes_with_raw_terminal_after_suspend(tmp_path) -> None:
         process.wait(timeout=5)
 
 
+@pytest.mark.parametrize("mode", ["off", "reserved"])
 @pytest.mark.parametrize("parent_delay", [False, True])
-def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path, parent_delay) -> None:
+def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path, mode, parent_delay) -> None:
     """A pager such as less puts the terminal in raw mode as it starts, before reading its pipe.
 
     It has to own the terminal by then. A background tcsetattr() stops it with SIGTTOU, and
@@ -645,7 +648,7 @@ def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path, parent_delay
     application = tmp_path / "application.py"
     application.write_text(
         "import pathlib, time\n"
-        "from cmd2 import Cmd, utils\n"
+        "from cmd2 import Cmd, ToolbarMode, utils\n"
         # The pipeline's first wait is cmd2's 0.2s startup check. Hold it open until the pager has reported, so the test does
         # not race that timer on a busy CI runner: what it checks is that the pager owns the terminal throughout the check,
         # however slowly it starts.
@@ -665,8 +668,9 @@ def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path, parent_delay
         "        time.sleep(0.5)\n"
         "        return start_job_control(reader)\n"
         "    utils.ProcReader._manage_terminal = late_job_control\n"
-        "app = Cmd()\n"
+        f"app = Cmd(bottom_toolbar_mode=ToolbarMode.{mode.upper()})\n"
         "app.prompt = 'TEST> '\n"
+        "app.main_session.bottom_toolbar = 'STATUS'\n"
         "app.cmdloop()\n",
         encoding="utf-8",
     )

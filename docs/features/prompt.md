@@ -195,9 +195,10 @@ interactive, as `less` and `fzf` are. It restores the toolbar when those operati
 
 [cmd2.Cmd.read_input][] and [cmd2.Cmd.read_secret][] keep the toolbar visible, and it continues to
 refresh at the same `refresh_interval` as the main prompt, so a clock or status display does not go
-stale while your command waits for input. [cmd2.Cmd.select][] does not yet show one, because
-prompt-toolkit's `choice()` has no way to configure a refresh interval and its toolbar would go
-stale while the selection sits idle.
+stale while your command waits for input. With reserved rendering all three, including
+[cmd2.Cmd.select][], keep the reserved rows and their toolbar while they wait. With legacy rendering
+`select()` does not show a toolbar, because prompt-toolkit's `choice()` has no way to configure a
+refresh interval and its toolbar would go stale while the selection sits idle.
 
 For custom terminal UIs, calls to `input()`, or subprocesses your own command code starts, use
 [cmd2.Cmd.suspend_bottom_toolbar][]:

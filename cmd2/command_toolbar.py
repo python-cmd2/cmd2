@@ -357,7 +357,9 @@ class CommandToolbar:
         session = cmd.main_session
         self.app = session.app
         # Ctrl-Z during a command is handled on the display's thread, where upstream's
-        # version would not hold the thread until the job has stopped.
+        # version would not hold the thread until the job has stopped. The reserved toolbar
+        # layers its row release over whatever is installed, so one it put there first is
+        # left in place; it releases the rows and then stops the process the same way.
         if "suspend_to_background" not in vars(self.app):
             cast("Any", self.app).suspend_to_background = self._suspend_to_background
         # PromptSession has no public hook for replacing just its input area.
@@ -924,10 +926,19 @@ class CommandToolbar:
         # Measuring the toolbar can invoke its callback; keep that work on the
         # UI thread along with rendering and layout changes.
         toolbar_height = self._call_in_ui(lambda: self.toolbar.preferred_height(size.columns, size.rows).preferred)
-        if output_fits(text, size.columns, max(0, size.rows - toolbar_height), chop=chop):
+        reserved = self.cmd.reserved_toolbar
+        available_rows = size.rows if reserved is not None and reserved.is_active else max(0, size.rows - toolbar_height)
+        if output_fits(text, size.columns, available_rows, chop=chop):
             self.cmd.stdout.write(text)
             self.cmd.stdout.flush()
             return
+
+        bridge = self._reserved_bridge()
+        if bridge is not None:
+            # The pager's first erase deletes whole lines from the cursor's row, before it
+            # switches to its own screen. Move past a line of command output still in
+            # progress there, as before a nested prompt, or that line is deleted with them.
+            bridge.finish_command_output()
 
         pager = Pager(text, chop=chop)
         pager.bindings.add(
@@ -939,6 +950,7 @@ class CommandToolbar:
         entered = False
         restored = False
         close_error: BaseException | None = None
+        handoff = contextlib.ExitStack()
 
         def restore() -> None:
             """Give the application back to the display, whichever thread is doing it.
@@ -966,6 +978,10 @@ class CommandToolbar:
             # duration -- otherwise the pager swaps in its layout and nothing is ever painted.
             self._set_render_suppressed(False)
             self.app.renderer.erase()
+            if reserved is not None:
+                # The very first pager layout must see the physical size. Releasing from
+                # enter_alternate_screen during replay is too late: that frame was measured.
+                handoff.enter_context(reserved.suspended(defer_band_clear=True))
             self.app.layout = layout
             self.app.key_bindings = pager.bindings
             self.app.editing_mode = EditingMode.EMACS
@@ -979,8 +995,20 @@ class CommandToolbar:
             entered = False
             try:
                 self.app.renderer.erase()
+            except BaseException:
+                # An erase can fail before quitting the alternate screen. Complete upstream's
+                # mode/buffer cleanup before returning the main-screen reservation; never
+                # retry the erase itself, which may already have changed visible output.
+                with contextlib.suppress(Exception):
+                    transaction = (
+                        reserved.lock.transaction("pager cleanup") if reserved is not None else contextlib.nullcontext()
+                    )
+                    with transaction:
+                        self.app.renderer.reset()
+                raise
             finally:
                 restore()
+                handoff.__exit__(*sys.exc_info())
             self.app.renderer.request_absolute_cursor_position()
             self.app.invalidate()
 
@@ -1016,6 +1044,7 @@ class CommandToolbar:
                 # the full-screen flag and editing mode would carry into the next prompt.
                 if not restored:
                     restore()
+                handoff.__exit__(*sys.exc_info())
         # A reservation abandoned while the pager was open deferred its legacy fallback until
         # the pager closed; now that it has, on the main screen, finish it.
         if self._legacy_fallback_pending and self.thread_is_alive:
