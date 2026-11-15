@@ -1,5 +1,6 @@
 """Tests for the built-in pager view."""
 
+import random
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -8,9 +9,12 @@ from unittest import mock
 
 import pytest
 from prompt_toolkit.data_structures import Size
+from prompt_toolkit.formatted_text import ANSI, fragment_list_to_text, to_formatted_text
+from prompt_toolkit.formatted_text.utils import split_lines
 from prompt_toolkit.input.typeahead import get_typeahead
 from rich.console import Console
 
+from cmd2 import pager as pager_module
 from cmd2.pager import Pager, output_fits
 
 
@@ -52,6 +56,116 @@ def test_output_fits_measures_styled_and_wide_text(chop) -> None:
     # Wrapping the line onto four rows fits; chopping keeps it one wide row that does not.
     assert output_fits(text, 20, 5, chop=chop) is (not chop)
     assert output_fits(text, 100, 1, chop=chop)
+
+
+def parsed_whole(text: str) -> tuple[str, list[list[tuple[str, str]]]]:
+    """Return the text and styled lines prompt-toolkit makes of captured output parsed in one piece.
+
+    This is what the pager showed when it parsed everything before showing anything.
+    """
+    fragments = to_formatted_text(ANSI(pager_module._OSC_RE.sub("", text).removesuffix("\n")))
+    lines = [[(style, char) for style, char, *_ in line if char] for line in split_lines(fragments)]
+    return fragment_list_to_text(fragments), lines
+
+
+def shown_by_pager(text: str) -> tuple[str, list[list[tuple[str, str]]]]:
+    """Return the text of a pager's view, and each of its lines as the view styles it."""
+    view = Pager(text, chop=False).text
+    get_line = view.lexer.lex_document(view.document)
+    lines = [[(style, char) for style, char, *_ in get_line(number) if char] for number in range(view.document.line_count)]
+    return view.text, lines
+
+
+RICH = Console(force_terminal=True, color_system="truecolor", no_color=False, legacy_windows=False, width=60)
+
+
+def rich_output(*renderables: object) -> str:
+    with RICH.capture() as capture:
+        for renderable in renderables:
+            RICH.print(renderable)
+    return capture.get()
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        pytest.param("", id="nothing"),
+        pytest.param("\n", id="one empty line"),
+        pytest.param("plain\ntext\n\nwith a gap", id="plain text"),
+        pytest.param("\x1b[31mred\x1b[0m plain \x1b[1;32mbold green\x1b[0m\nnext", id="styles closed on their line"),
+        pytest.param("\x1b[31mred\nstill red\n\x1b[1mand bold\x1b[0m\nplain", id="a style left open across lines"),
+        pytest.param("\x1b[31mred\n\x1b[39mdefault\n\x1b[4munderlined\nstill\x1b[m\nplain", id="styles ended without a reset"),
+        pytest.param("\x1b[38;5;196mindexed\x1b[0m \x1b[38;2;1;2;3mtrue color\x1b[0m", id="indexed and true color"),
+        pytest.param("a\x1b[5Cb\x1b[Cc", id="cursor forward becomes spaces"),
+        pytest.param("a\x1b[2Kb\x1b[?25lc\x1b[Hd", id="other control sequences"),
+        pytest.param("a\x1bXb\x1b\nc", id="an escape which starts no control sequence"),
+        pytest.param("a\x1b[31\nb\x1b[0mc", id="a newline inside a control sequence"),
+        pytest.param("a\x1b[31", id="a control sequence cut short"),
+        pytest.param("a\x1b", id="an escape cut short"),
+        pytest.param("\x9b31mred\x9b0m plain \x9b2Cgap", id="one-character sequence introducer"),
+        pytest.param("\x1b\x1b[31mnot red", id="an escape before a control sequence"),
+        pytest.param("\u754c\x1b[31m\u754c\u754c\x1b[0m e\u0301 \U0001f600", id="wide and combining characters"),
+        pytest.param("line\r\nwith\tcontrols\x00", id="other control characters"),
+        pytest.param(
+            rich_output("[bold red]bold red[/bold red] plain [link=https://example.com]linked[/link]"), id="Rich markup"
+        ),
+        pytest.param(rich_output("[on blue]" + "word " * 40), id="a Rich style wrapped over several lines"),
+    ],
+)
+def test_pager_shows_what_parsing_the_whole_text_showed(text) -> None:
+    """Parsing a line when it is shown gives the text and styles that parsing everything first gave."""
+    assert shown_by_pager(text) == parsed_whole(text)
+
+
+def test_pager_shows_what_parsing_the_whole_text_showed_for_arbitrary_input() -> None:
+    """The same, for input nobody thought of: escapes and their parts in every order."""
+    pieces = ["\x1b", "[", "0", "1", "3", "9", ";", "m", "C", "?", "\x9b", "\r", "a", "\u754c", " ", "\n", "\n"]
+    whole = ["\x1b[31m", "\x1b[1m", "\x1b[4;32m", "\x1b[39m", "\x1b[22m", "\x1b[0m", "\x1b[m", "\x1b[0;33m"]
+    randomizer = random.Random(1743)
+    for _ in range(3000):
+        text = "".join(randomizer.choices(pieces + whole, k=randomizer.randrange(24)))
+        assert shown_by_pager(text) == parsed_whole(text), repr(text)
+
+
+def test_pager_leaves_out_zero_width_markers() -> None:
+    """Readline's markers, and what is between them, are for a prompt and never shown."""
+    assert shown_by_pager("a\x01\x1b[31m\x02b\nc\x01unfinished\nd") == ("ab\nc", [[("", "a"), ("", "b")], [("", "c")]])
+
+
+def test_pager_parses_only_the_lines_it_is_asked_for(monkeypatch) -> None:
+    """Opening a pager on a long text costs no more than opening one on a short text.
+
+    prompt-toolkit's parser makes a fragment of every character. Parsing 100,000 lines
+    before showing any took two seconds and a gigabyte.
+    """
+    parsed = []
+
+    def counting(value: str) -> ANSI:
+        parsed.append(value)
+        return ANSI(value)
+
+    monkeypatch.setattr(pager_module, "ANSI", counting)
+    text = "\n".join(f"\x1b[32mrow {number}\x1b[0m of output" for number in range(5000))
+
+    assert not output_fits(text, 80, 23, chop=False)
+    view = Pager(text, chop=False).text
+    assert parsed == []
+
+    get_line = view.lexer.lex_document(view.document)
+    assert [char for _, char, *_ in get_line(4999)] == list("row 4999 of output")
+    assert get_line(4999)[0][0] == "ansigreen"
+    assert get_line(4999) is get_line(4999)
+    assert parsed == ["\x1b[32mrow 4999\x1b[0m of output"]
+
+
+@pytest.mark.parametrize("chop", [False, True])
+def test_output_fits_measures_only_text_short_enough_to_fit(monkeypatch, chop) -> None:
+    """Text with more lines than rows cannot fit, however narrow, so none of it is measured."""
+    monkeypatch.setattr(pager_module, "get_cwidth", mock.Mock(side_effect=AssertionError("measured")))
+    monkeypatch.setattr(pager_module, "UIContent", mock.Mock(side_effect=AssertionError("measured")))
+
+    assert not output_fits("\x1b[31mrow\x1b[0m\n" * 24, 80, 23, chop=chop)
+    assert not output_fits("", 80, 0, chop=chop)
 
 
 @pytest.mark.parametrize("chop", [False, True])

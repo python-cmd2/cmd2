@@ -2,14 +2,15 @@
 
 import re
 import threading
+from array import array
 from collections.abc import Callable
-from functools import partial
+from functools import lru_cache, partial
+from itertools import accumulate
 
 from prompt_toolkit.document import Document
 from prompt_toolkit.filters import has_focus, is_searching, to_filter
-from prompt_toolkit.formatted_text import ANSI, fragment_list_to_text, to_formatted_text
+from prompt_toolkit.formatted_text import ANSI, to_formatted_text
 from prompt_toolkit.formatted_text.base import StyleAndTextTuples
-from prompt_toolkit.formatted_text.utils import split_lines
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.key_binding.bindings import search
 from prompt_toolkit.key_binding.key_processor import KeyPressEvent
@@ -22,14 +23,51 @@ from prompt_toolkit.utils import get_cwidth
 from prompt_toolkit.widgets import SearchToolbar, TextArea
 
 _OSC_RE = re.compile(r"\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)")
+# A sequence which sets the style of the text after it. It begins with characters which can
+# be searched for quickly, which matters in a text with one or more of these on every line.
+_SGR_RE = re.compile(r"\x1b\[[0-9;]*m")
+# Everything else prompt-toolkit's ANSI parser takes out of the text, in the order it reads.
+_OTHER_ESCAPE_RE = re.compile(
+    # A style sequence which begins with the one-character introducer.
+    r"\x9b[0-9;]*m"
+    # Any other control sequence, or one the text ends in the middle of.
+    r"|(?:\x1b\[|\x9b)[0-9;]*(?:[^0-9;m]|\Z)"
+    # An escape which begins no control sequence, and the character after it.
+    r"|\x1b(?:[^\[]|\Z)"
+    # Readline's zero-width markers and what is between them.
+    r"|\x01[^\x02]*(?:\x02|\Z)"
+)
+_RESETS = ("\x1b[0m", "\x1b[m")
+# How many lines keep their fragments. A screen shows far fewer.
+_PARSED_LINES = 1024
 
 
-def _fragments(text: str) -> StyleAndTextTuples:
-    """Parse captured output, dropping the trailing newline that ends its last line."""
+def _other_escape(match: re.Match[str]) -> str:
+    """Return what prompt-toolkit's parser leaves in the text for an escape which sets no style."""
+    sequence = match.group()
+    if sequence[0] == "\x9b" and sequence[-1] == "m":
+        return "\x1b[" + sequence[1:]
+    if sequence[0] != "\x01" and sequence[-1] == "C":
+        # Cursor forward is written as that many spaces.
+        count = sequence[2:-1] if sequence[0] == "\x1b" else sequence[1:-1]
+        return " " * min(int(count.split(";")[0] or 0), 9999)
+    return ""
+
+
+def _styled_and_plain(text: str) -> tuple[str, str]:
+    """Return captured output with no escapes but those which set styles, and with none at all.
+
+    Both drop the trailing newline which ends the last line.
+    """
     # prompt-toolkit's ANSI parser does not handle OSC sequences, including Rich
     # hyperlinks. Remove their metadata while retaining visible text and SGR styles.
-    text = _OSC_RE.sub("", text)
-    return to_formatted_text(ANSI(text.removesuffix("\n")))
+    styled = _OSC_RE.sub("", text).removesuffix("\n")
+    plain = _SGR_RE.sub("", styled)
+    if "\x1b" in plain or "\x9b" in plain or "\x01" in plain:
+        # Rare, and slow to look for, so not looked for until there is one.
+        styled = _OTHER_ESCAPE_RE.sub(_other_escape, styled)
+        plain = _SGR_RE.sub("", styled)
+    return styled, plain
 
 
 def output_fits(text: str, columns: int, rows: int, *, chop: bool) -> bool:
@@ -38,11 +76,15 @@ def output_fits(text: str, columns: int, rows: int, *, chop: bool) -> bool:
     Measuring the text itself keeps output that needs no scrolling from paying for a
     Pager's widgets and key bindings, which would only be built to be thrown away.
     """
-    lines = fragment_list_to_text(_fragments(text)).split("\n")
+    plain = _styled_and_plain(text)[1]
+    if plain.count("\n") >= rows:
+        # Every line takes a row at least, so no line needs to be measured.
+        return False
+    lines = plain.split("\n")
     if chop:
         # Even one wide line needs a pager so its hidden columns remain
         # accessible through horizontal scrolling.
-        return len(lines) <= rows and all(get_cwidth(line) <= columns for line in lines)
+        return all(get_cwidth(line) <= columns for line in lines)
     # Reuse prompt-toolkit's own wrapping arithmetic so this matches what a Pager
     # would render, without building a control to ask on the UI thread.
     content = UIContent(get_line=lambda number: [("", lines[number])], line_count=len(lines))
@@ -55,14 +97,49 @@ def output_fits(text: str, columns: int, rows: int, *, chop: bool) -> bool:
 
 
 class _AnsiLexer(Lexer):
-    """Preserve captured Rich styles while searching and scrolling plain text."""
+    """Preserve captured Rich styles while searching and scrolling plain text.
 
-    def __init__(self, fragments: StyleAndTextTuples) -> None:
-        self.lines = list(split_lines(fragments))
+    prompt-toolkit's ANSI parser makes a fragment of every character, which for a long text
+    takes seconds and hundreds of bytes for each character. So a line is parsed when it is
+    asked for, which is when it is about to be shown.
+    """
+
+    def __init__(self, styled: str) -> None:
+        """Keep the text to parse lines of.
+
+        :param styled: the text, with no escape sequences except those which set styles
+        """
+        self._styled = styled
+        self._lines = styled.split("\n")
+        # Where each line starts in the text, to find the styles still in effect there. Left
+        # empty for a text with no styles.
+        self._starts = array("Q")
+        if "\x1b" in styled:
+            self._starts = array("Q", accumulate(map(len, self._lines), lambda start, length: start + length + 1, initial=0))
+        self._parsed = lru_cache(maxsize=_PARSED_LINES)(self._parse)
+
+    def _parse(self, number: int) -> StyleAndTextTuples:
+        return to_formatted_text(ANSI(self._styles_in_effect(number) + self._lines[number]))
+
+    def _styles_in_effect(self, number: int) -> str:
+        """Return the sequences which set the style a line starts in.
+
+        Those are the ones since the text was last reset to no style. Rich resets after each
+        piece of text it styles, so in its output nothing is in effect when a line starts.
+        """
+        if not self._starts:
+            return ""
+        start = self._starts[number]
+        since = 0
+        for reset in _RESETS:
+            found = self._styled.rfind(reset, since, start)
+            if found != -1:
+                since = found + len(reset)
+        return "".join(_SGR_RE.findall(self._styled, since, start))
 
     def lex_document(self, document: Document) -> Callable[[int], StyleAndTextTuples]:  # noqa: ARG002
         def get_line(number: int) -> StyleAndTextTuples:
-            return self.lines[number] if number < len(self.lines) else []
+            return self._parsed(number) if number < len(self._lines) else []
 
         return get_line
 
@@ -75,11 +152,11 @@ class Pager:
         self.closed = threading.Event()
         self.on_close: Callable[[], None] = self.closed.set
         self.chop = chop
-        fragments = _fragments(text)
+        styled, plain = _styled_and_plain(text)
         self.search = SearchToolbar()
         self.text = TextArea(
-            text=fragment_list_to_text(fragments),
-            lexer=_AnsiLexer(fragments),
+            text=plain,
+            lexer=_AnsiLexer(styled),
             read_only=True,
             wrap_lines=not chop,
             search_field=self.search,
