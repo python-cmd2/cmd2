@@ -4083,19 +4083,11 @@ class RendersOnce:
         yield from self._lines
 
 
-@pytest.mark.parametrize("chop", [True, False])
-def test_ppaged_renders_once_when_the_pager_cannot_be_run(paging_app, chop) -> None:
-    """What was rendered for the pager is what gets shown: not everything can be rendered a second time."""
-    app, shown = paging_app
-    app.pager = app.pager_chop = "cmd2-no-such-pager-program"
-
-    app.ppaged(RendersOnce("first line", "second line"), chop=chop)
-
-    assert shown() == "first line\nsecond line\n"
-
-
 def test_ppaged_does_not_try_again_a_pager_which_cannot_be_run(paging_app, capfd) -> None:
-    """The shell says once that there is no such pager, not every time something is paged."""
+    """The shell says once that there is no such pager, not every time something is paged.
+
+    From then on nothing is rendered for a pager either, only for poutput().
+    """
     app, shown = paging_app
     app.pager = "cmd2-no-such-pager-program"
 

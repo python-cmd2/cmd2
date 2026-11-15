@@ -47,7 +47,8 @@ Output of any command can be displayed one page at a time using the [cmd2.Cmd.pp
 The pager is the command in `self.pager`, or `self.pager_chop` when chopping long lines: `less` on
 POSIX systems and `more` on Windows by default. If that program cannot be run, for example because
 it is not installed, the output is printed without paging. A pager command which could not be run is
-not tried again while the application is running, so the shell reports it only once.
+not tried again while the application is running. `self.pager` and `self.pager_chop` are separate
+commands, so the shell may report each of them once.
 
 Alternatively, a terminal pager can be invoked directly using the ability to run shell commands with
 the `!` shortcut like so:

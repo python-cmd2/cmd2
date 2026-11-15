@@ -2027,9 +2027,8 @@ class Cmd:
                     soft_wrap=pager_soft_wrap,
                     **(rich_print_kwargs if rich_print_kwargs is not None else {}),
                 )
-            output = capture.get()
             # As for a pipe: the pager gets UTF-8, and on Windows the console is UTF-8 while it runs.
-            output_bytes = output.encode("utf-8", "replace")
+            output_bytes = capture.get().encode("utf-8", "replace")
 
             # Prevent KeyboardInterrupts while in the pager. The pager application will
             # still receive the SIGINT since it is in the same process group as us.
@@ -2066,16 +2065,8 @@ class Cmd:
                 return
 
             # The shell has said why there is no pager. Remember that, so it is not asked every time.
+            # Nothing has been shown, so this once the objects are rendered a second time below.
             self._unrunnable_pagers.add(pager)
-
-            if pager_soft_wrap == soft_wrap:
-                # What was rendered for the pager is what poutput() would print. Write that instead
-                # of rendering the objects a second time, which not all of them can be.
-                self.stdout.write(output)
-                self.stdout.flush()
-                return
-
-            # Chopping changed the wrapping for the pager, so render again as the caller asked.
 
         # Nothing is paging the output, so print it.
         self.poutput(

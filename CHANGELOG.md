@@ -6,7 +6,7 @@
     - `ppaged()` now prints its output when the configured pager program cannot be run, for example
       where `less` is not installed. Previously only the shell's error was shown and the output was
       lost. A pager command which could not be run is not tried again while the application is
-      running, so the shell's error is shown only once.
+      running, so the shell's error is shown once for each pager command instead of every time.
 
 ## 4.4.2 (November 11, 2026)
 
