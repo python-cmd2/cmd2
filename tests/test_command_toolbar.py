@@ -1289,6 +1289,7 @@ def test_builtin_pager_never_erases_its_screen_from_the_corner(monkeypatch) -> N
             app.stdout = stream
             app.use_builtin_pager = True
             monkeypatch.setattr(app, "stdin", Terminal())
+            monkeypatch.setenv("TERM", "xterm")
             app.main_session = PromptSession(input=pipe, output=terminal, bottom_toolbar="STATUS", refresh_interval=0.01)
             ui = app.main_session.app
 
