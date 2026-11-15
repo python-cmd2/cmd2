@@ -661,6 +661,10 @@ class Cmd:
             if callargs:
                 self._startup_commands.extend(callargs)
 
+        # The embedded pager shares the main toolbar. Applications can opt back
+        # into their configured external pager by setting this to False.
+        self.use_builtin_pager = enable_bottom_toolbar
+
         # Set the pager(s) for use when displaying output using a pager
         if sys.platform.startswith("win"):
             self.pager = self.pager_chop = "more"
@@ -1952,15 +1956,17 @@ class Cmd:
         fits on the screen. A pager is not used inside a script (Python or text) or when output is
         redirected or piped, and in these cases, output is sent to `poutput`.
 
-        The pager takes over the terminal, so the bottom toolbar is hidden while it is open and
-        comes back when it exits.
+        While the bottom toolbar is running, the built-in pager keeps it visible and refreshing.
+        Set ``use_builtin_pager=False`` to use the configured external ``pager`` or ``pager_chop``
+        command instead; external pagers temporarily hide the toolbar. Where no toolbar is
+        running, such as outside the command loop, the external pager is used regardless.
 
         :param chop: True -> causes lines longer than the screen width to be chopped (truncated) rather than wrapped
                               - truncated text is still accessible by scrolling with the right & left arrow keys
                               - chopping is ideal for displaying wide tabular data as is done in utilities like pgcli
                      False -> causes lines longer than the screen width to wrap to the next line
                               - wrapping is ideal when you want to keep users from having to use horizontal scrolling
-                     WARNING: On Windows, the text always wraps regardless of what the chop argument is set to
+                     WARNING: The default external pager on Windows always wraps; the built-in pager supports chopping.
         :param soft_wrap: Enable soft wrap mode. If True, lines of text will not be word-wrapped or cropped to
                           fit the terminal width. Defaults to True.
 
@@ -2003,8 +2009,17 @@ class Cmd:
                     soft_wrap=soft_wrap,
                     **(rich_print_kwargs if rich_print_kwargs is not None else {}),
                 )
+            output = capture.get()
+
+            # Page inside the toolbar's display only when the command loop is already
+            # running one. Starting one here would seize the terminal for commands run
+            # outside that loop, which the toolbar is documented not to do.
+            if self.use_builtin_pager and self._command_toolbar is not None and self._command_toolbar.is_active:
+                self._command_toolbar.page(output, chop=chop)
+                return
+
             # As for a pipe: the pager gets UTF-8, and on Windows the console is UTF-8 while it runs.
-            output_bytes = capture.get().encode("utf-8", "replace")
+            output_bytes = output.encode("utf-8", "replace")
 
             # Prevent KeyboardInterrupts while in the pager. The pager application will
             # still receive the SIGINT since it is in the same process group as us.
@@ -2116,8 +2131,8 @@ class Cmd:
         During command execution this callback runs in a background UI thread. Protect shared
         state with a lock when necessary, but never hold that lock in a command while it prompts
         for input, pages output, runs a shell command, or otherwise pauses the toolbar: pausing
-        waits for this callback to return. The toolbar is suspended while another prompt, a
-        pager, or an interactive shell owns the terminal.
+        waits for this callback to return. The built-in pager shares this toolbar. It is suspended
+        while another prompt, external pager, or interactive shell owns the terminal.
 
         If this callback raises an exception during a command, the error is reported once and the
         command carries on without the toolbar.
