@@ -379,16 +379,13 @@ def _quote_shell_arg(arg: str) -> str:
 def _get_path_dirs() -> set[str]:
     """Return the directories listed in the PATH environment variable.
 
-    Symbolic links are resolved so a directory which is reachable through more than one entry is only
-    returned once. Relative entries are returned as they are since resolving one raises an exception if
-    the current working directory no longer exists.
+    The entries are returned as they are written. Resolving them would avoid searching a directory twice
+    when it is listed under two names, but doing so can raise an exception for an entry which can't be reached.
 
     :return: the directories, which is an empty set if PATH is not set
     """
     env_path = os.getenv("PATH")
-    if env_path is None:
-        return set()
-    return {os.path.realpath(p) if os.path.isabs(p) else p for p in env_path.split(os.path.pathsep)}
+    return set() if env_path is None else set(env_path.split(os.path.pathsep))
 
 
 def find_editor() -> str | None:

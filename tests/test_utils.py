@@ -2094,11 +2094,23 @@ def test_get_exes_in_path_symlinked_directory(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("PATH", str(link_dir))
     assert cu.get_exes_in_path("my") == ["mytool"]
 
-    # A directory reachable through more than one PATH entry is only searched once
-    monkeypatch.setenv("PATH", os.pathsep.join([str(real_dir), str(link_dir)]))
-    with mock.patch("cmd2.utils.files_from_glob_pattern", wraps=cu.files_from_glob_pattern) as glob_mock:
-        assert cu.get_exes_in_path("my") == ["mytool"]
-    glob_mock.assert_called_once()
+    # An executable reachable through more than one PATH entry is only returned once
+    monkeypatch.setenv("PATH", os.pathsep.join([str(real_dir), str(link_dir), str(real_dir)]))
+    assert cu.get_exes_in_path("my") == ["mytool"]
+
+
+def test_get_path_dirs_does_not_resolve_entries(monkeypatch) -> None:
+    # Resolving an entry can raise an exception, such as for one on a network share which can't be reached
+    # on Windows. Since find_editor() runs when cmd2 is imported, that would keep cmd2 from being imported.
+    monkeypatch.setenv("PATH", os.pathsep.join(["/unreachable/bin", "relative_bin", "/unreachable/bin"]))
+    with mock.patch("os.path.realpath", side_effect=OSError("network path was not found")):
+        assert cu._get_path_dirs() == {"/unreachable/bin", "relative_bin"}
+        assert cu.get_exes_in_path("my") == []
+        monkeypatch.delenv("EDITOR", raising=False)
+        assert cu.find_editor() is None
+
+    monkeypatch.delenv("PATH")
+    assert cu._get_path_dirs() == set()
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="Windows does not allow the current working directory to be removed")

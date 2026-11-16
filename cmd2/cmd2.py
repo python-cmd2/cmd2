@@ -2581,13 +2581,10 @@ class Cmd:
 
                 prior_token = cur_token
 
-            if do_shell_completion:
-                completions = self.shell_cmd_complete(text, line, begidx, endidx)
-                return dataclasses.replace(completions, _quote_for_shell=piped_to_shell)
-
-            if do_path_completion:
-                completions = self.path_complete(text, line, begidx, endidx)
-                return dataclasses.replace(completions, _quote_for_shell=piped_to_shell)
+            if do_shell_completion or do_path_completion:
+                completer = self.shell_cmd_complete if do_shell_completion else self.path_complete
+                completions = completer(text, line, begidx, endidx)
+                return self._for_shell(completions) if piped_to_shell else completions
 
             # If there were redirection strings anywhere on the command line, then we
             # are no longer completing for the current command
@@ -5054,15 +5051,21 @@ class Cmd:
 
         return shell_parser
 
+    @staticmethod
+    def _for_shell(completions: Completions) -> Completions:
+        """Mark completions as being for part of the command line which is passed to a shell.
+
+        This is what gets them quoted when one of them has a character which is special to that shell.
+        """
+        return dataclasses.replace(completions, _quote_for_shell=True)
+
     def _complete_shell_command(self, text: str, line: str, begidx: int, endidx: int) -> Completions:
         """Complete the command which do_shell passes to a shell."""
-        completions = self.shell_cmd_complete(text, line, begidx, endidx)
-        return dataclasses.replace(completions, _quote_for_shell=True)
+        return self._for_shell(self.shell_cmd_complete(text, line, begidx, endidx))
 
     def _complete_shell_arg(self, text: str, line: str, begidx: int, endidx: int) -> Completions:
         """Complete an argument of the command which do_shell passes to a shell."""
-        completions = self.path_complete(text, line, begidx, endidx)
-        return dataclasses.replace(completions, _quote_for_shell=True)
+        return self._for_shell(self.path_complete(text, line, begidx, endidx))
 
     # Preserve quotes since we are passing these strings to the shell
     @with_argparser(_build_shell_parser, preserve_quotes=True)
