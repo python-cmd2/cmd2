@@ -12,8 +12,10 @@ development environment on POSIX systems, so run this example with:
     uv run examples/textual_toolbar.py
 
 Things to try: ``slow``, ``burst 2000 1``, ``page 500``, ``ask``, resizing the window while a command
-runs, Ctrl-C during ``slow``, and ``quit``. Pass ``--plain`` to run the same application without Textual,
-where prompt-toolkit draws the toolbar and it is only there at the prompt.
+runs, Ctrl-C during ``slow``, and ``quit``. After ``burst 500``, look back at what scrolled away with the
+mouse wheel, or with Shift and Page Up if your terminal passes that on; typing returns to the bottom. Pass
+``--plain`` to run the same application without Textual, where prompt-toolkit draws the toolbar and it is
+only there at the prompt.
 """
 
 import os

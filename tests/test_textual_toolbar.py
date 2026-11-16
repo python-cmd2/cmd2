@@ -259,3 +259,129 @@ class TestHost:
                 return (*before, *after)
 
         assert asyncio.run(drive()) == (1, 23, 2, 22)
+
+
+@posix_only
+class TestScrollback:
+    """The rows which scroll off the top of the program's screen are kept, and can be looked back at."""
+
+    @staticmethod
+    def host(host_socket, lines: int):
+        program = (
+            "import sys\n"
+            f"for number in range({lines}):\n"
+            "    print('row', number)\n"
+            "print('printed', flush=True)\n"
+            "sys.stdin.readline()\n"
+        )
+        return textual_toolbar.build_host_app([sys.executable, "-c", program], host_socket)
+
+    @staticmethod
+    def shown(terminal) -> list[str]:
+        return [terminal.render_line(y).text.rstrip() for y in range(terminal.size.height)]
+
+    async def until(self, pilot, predicate) -> bool:
+        for _ in range(300):
+            await pilot.pause(0.02)
+            if predicate():
+                return True
+        return False
+
+    def test_rows_which_scroll_off_are_kept_and_shown_when_looking_back(self, host_socket) -> None:
+        pytest.importorskip("textual_tty")
+        app = self.host(host_socket, 100)
+
+        async def drive() -> None:
+            async with app.run_test(size=(80, 24)) as pilot:
+                terminal = app.query_one("#program")
+                assert await self.until(pilot, lambda: "printed" in self.shown(terminal))
+                # 23 rows of screen: the last 21 rows of output, "printed", and the row the cursor is on.
+                assert self.shown(terminal)[:2] == ["row 79", "row 80"]
+                assert len(terminal.scrollback) == 79
+                assert [row for row in self.shown(terminal) if row.startswith("row")][-1] == "row 99"
+
+                await pilot.press("shift+pageup")
+                assert terminal.back == 22
+                assert self.shown(terminal)[0] == "row 57"
+                assert self.shown(terminal)[-1] == "row 79"
+
+                await pilot.press("shift+home")
+                assert terminal.back == 79
+                assert self.shown(terminal)[:2] == ["row 0", "row 1"]
+
+                await pilot.press("shift+pagedown")
+                assert self.shown(terminal)[0] == "row 22"
+
+                await pilot.press("shift+end")
+                assert terminal.back == 0
+                assert self.shown(terminal)[0] == "row 79"
+
+                terminal.look(3)
+                await pilot.pause()
+                assert self.shown(terminal)[0] == "row 76"
+                # Looking further back than there is stops at the oldest row.
+                terminal.look(1000)
+                assert terminal.back == 79
+                await pilot.press("enter")
+                assert await self.until(pilot, lambda: not app.is_running)
+
+        asyncio.run(drive())
+
+    def test_typing_returns_to_the_bottom(self, host_socket) -> None:
+        pytest.importorskip("textual_tty")
+        app = self.host(host_socket, 100)
+
+        async def drive() -> None:
+            async with app.run_test(size=(80, 24)) as pilot:
+                terminal = app.query_one("#program")
+                assert await self.until(pilot, lambda: "printed" in self.shown(terminal))
+                await pilot.press("shift+pageup")
+                assert terminal.back
+                assert "rows back]" in str(app.query_one("#toolbar").render())
+                await pilot.press("x")
+                assert terminal.back == 0
+                assert "rows back]" not in str(app.query_one("#toolbar").render())
+                await pilot.press("enter")
+                assert await self.until(pilot, lambda: not app.is_running)
+
+        asyncio.run(drive())
+
+    def test_a_shorter_screen_sends_its_top_rows_to_the_scrollback(self, host_socket) -> None:
+        """The emulator would cut the bottom rows off, the cursor's among them."""
+        pytest.importorskip("textual_tty")
+        app = self.host(host_socket, 15)
+
+        async def drive() -> None:
+            async with app.run_test(size=(80, 24)) as pilot:
+                terminal = app.query_one("#program")
+                assert await self.until(pilot, lambda: "printed" in self.shown(terminal))
+                assert not terminal.scrollback
+                await pilot.resize_terminal(80, 12)
+                assert await self.until(pilot, lambda: terminal.size.height == 11)
+                # 17 rows were in use: 15 of output, "printed" and the cursor's. Eleven fit.
+                assert len(terminal.scrollback) == 6
+                assert self.shown(terminal)[0] == "row 6"
+                assert "printed" in self.shown(terminal)
+                await pilot.press("shift+home")
+                assert self.shown(terminal)[0] == "row 0"
+                await pilot.press("enter")
+                assert await self.until(pilot, lambda: not app.is_running)
+
+        asyncio.run(drive())
+
+    def test_no_more_rows_are_kept_than_the_limit(self, host_socket, monkeypatch) -> None:
+        pytest.importorskip("textual_tty")
+        monkeypatch.setattr(textual_toolbar, "SCROLLBACK_ROWS", 30)
+        app = self.host(host_socket, 100)
+
+        async def drive() -> None:
+            async with app.run_test(size=(80, 24)) as pilot:
+                terminal = app.query_one("#program")
+                assert await self.until(pilot, lambda: "printed" in self.shown(terminal))
+                assert len(terminal.scrollback) == 30
+                await pilot.press("shift+home")
+                assert self.shown(terminal)[0] == "row 49"
+                await pilot.press("enter")
+                assert await self.until(pilot, lambda: not app.is_running)
+
+        asyncio.run(drive())

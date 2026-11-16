@@ -14,6 +14,11 @@ does not draw the toolbar at all:
 Since the emulator and the toolbar are different widgets, command output cannot reach the
 toolbar's rows, and Textual redraws only what changed.
 
+The host's terminal is not the user's: the session is on the alternate screen, so none of it
+reaches the real terminal's scrollback. The emulator widget keeps a scrollback of its own
+instead (see :func:`scrollback_terminal_class`), looked at with the mouse wheel, or with Shift
+and Page Up, Page Down, Home or End where the real terminal passes those keys on.
+
 Use :func:`run` in place of ``sys.exit(MyApp().cmdloop())``::
 
     if __name__ == "__main__":
@@ -250,6 +255,163 @@ def run_host(command: list[str]) -> int:
         shutil.rmtree(directory, ignore_errors=True)
 
 
+#: How many rows which have scrolled off the top of the program's screen are kept.
+SCROLLBACK_ROWS = 10_000
+
+#: Rows the mouse wheel moves the view by.
+WHEEL_ROWS = 3
+
+
+def scrollback_terminal_class() -> Any:
+    """Build a terminal widget which keeps the rows that scroll off the top of its screen.
+
+    textual-tty's ``Terminal`` shows a screen and nothing else: a row which scrolls off the top
+    is gone. This adds what a terminal emulator calls scrollback. The emulator scrolls in one
+    place, so that is where the rows leaving the top of the primary screen are kept, and the
+    widget draws from them when the view has been moved back with the mouse wheel or with
+    Shift and Page Up. The program's own screen is never changed by looking back.
+
+    Built on request because textual-tty is only imported when a host is started.
+    """
+    from collections import deque
+
+    from rich.segment import Segment
+    from textual import events
+    from textual.message import Message
+    from textual.strip import Strip
+    from textual_tty import Terminal  # type: ignore[import-untyped]
+
+    class ScrollbackTerminal(Terminal):  # type: ignore[misc]
+        """A terminal emulator widget with scrollback."""
+
+        class Scrolled(Message):
+            """The view moved: how many rows back it is, of how many kept."""
+
+            def __init__(self, back: int, kept: int) -> None:
+                self.back = back
+                self.kept = kept
+                super().__init__()
+
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            super().__init__(*args, **kwargs)
+            self.scrollback: deque[list[Any]] = deque(maxlen=SCROLLBACK_ROWS)
+            self.back = 0
+            blitter = self.board.blitter
+            scroll = blitter.scroll
+
+            def scroll_keeping_rows(lines: int) -> None:
+                # Rows leave the top for good only when the whole width scrolls up from the first
+                # row, on the primary screen. A region lower down, or a full-screen program on
+                # the alternate screen, scrolls within itself.
+                if (
+                    lines > 0
+                    and blitter.scroll_top == 0
+                    and not blitter.in_alt_screen
+                    and blitter.left_margin == 0
+                    and blitter.right_margin == self.board.width - 1
+                ):
+                    self._keep(blitter.current_buffer.grid[: min(lines, blitter.scroll_bottom + 1)])
+                scroll(lines)
+
+            blitter.scroll = scroll_keeping_rows
+
+        def _keep(self, rows: list[list[Any]]) -> None:
+            """Take rows which are about to leave the top of the screen."""
+            dropped = max(0, len(self.scrollback) + len(rows) - SCROLLBACK_ROWS)
+            self.scrollback.extend(rows)
+            if self.back:
+                # Someone is reading: keep the same rows in view while output goes on below.
+                self.back = max(0, min(self.back + len(rows) - dropped, len(self.scrollback)))
+                self.post_message(self.Scrolled(self.back, len(self.scrollback)))
+
+        def look(self, rows: int) -> None:
+            """Move the view back by that many rows, or forward if negative."""
+            back = max(0, min(self.back + rows, len(self.scrollback)))
+            if back != self.back:
+                self.back = back
+                self.refresh()
+                self.post_message(self.Scrolled(back, len(self.scrollback)))
+
+        # --- drawing --- #
+
+        def render_line(self, y: int) -> Strip:
+            if not self.back:
+                return super().render_line(y)  # type: ignore[no-any-return]
+            # The view is a window on the kept rows followed by the screen's own.
+            row = len(self.scrollback) - self.back + y
+            if row >= len(self.scrollback):
+                return super().render_line(row - len(self.scrollback))  # type: ignore[no-any-return]
+            width = self.size.width
+            segments = []
+            run: list[str] = []
+            run_style = None
+            for style, char in self.scrollback[row][:width]:
+                if style is not run_style and style != run_style:
+                    if run:
+                        segments.append(Segment("".join(run), self._to_rich(run_style)))
+                        run = []
+                    run_style = style
+                run.append(char)
+            if run:
+                segments.append(Segment("".join(run), self._to_rich(run_style)))
+            return Strip(segments).adjust_cell_length(width)
+
+        def _tick(self) -> None:
+            # The widget repaints the rows of the screen which changed, by their place on the
+            # screen. Looking back, they are somewhere else, so everything is repainted.
+            changed = self._dirty and not self._sync
+            super()._tick()
+            if changed and self.back:
+                self.refresh()
+
+        def _cursor_shown(self) -> bool:
+            return not self.back and super()._cursor_shown()
+
+        # --- sizing --- #
+
+        def on_resize(self, event: events.Resize) -> None:
+            height = event.size.height
+            blitter = self.board.blitter
+            below = self.board.cursor.y - (height - 1)
+            if height and below > 0 and not blitter.in_alt_screen:
+                # The emulator cuts a shorter screen off at the bottom. A terminal keeps the
+                # cursor's row on it instead, and the rows above go to its scrollback.
+                page = blitter.current_buffer
+                self._keep(page.grid[:below])
+                page.scroll_up(below)
+                self.board.cursor.y -= below
+            super().on_resize(event)
+
+        # --- input --- #
+
+        def on_key(self, event: events.Key) -> None:
+            page = max(1, self.size.height - 1)
+            moves = {
+                "shift+pageup": page,
+                "shift+pagedown": -page,
+                "shift+home": len(self.scrollback),
+                "shift+end": -self.back,
+            }
+            if event.key in moves:
+                self.look(moves[event.key])
+                event.stop()
+                event.prevent_default()
+                return
+            # Anything typed is for the program, which is at the bottom.
+            self.look(-self.back)
+            super().on_key(event)
+
+        def _wheel(self, event: events.MouseEvent, button: int, arrow: str) -> None:
+            if self.mouse_mode != "off" or self.board.blitter.in_alt_screen:
+                # The program wants the wheel itself, or is full-screen and has no rows above.
+                super()._wheel(event, button, arrow)
+                return
+            self.look(WHEEL_ROWS if arrow == "up" else -WHEEL_ROWS)
+            event.stop()
+
+    return ScrollbackTerminal
+
+
 def build_host_app(command: list[str], listener: socket.socket) -> Any:
     """Build the Textual application which hosts a program. Textual is only imported here.
 
@@ -263,7 +425,8 @@ def build_host_app(command: list[str], listener: socket.socket) -> Any:
     from textual.app import App, ComposeResult
     from textual.message import Message
     from textual.widgets import Static
-    from textual_tty import Terminal  # type: ignore[import-untyped]
+
+    Terminal = scrollback_terminal_class()  # noqa: N806
 
     class ToolbarChanged(Message):
         """The program has new content for its toolbar."""
@@ -293,6 +456,8 @@ def build_host_app(command: list[str], listener: socket.socket) -> Any:
             super().__init__()
             self.program_exit_code = 0
             self._server: asyncio.Server | None = None
+            self._toolbar = Text()
+            self._looking_back = ""
 
         def compose(self) -> ComposeResult:
             yield Terminal(command=command, id="program")
@@ -315,7 +480,18 @@ def build_host_app(command: list[str], listener: socket.socket) -> Any:
                         self.post_message(ToolbarChanged(document["toolbar"]))
 
         def on_toolbar_changed(self, message: ToolbarChanged) -> None:
-            self.query_one("#toolbar", Static).update(Text.from_ansi(message.rendered))
+            self._toolbar = Text.from_ansi(message.rendered)
+            self._show_toolbar()
+
+        def on_scrollback_terminal_scrolled(self, message: Any) -> None:
+            """Say so when the view is not at the bottom, since the prompt is then out of sight."""
+            self._looking_back = f"  [{message.back} of {message.kept} rows back]" if message.back else ""
+            self._show_toolbar()
+
+        def _show_toolbar(self) -> None:
+            toolbar = self._toolbar.copy()
+            toolbar.append(self._looking_back, style="bold")
+            self.query_one("#toolbar", Static).update(toolbar)
 
         def on_terminal_process_exited(self, event: Any) -> None:
             code = event.exit_code
