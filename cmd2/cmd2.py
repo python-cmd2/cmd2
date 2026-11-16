@@ -111,6 +111,7 @@ from . import (
     argparse_utils,
     constants,
     plugin,
+    textual_toolbar,
     utils,
 )
 from . import rich_utils as ru
@@ -840,7 +841,8 @@ class Cmd:
         # Base configuration
         kwargs: dict[str, Any] = {
             "auto_suggest": AutoSuggestFromHistory() if auto_suggest else None,
-            "bottom_toolbar": self.get_bottom_toolbar if enable_bottom_toolbar else None,
+            # PROTOTYPE: inside a Textual host, the host draws the toolbar. See textual_toolbar.py.
+            "bottom_toolbar": self.get_bottom_toolbar if enable_bottom_toolbar and not textual_toolbar.is_hosted() else None,
             "color_depth": pt_resolve_color_depth(),
             "complete_style": CompleteStyle.MULTI_COLUMN,
             "complete_in_thread": complete_in_thread,
