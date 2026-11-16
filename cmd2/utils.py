@@ -324,37 +324,34 @@ def expand_user_in_tokens(tokens: MutableSequence[str]) -> None:
         tokens[index] = expand_user(tokens[index])
 
 
-# Matches a character in a path which is special to a POSIX shell or to cmd2's own parser.
-# A '[' only counts when a ']' follows it, since it can't begin a glob pattern otherwise and
-# there are common executables with that name. A '#' only counts where it begins a comment.
-_POSIX_SPECIAL_RE = re.compile(r"""[ \t"';|<>&()*?{}$`\\]|\[.*]|^#""")
+# Matches a character which is special to a POSIX shell. A '[' counts even when no ']' follows it since
+# some shells, like zsh, reject that as a bad pattern. A '#' and a '=' only count at the start of a word.
+_POSIX_SPECIAL_RE = re.compile(r"""[ \t"';|<>&()*?\[{}$`\\]|^[#=]""")
 
-# The same for cmd.exe, which does not expand glob patterns and has '\' as its path separator
-_WINDOWS_SPECIAL_RE = re.compile(r"""[ \t"';|<>&()^]""")
+# Matches a character which cmd.exe documents as requiring quotes. A '~' is left out because it is not
+# special to cmd.exe itself, and quoting it would quote every path below a home directory.
+_WINDOWS_SPECIAL_RE = re.compile(r"""[ \t&()\[\]{}^=;!'+,`]""")
 
 
-def _path_quote_char(paths: Sequence[str]) -> str:
-    """Return the quote character which paths offered as completions need to be wrapped in.
+def _shell_quote_char(matches: Sequence[str]) -> str:
+    """Return the quote character which completions being passed to a shell need to be wrapped in.
 
-    A completed path becomes part of a command line which cmd2 parses and which may then be passed to a
-    shell, so it needs quotes if it has a character which is special to either of them.
-
-    :param paths: the paths being offered as completions
-    :return: the quote character to use, or an empty string if none of the paths need quotes
+    :param matches: the completions being offered for part of a command line which is passed to a shell
+    :return: the quote character to use, or an empty string if none of the matches need quotes
     """
     if sys.platform.startswith("win"):
         # cmd.exe only treats double quotes as quotes, and a Windows file name can't contain one
-        return '"' if any(_WINDOWS_SPECIAL_RE.search(path) for path in paths) else ""
+        return '"' if any(_WINDOWS_SPECIAL_RE.search(match) for match in matches) else ""
 
-    if not any(_POSIX_SPECIAL_RE.search(path) for path in paths):
+    if not any(_POSIX_SPECIAL_RE.search(match) for match in matches):
         return ""
 
-    # A quote character within a path has to be quoted with the other quote character
-    if any("'" in path for path in paths):
+    # A quote character within a match has to be quoted with the other quote character
+    if any("'" in match for match in matches):
         return '"'
 
     # Only use single quotes when a shell would still expand something within double quotes
-    return "'" if any(char in path for path in paths for char in '"$`\\') else '"'
+    return "'" if any(char in match for match in matches for char in '"$`\\') else '"'
 
 
 def _quote_shell_arg(arg: str) -> str:

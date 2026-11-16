@@ -2121,8 +2121,8 @@ def test_get_exes_in_path_removed_cwd(tmp_path, monkeypatch, unusable_entry: str
     ("platform", "matches", "expected"),
     [
         # Nothing special
-        ("linux", ["file.txt", "dir/other-file_2.txt", "~/caf\u00e9.txt"], ""),
-        ("win32", ["file.txt", "C:\\dir\\other-file_2.txt"], ""),
+        ("linux", ["file.txt", "dir/other-file_2.txt", "~/caf\u00e9.txt", "a]b", "a=b", "c#.txt"], ""),
+        ("win32", ["file.txt", "C:\\dir\\other-file_2.txt", "~\\file.txt", "c#.txt", "cost$5.txt"], ""),
         # One special match is enough
         ("linux", ["file.txt", "my file.txt"], '"'),
         ("win32", ["file.txt", "my file.txt"], '"'),
@@ -2130,12 +2130,11 @@ def test_get_exes_in_path_removed_cwd(tmp_path, monkeypatch, unusable_entry: str
         ("linux", ["my*file.txt"], '"'),
         ("linux", ["my?file.txt"], '"'),
         ("linux", ["notes[2026].txt"], '"'),
-        # A '[' is only special when a ']' follows it
-        ("linux", ["[", "g["], ""),
-        ("linux", ["]["], ""),
-        # A '#' is only special at the start
+        # A '[' is a bad pattern to some shells even without a ']'
+        ("linux", ["g["], '"'),
+        # These are only special at the start
         ("linux", ["#autosave#"], '"'),
-        ("linux", ["c#.txt"], ""),
+        ("linux", ["=equals"], '"'),
         # Shell syntax
         ("linux", ["a&b"], '"'),
         ("linux", ["a;b"], '"'),
@@ -2156,10 +2155,17 @@ def test_get_exes_in_path_removed_cwd(tmp_path, monkeypatch, unusable_entry: str
         ("win32", ["a&b.txt"], '"'),
         ("win32", ["a^b.txt"], '"'),
         ("win32", ["file(1).txt"], '"'),
+        ("win32", ["notes[2026].txt"], '"'),
+        ("win32", ["{guid}"], '"'),
+        ("win32", ["a,b.txt"], '"'),
+        ("win32", ["a=b.txt"], '"'),
+        ("win32", ["a;b.txt"], '"'),
+        ("win32", ["a+b.txt"], '"'),
+        ("win32", ["wow!.txt"], '"'),
+        ("win32", ["back`tick.txt"], '"'),
         ("win32", ["it's.txt"], '"'),
-        ("win32", ["cost$5.txt", "notes[2026].txt", "{a,b}", "#autosave#"], ""),
     ],
 )
-def test_path_quote_char(monkeypatch, platform: str, matches: list[str], expected: str) -> None:
+def test_shell_quote_char(monkeypatch, platform: str, matches: list[str], expected: str) -> None:
     monkeypatch.setattr(sys, "platform", platform)
-    assert cu._path_quote_char(matches) == expected
+    assert cu._shell_quote_char(matches) == expected

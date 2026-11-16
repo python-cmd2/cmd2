@@ -912,7 +912,7 @@ def test_add_opening_quote_nothing_added(cmd_app) -> None:
     assert not completions._quote_char
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="these characters are either illegal in Windows file names or not special")
+@pytest.mark.skipif(sys.platform == "win32", reason="some of these are illegal in Windows file names or not special there")
 @pytest.mark.parametrize(
     ("name", "text", "quote_char"),
     [
@@ -965,10 +965,9 @@ def test_add_opening_quote_shell_special_command(cmd_app, tmp_path, monkeypatch)
     assert completions._quote_char == '"'
 
 
-def test_add_opening_quote_unpaired_bracket_not_special(cmd_app, tmp_path, monkeypatch) -> None:
-    # A '[' which isn't followed by a ']' can't begin a glob pattern. Executables named '[' and 'g[' are
-    # common, and they must not cause every other shell command to be quoted.
-    make_exes(tmp_path, ["[", "g[", "git"])
+def test_add_opening_quote_unpaired_bracket(cmd_app, tmp_path, monkeypatch) -> None:
+    # A '[' which isn't followed by a ']' is still a bad pattern to shells like zsh
+    make_exes(tmp_path, ["g[", "git"])
     monkeypatch.setenv("PATH", str(tmp_path))
     text = "g"
     line = f"shell {text}"
@@ -977,8 +976,83 @@ def test_add_opening_quote_unpaired_bracket_not_special(cmd_app, tmp_path, monke
 
     completions = cmd_app.complete(text, line, begidx, endidx)
     assert sorted(completions.to_strings()) == ["g[", "git"]
-    assert not completions._add_opening_quote
-    assert not completions._quote_char
+    assert completions._add_opening_quote
+    assert completions._quote_char == '"'
+
+
+@pytest.mark.parametrize(
+    ("line_start", "quoted"),
+    [
+        # Arguments to the shell command and everything after a pipe are passed to a shell
+        ("shell cat ", True),
+        ("!cat ", True),
+        ("help | cat ", True),
+        ("help | cat -n ", True),
+        ("help | cat > ", True),
+        # Nothing else is, so these are only quoted if a match has a space
+        ("edit ", False),
+        ("run_script ", False),
+        ("help > ", False),
+        ("help >> ", False),
+        ("raw_path ", False),
+        ("help > out.txt | cat ", False),
+    ],
+)
+def test_add_opening_quote_only_for_shell(tmp_path, monkeypatch, line_start, quoted) -> None:
+    class RawPathApp(cmd2.Cmd):
+        """Application with a command that receives its argument exactly as it was typed."""
+
+        def do_raw_path(self, line: cmd2.Statement) -> None:
+            self.poutput(line)
+
+        complete_raw_path = cmd2.Cmd.path_complete
+
+    (tmp_path / "notes[2026].txt").touch()
+    monkeypatch.chdir(tmp_path)
+    app = RawPathApp()
+    text = "no"
+    line = line_start + text
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    completions = app.complete(text, line, begidx, endidx)
+    assert completions.to_strings() == ("notes[2026].txt",)
+    assert completions._add_opening_quote == quoted
+    assert completions._quote_char == ('"' if quoted else "")
+
+
+def test_add_opening_quote_shell_command_after_pipe(cmd_app, tmp_path, monkeypatch) -> None:
+    make_exes(tmp_path, ["my&tool"])
+    monkeypatch.setenv("PATH", str(tmp_path))
+    text = "my"
+    line = f"help | {text}"
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    completions = cmd_app.complete(text, line, begidx, endidx)
+    assert completions.to_strings() == ("my&tool",)
+    assert completions._add_opening_quote
+    assert completions._quote_char == '"'
+
+
+def test_add_opening_quote_space_outside_shell(cmd_app, tmp_path, monkeypatch) -> None:
+    (tmp_path / "my notes.txt").touch()
+    monkeypatch.chdir(tmp_path)
+    text = "my"
+    line = f"edit {text}"
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # A match with a space is quoted no matter which command it is for
+    completions = cmd_app.complete(text, line, begidx, endidx)
+    assert completions.to_strings() == ("my notes.txt",)
+    assert completions._add_opening_quote
+    assert completions._quote_char == '"'
+
+
+def test_quote_for_shell_ignored_in_comparison() -> None:
+    # This is an internal detail which must not make otherwise equal results differ
+    assert Completions.from_values(["a"]) == dataclasses.replace(Completions.from_values(["a"]), _quote_for_shell=True)
 
 
 class GlobChoicesApp(cmd2.Cmd):
@@ -999,7 +1073,7 @@ def test_add_opening_quote_not_added_to_non_path(text, expected) -> None:
     endidx = len(line)
     begidx = endidx - len(text)
 
-    # Only paths are quoted for a shell. Quoting this would break a command which preserves quotes.
+    # Only what is passed to a shell is quoted for one. Quoting this would break a command which preserves quotes.
     completions = app.complete(text, line, begidx, endidx)
     assert completions.to_strings() == (expected,)
     assert not completions._add_opening_quote
@@ -1317,10 +1391,10 @@ def test_redirect_complete(cmd_app, monkeypatch, line, comp_type) -> None:
     # Test both cases of allow_redirection
     cmd_app.allow_redirection = True
     for _ in range(2):
-        shell_cmd_complete_mock = mock.MagicMock(name="shell_cmd_complete")
+        shell_cmd_complete_mock = mock.MagicMock(name="shell_cmd_complete", return_value=Completions())
         monkeypatch.setattr("cmd2.Cmd.shell_cmd_complete", shell_cmd_complete_mock)
 
-        path_complete_mock = mock.MagicMock(name="path_complete")
+        path_complete_mock = mock.MagicMock(name="path_complete", return_value=Completions())
         monkeypatch.setattr("cmd2.Cmd.path_complete", path_complete_mock)
 
         default_complete_mock = mock.MagicMock(name="fake_completer")

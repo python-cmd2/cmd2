@@ -2387,8 +2387,7 @@ class Cmd:
 
         Apart from a leading ``~``, which refers to a user's home directory, every character in ``text`` is
         matched literally. Glob characters like ``*``, ``?``, and ``[`` are not expanded, and they are not
-        escaped in the results. When these results are used for tab completion, quotes are added if any
-        of them has a character which is special to a shell.
+        escaped in the results.
 
         :param text: the string prefix we are attempting to match (all matches must begin with it)
         :param line: the current input line with leading whitespace removed
@@ -2481,7 +2480,7 @@ class Cmd:
             for match, display in zip(matches, display_matches, strict=True)
         ]
 
-        return Completions(items=items, allow_finalization=allow_finalization, _quote_for_shell=True)
+        return Completions(items=items, allow_finalization=allow_finalization)
 
     def shell_cmd_complete(
         self, text: str, line: str, begidx: int, endidx: int, *, complete_blank: bool = False
@@ -2503,7 +2502,7 @@ class Cmd:
         # If the search text is a bare command name (no '~' or path separator), complete executables from PATH
         if not text.startswith("~") and os.path.sep not in text:
             items = [CompletionItem(exe) for exe in utils.get_exes_in_path(text)]
-            return Completions(items=items, _quote_for_shell=True)
+            return Completions(items=items)
 
         # Otherwise look for executables in the given path
         return self.path_complete(
@@ -2535,6 +2534,9 @@ class Cmd:
             # True when command line contains any redirection tokens
             has_redirection = False
 
+            # True when the first redirection token is a pipe, which means everything after it is passed to a shell
+            piped_to_shell = False
+
             # Keep track of state while examining tokens
             in_pipe = False
             in_file_redir = False
@@ -2545,6 +2547,8 @@ class Cmd:
             for cur_token in raw_tokens:
                 # Process redirection tokens
                 if cur_token in constants.REDIRECTION_TOKENS:
+                    if not has_redirection:
+                        piped_to_shell = cur_token == constants.REDIRECTION_PIPE
                     has_redirection = True
 
                     # Check if we are at a pipe
@@ -2578,10 +2582,12 @@ class Cmd:
                 prior_token = cur_token
 
             if do_shell_completion:
-                return self.shell_cmd_complete(text, line, begidx, endidx)
+                completions = self.shell_cmd_complete(text, line, begidx, endidx)
+                return dataclasses.replace(completions, _quote_for_shell=piped_to_shell)
 
             if do_path_completion:
-                return self.path_complete(text, line, begidx, endidx)
+                completions = self.path_complete(text, line, begidx, endidx)
+                return dataclasses.replace(completions, _quote_for_shell=piped_to_shell)
 
             # If there were redirection strings anywhere on the command line, then we
             # are no longer completing for the current command
@@ -2728,10 +2734,9 @@ class Cmd:
         if not completion_token_quote:
             matches = completions.to_strings()
 
-            # Paths and shell commands can end up on a shell's command line, so
-            # they need quotes if any of them has a character special to a shell.
+            # Matches which are being passed to a shell need quotes if any of them has a character special to it
             if completions._quote_for_shell:
-                _quote_char = utils._path_quote_char(matches)
+                _quote_char = utils._shell_quote_char(matches)
                 _add_opening_quote = bool(_quote_char)
 
             # Everything else only needs quotes to keep a match with a space as a single token
@@ -5042,12 +5047,22 @@ class Cmd:
     @classmethod
     def _build_shell_parser(cls) -> Cmd2ArgumentParser:
         shell_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description="Execute a command as if at the OS prompt.")
-        shell_parser.add_argument("command", help="the command to run", completer=cls.shell_cmd_complete)
+        shell_parser.add_argument("command", help="the command to run", completer=cls._complete_shell_command)
         shell_parser.add_argument(
-            "command_args", nargs=argparse.REMAINDER, help="arguments to pass to command", completer=cls.path_complete
+            "command_args", nargs=argparse.REMAINDER, help="arguments to pass to command", completer=cls._complete_shell_arg
         )
 
         return shell_parser
+
+    def _complete_shell_command(self, text: str, line: str, begidx: int, endidx: int) -> Completions:
+        """Complete the command which do_shell passes to a shell."""
+        completions = self.shell_cmd_complete(text, line, begidx, endidx)
+        return dataclasses.replace(completions, _quote_for_shell=True)
+
+    def _complete_shell_arg(self, text: str, line: str, begidx: int, endidx: int) -> Completions:
+        """Complete an argument of the command which do_shell passes to a shell."""
+        completions = self.path_complete(text, line, begidx, endidx)
+        return dataclasses.replace(completions, _quote_for_shell=True)
 
     # Preserve quotes since we are passing these strings to the shell
     @with_argparser(_build_shell_parser, preserve_quotes=True)
