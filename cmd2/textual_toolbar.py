@@ -255,6 +255,15 @@ def run_host(command: list[str]) -> int:
         shutil.rmtree(directory, ignore_errors=True)
 
 
+def _host_import(module: str) -> Any:
+    """Import a module which only a host needs.
+
+    Not an import statement, so that the type checkers do not need Textual to check this module:
+    it is not a dependency of cmd2, and what comes from it is treated as untyped.
+    """
+    return importlib.import_module(module)
+
+
 #: How many rows which have scrolled off the top of the program's screen are kept.
 SCROLLBACK_ROWS = 10_000
 
@@ -276,15 +285,15 @@ def scrollback_terminal_class() -> Any:
     from collections import deque
 
     from rich.segment import Segment
-    from textual import events
-    from textual.message import Message
-    from textual.strip import Strip
-    from textual_tty import Terminal  # type: ignore[import-untyped]
+
+    Message: Any = _host_import("textual.message").Message  # noqa: N806
+    Strip: Any = _host_import("textual.strip").Strip  # noqa: N806
+    Terminal: Any = _host_import("textual_tty").Terminal  # noqa: N806
 
     class ScrollbackTerminal(Terminal):  # type: ignore[misc]
         """A terminal emulator widget with scrollback."""
 
-        class Scrolled(Message):
+        class Scrolled(Message):  # type: ignore[misc]
             """The view moved: how many rows back it is, of how many kept."""
 
             def __init__(self, back: int, kept: int) -> None:
@@ -334,13 +343,13 @@ def scrollback_terminal_class() -> Any:
 
         # --- drawing --- #
 
-        def render_line(self, y: int) -> Strip:
+        def render_line(self, y: int) -> Any:
             if not self.back:
-                return super().render_line(y)  # type: ignore[no-any-return]
+                return super().render_line(y)
             # The view is a window on the kept rows followed by the screen's own.
             row = len(self.scrollback) - self.back + y
             if row >= len(self.scrollback):
-                return super().render_line(row - len(self.scrollback))  # type: ignore[no-any-return]
+                return super().render_line(row - len(self.scrollback))
             width = self.size.width
             segments = []
             run: list[str] = []
@@ -365,11 +374,11 @@ def scrollback_terminal_class() -> Any:
                 self.refresh()
 
         def _cursor_shown(self) -> bool:
-            return not self.back and super()._cursor_shown()
+            return not self.back and bool(super()._cursor_shown())
 
         # --- sizing --- #
 
-        def on_resize(self, event: events.Resize) -> None:
+        def on_resize(self, event: Any) -> None:
             height = event.size.height
             blitter = self.board.blitter
             below = self.board.cursor.y - (height - 1)
@@ -384,7 +393,7 @@ def scrollback_terminal_class() -> Any:
 
         # --- input --- #
 
-        def on_key(self, event: events.Key) -> None:
+        def on_key(self, event: Any) -> None:
             page = max(1, self.size.height - 1)
             moves = {
                 "shift+pageup": page,
@@ -401,7 +410,7 @@ def scrollback_terminal_class() -> Any:
             self.look(-self.back)
             super().on_key(event)
 
-        def _wheel(self, event: events.MouseEvent, button: int, arrow: str) -> None:
+        def _wheel(self, event: Any, button: int, arrow: str) -> None:
             if self.mouse_mode != "off" or self.board.blitter.in_alt_screen:
                 # The program wants the wheel itself, or is full-screen and has no rows above.
                 super()._wheel(event, button, arrow)
@@ -422,20 +431,20 @@ def build_host_app(command: list[str], listener: socket.socket) -> Any:
     import asyncio
 
     from rich.text import Text
-    from textual.app import App, ComposeResult
-    from textual.message import Message
-    from textual.widgets import Static
 
-    Terminal = scrollback_terminal_class()  # noqa: N806
+    App: Any = _host_import("textual.app").App  # noqa: N806
+    Message: Any = _host_import("textual.message").Message  # noqa: N806
+    Static: Any = _host_import("textual.widgets").Static  # noqa: N806
+    Terminal: Any = scrollback_terminal_class()  # noqa: N806
 
-    class ToolbarChanged(Message):
+    class ToolbarChanged(Message):  # type: ignore[misc]
         """The program has new content for its toolbar."""
 
         def __init__(self, rendered: str) -> None:
             self.rendered = rendered
             super().__init__()
 
-    class ToolbarHost(App[None]):
+    class ToolbarHost(App[None]):  # type: ignore[misc]
         """A terminal emulator running the program, and its toolbar."""
 
         CSS = """
@@ -459,7 +468,7 @@ def build_host_app(command: list[str], listener: socket.socket) -> Any:
             self._toolbar = Text()
             self._looking_back = ""
 
-        def compose(self) -> ComposeResult:
+        def compose(self) -> Any:
             yield Terminal(command=command, id="program")
             yield Static("", id="toolbar")
 
