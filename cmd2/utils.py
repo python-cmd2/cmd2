@@ -6,9 +6,9 @@ import functools
 import glob
 import inspect
 import io
-import itertools
 import os
 import re
+import shutil
 import subprocess
 import sys
 import threading
@@ -358,21 +358,12 @@ def find_editor() -> str | None:
         else:
             editors = ["vim", "vi", "emacs", "nano", "pico", "joe", "code", "subl", "gedit", "kate"]
 
-        # Get a list of every directory in the PATH environment variable
-        env_path = os.getenv("PATH")
-        paths = [] if env_path is None else env_path.split(os.path.pathsep)
+        # Use the first of these editors which the shell would be able to find
+        editor = next((cur_editor for cur_editor in editors if shutil.which(cur_editor)), None)
 
-        for possible_editor, path in itertools.product(editors, paths):
-            editor_path = os.path.join(path, possible_editor)
-            if os.path.isfile(editor_path) and os.access(editor_path, os.X_OK):
-                if sys.platform[:3] == "win":
-                    # Remove extension from Windows file names
-                    editor = os.path.splitext(possible_editor)[0]
-                else:
-                    editor = possible_editor
-                break
-        else:
-            editor = None
+        # Remove extension from Windows file names
+        if editor is not None and sys.platform[:3] == "win":
+            editor = os.path.splitext(editor)[0]
 
     return editor
 
@@ -414,10 +405,15 @@ def get_exes_in_path(starts_with: str) -> list[str]:
     :param starts_with: what the exes should start with. leave blank for all exes in path.
     :return: a list of matching exe names
     """
-    # Get every directory in the PATH environment variable. Resolve symbolic links so
-    # a directory which is reachable through more than one entry is only searched once.
+    # Get every directory in the PATH environment variable. Resolve symbolic links so a directory which is reachable
+    # through more than one entry is only searched once. Relative entries are left as they are since resolving one
+    # raises an exception if the current working directory no longer exists.
     env_path = os.getenv("PATH")
-    paths = [] if env_path is None else list(dict.fromkeys(os.path.realpath(p) for p in env_path.split(os.path.pathsep)))
+    paths = (
+        set()
+        if env_path is None
+        else {os.path.realpath(p) if os.path.isabs(p) else p for p in env_path.split(os.path.pathsep)}
+    )
 
     # Use a set to store exe names since there can be duplicates
     exes_set = set()

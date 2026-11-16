@@ -33,22 +33,31 @@ line of code similar to the following to your class which inherits from `cmd2.Cm
 complete_bar = functools.partialmethod(cmd2.Cmd.path_complete, path_filter=os.path.isdir)
 ```
 
-### Special Characters in Paths
+## Special Characters in Paths
 
 Path and shell command completion match the text being completed literally. Glob characters such as
 `*`, `?`, and `[` are never expanded, so a file named `my*file.txt` or `notes[2026].txt` completes
-like any other.
+like any other. The one exception is a leading `~`, which refers to a user's home directory as it
+does in a shell.
 
-Completion results are literal names too. `cmd2` adds an opening quote when a match contains a
-space, but it does not escape characters which are special to a shell, because it has no way of
-knowing how a command will use the path. Most commands use a path directly in Python, where the
-literal name is exactly what is wanted. If a completed path is going to be passed to a shell, as the
-[shell](./builtin_commands.md#shell) command does with its arguments, then quote or escape it
-yourself:
+Completion results are literal names too. `cmd2` does not escape them, because it has no way of
+knowing how a command will use a path. Most commands use a path directly in Python, where the
+literal name is exactly what is wanted. What `cmd2` does do is add quotes when a match contains a
+space or one of the glob characters `*`, `?`, and `[`:
 
 ```text
-(Cmd) !ls 'my*file.txt'
+(Cmd) !ls my*<TAB>
+(Cmd) !ls "my*file.txt"
 ```
+
+The quotes keep a match with a space together as a single argument. They also keep a shell from
+expanding a glob character if the command line is passed to one, as the
+[shell](./builtin_commands.md#shell) command and a [pipe](./redirection.md) do. `cmd2` removes the
+quotes before passing the argument to a command, unless that command asked to preserve them.
+
+Characters which stay special to a shell inside double quotes, such as `$` and a backtick, are not
+covered by this. If a path containing one is going to be passed to a shell, then quote or escape it
+yourself.
 
 ## Included Tab Completion Functions
 

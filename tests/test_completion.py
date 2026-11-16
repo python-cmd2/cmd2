@@ -24,6 +24,7 @@ from cmd2 import (
 )
 
 from .conftest import (
+    make_exes,
     normalize,
     run_cmd,
 )
@@ -392,17 +393,9 @@ def test_shell_command_completion_does_not_expand_wildcards(cmd_app) -> None:
     assert not completions
 
 
-def _make_exes(directory, names) -> None:
-    """Create an executable file in directory for each name."""
-    for name in names:
-        exe = directory / name
-        exe.touch()
-        exe.chmod(0o755)
-
-
 @pytest.mark.parametrize("prefix", ["[ab]", "[!ab]"])
 def test_shell_command_completion_literal_brackets_in_name(cmd_app, tmp_path, monkeypatch, prefix) -> None:
-    _make_exes(tmp_path, ("[ab]-tool", "[!ab]-tool", "a-tool", "c-tool"))
+    make_exes(tmp_path, ("[ab]-tool", "[!ab]-tool", "a-tool", "c-tool"))
     monkeypatch.setenv("PATH", str(tmp_path))
     line = f"shell {prefix}"
 
@@ -414,7 +407,7 @@ def test_shell_command_completion_literal_brackets_in_name(cmd_app, tmp_path, mo
 def test_shell_command_completion_literal_brackets_in_path_directory(cmd_app, tmp_path, monkeypatch) -> None:
     bin_dir = tmp_path / "bin[2026]"
     bin_dir.mkdir()
-    _make_exes(bin_dir, ("mytool", "other"))
+    make_exes(bin_dir, ("mytool", "other"))
     monkeypatch.setenv("PATH", str(bin_dir))
     text = "my"
     line = f"shell {text}"
@@ -428,7 +421,7 @@ def test_shell_command_completion_literal_brackets_in_given_path(cmd_app, tmp_pa
     # Search text containing a path separator is completed from that path instead of from PATH
     bin_dir = tmp_path / "bin[2026]"
     bin_dir.mkdir()
-    _make_exes(bin_dir, ("[ab]-tool", "a-tool"))
+    make_exes(bin_dir, ("[ab]-tool", "a-tool"))
     monkeypatch.setenv("PATH", "")
     text = str(bin_dir / "[ab]")
     line = f"shell {text}"
@@ -441,7 +434,7 @@ def test_shell_command_completion_literal_brackets_in_given_path(cmd_app, tmp_pa
 @pytest.mark.skipif(sys.platform == "win32", reason="'*' and '?' are not legal in Windows file names")
 @pytest.mark.parametrize("prefix", ["my*", "my?"])
 def test_shell_command_completion_literal_wildcards_in_name(cmd_app, tmp_path, monkeypatch, prefix) -> None:
-    _make_exes(tmp_path, ("my*tool", "my?tool", "mytool", "myxtool"))
+    make_exes(tmp_path, ("my*tool", "my?tool", "mytool", "myxtool"))
     monkeypatch.setenv("PATH", str(tmp_path))
     line = f"shell {prefix}"
 
@@ -917,6 +910,44 @@ def test_add_opening_quote_nothing_added(cmd_app) -> None:
     completions = cmd_app.complete(text, line, begidx, endidx)
     assert not completions._add_opening_quote
     assert not completions._quote_char
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "[ab].txt",
+        pytest.param("my*file.txt", marks=pytest.mark.skipif(sys.platform == "win32", reason="illegal Windows file name")),
+        pytest.param("my?file.txt", marks=pytest.mark.skipif(sys.platform == "win32", reason="illegal Windows file name")),
+    ],
+)
+def test_add_opening_quote_glob_character(cmd_app, tmp_path, monkeypatch, name) -> None:
+    (tmp_path / name).touch()
+    monkeypatch.chdir(tmp_path)
+    text = name[:3]
+    line = f"shell cat {text}"
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # The match has a glob character, so quote it to keep a shell from expanding it
+    completions = cmd_app.complete(text, line, begidx, endidx)
+    assert completions.to_strings() == (name,)
+    assert completions._add_opening_quote
+    assert completions._quote_char == '"'
+
+
+def test_add_opening_quote_glob_character_already_quoted(cmd_app, tmp_path, monkeypatch) -> None:
+    (tmp_path / "[ab].txt").touch()
+    monkeypatch.chdir(tmp_path)
+    text = "[ab"
+    line = f"shell cat '{text}"
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # The search text already has an opening quote, so keep using it
+    completions = cmd_app.complete(text, line, begidx, endidx)
+    assert completions.to_strings() == ("[ab].txt",)
+    assert not completions._add_opening_quote
+    assert completions._quote_char == "'"
 
 
 def test_word_break_in_quote(cmd_app) -> None:

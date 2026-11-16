@@ -16,6 +16,8 @@ import pytest
 
 import cmd2.utils as cu
 
+from .conftest import make_exes
+
 HELLO_WORLD = "Hello, world!"
 
 
@@ -1810,9 +1812,7 @@ def test_find_editor_not_specified() -> None:
 def test_find_editor_symlinked_directory(tmp_path, monkeypatch) -> None:
     real_dir = tmp_path / "real_bin"
     real_dir.mkdir()
-    exe = real_dir / "nano"
-    exe.touch()
-    exe.chmod(0o755)
+    make_exes(real_dir, ["nano"])
     link_dir = tmp_path / "link_bin"
     link_dir.symlink_to(real_dir, target_is_directory=True)
 
@@ -1820,6 +1820,26 @@ def test_find_editor_symlinked_directory(tmp_path, monkeypatch) -> None:
     monkeypatch.delenv("EDITOR", raising=False)
     monkeypatch.setenv("PATH", str(link_dir))
     assert cu.find_editor() == "nano"
+
+
+def test_find_editor_prefers_earlier_editor(tmp_path, monkeypatch) -> None:
+    # The editors are tried in order of preference, regardless of which PATH directory they are in
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+    first_dir.mkdir()
+    second_dir.mkdir()
+    if sys.platform == "win32":
+        make_exes(first_dir, ["notepad.exe"])
+        make_exes(second_dir, ["notepad++.exe"])
+        expected = "notepad++"
+    else:
+        make_exes(first_dir, ["nano"])
+        make_exes(second_dir, ["emacs"])
+        expected = "emacs"
+
+    monkeypatch.delenv("EDITOR", raising=False)
+    monkeypatch.setenv("PATH", os.pathsep.join([str(first_dir), str(second_dir)]))
+    assert cu.find_editor() == expected
 
 
 def test_similarity() -> None:
@@ -2001,10 +2021,7 @@ def test_proc_reader_relays_producer_stop(resolved, foreground_group) -> None:
 
 @pytest.mark.parametrize("prefix", ["[ab]", "[!ab]"])
 def test_get_exes_in_path_literal_brackets_in_name(tmp_path, monkeypatch, prefix: str) -> None:
-    for name in ("[ab]-tool", "[!ab]-tool", "a-tool", "c-tool"):
-        exe = tmp_path / name
-        exe.touch()
-        exe.chmod(0o755)
+    make_exes(tmp_path, ("[ab]-tool", "[!ab]-tool", "a-tool", "c-tool"))
     monkeypatch.setenv("PATH", str(tmp_path))
 
     assert cu.get_exes_in_path(prefix) == [f"{prefix}-tool"]
@@ -2013,10 +2030,7 @@ def test_get_exes_in_path_literal_brackets_in_name(tmp_path, monkeypatch, prefix
 def test_get_exes_in_path_literal_brackets_in_directory(tmp_path, monkeypatch) -> None:
     bin_dir = tmp_path / "bin[2026]"
     bin_dir.mkdir()
-    for name in ("mytool", "other"):
-        exe = bin_dir / name
-        exe.touch()
-        exe.chmod(0o755)
+    make_exes(bin_dir, ("mytool", "other"))
     monkeypatch.setenv("PATH", str(bin_dir))
 
     assert sorted(cu.get_exes_in_path("")) == ["mytool", "other"]
@@ -2028,10 +2042,7 @@ def test_get_exes_in_path_literal_brackets_in_directory(tmp_path, monkeypatch) -
 @pytest.mark.skipif(sys.platform == "win32", reason="'*' and '?' are not legal in Windows file names")
 @pytest.mark.parametrize("prefix", ["my*", "my?"])
 def test_get_exes_in_path_literal_wildcards_in_name(tmp_path, monkeypatch, prefix: str) -> None:
-    for name in ("my*tool", "my?tool", "mytool", "myxtool"):
-        exe = tmp_path / name
-        exe.touch()
-        exe.chmod(0o755)
+    make_exes(tmp_path, ("my*tool", "my?tool", "mytool", "myxtool"))
     monkeypatch.setenv("PATH", str(tmp_path))
 
     # A wildcard is matched as a literal character instead of being expanded
@@ -2045,9 +2056,7 @@ def test_get_exes_in_path_literal_wildcards_in_directory(tmp_path, monkeypatch, 
     for cur_dir, exe_name in ((dir_name, "mytool"), ("bin2", "decoy")):
         bin_dir = tmp_path / cur_dir
         bin_dir.mkdir()
-        exe = bin_dir / exe_name
-        exe.touch()
-        exe.chmod(0o755)
+        make_exes(bin_dir, [exe_name])
     monkeypatch.setenv("PATH", str(tmp_path / dir_name))
 
     assert cu.get_exes_in_path("") == ["mytool"]
@@ -2059,9 +2068,7 @@ def test_get_exes_in_path_literal_wildcards_in_directory(tmp_path, monkeypatch, 
 def test_get_exes_in_path_symlinked_directory(tmp_path, monkeypatch) -> None:
     real_dir = tmp_path / "real_bin"
     real_dir.mkdir()
-    exe = real_dir / "mytool"
-    exe.touch()
-    exe.chmod(0o755)
+    make_exes(real_dir, ["mytool"])
     link_dir = tmp_path / "link_bin"
     link_dir.symlink_to(real_dir, target_is_directory=True)
 
@@ -2074,3 +2081,19 @@ def test_get_exes_in_path_symlinked_directory(tmp_path, monkeypatch) -> None:
     with mock.patch("cmd2.utils.files_from_glob_pattern", wraps=cu.files_from_glob_pattern) as glob_mock:
         assert cu.get_exes_in_path("my") == ["mytool"]
     glob_mock.assert_called_once()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows does not allow the current working directory to be removed")
+@pytest.mark.parametrize("unusable_entry", ["", "relative_bin"])
+def test_get_exes_in_path_removed_cwd(tmp_path, monkeypatch, unusable_entry: str) -> None:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    make_exes(bin_dir, ["mytool"])
+    cwd = tmp_path / "cwd"
+    cwd.mkdir()
+    monkeypatch.chdir(cwd)
+    cwd.rmdir()
+
+    # An empty or relative PATH entry can't be searched, but that doesn't stop the others from being searched
+    monkeypatch.setenv("PATH", os.pathsep.join([str(bin_dir), unusable_entry]))
+    assert cu.get_exes_in_path("my") == ["mytool"]

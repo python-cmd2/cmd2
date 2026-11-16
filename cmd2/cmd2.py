@@ -2385,8 +2385,9 @@ class Cmd:
     ) -> Completions:
         """Perform completion of local file system paths.
 
-        Every character in ``text`` is matched literally. Glob characters like ``*``, ``?``, and ``[`` are not
-        expanded, and they are not escaped in the results.
+        Apart from a leading ``~``, which refers to a user's home directory, every character in ``text`` is
+        matched literally. Glob characters like ``*``, ``?``, and ``[`` are not expanded, and they are not
+        escaped in the results.
 
         :param text: the string prefix we are attempting to match (all matches must begin with it)
         :param line: the current input line with leading whitespace removed
@@ -2726,7 +2727,9 @@ class Cmd:
         if not completion_token_quote:
             matches = completions.to_strings()
 
-            if any(" " in match for match in matches):
+            # A match with a space needs quotes to remain a single token. A match with a glob character
+            # gets them so it isn't expanded if the command line is passed to a shell.
+            if any(char in match for match in matches for char in " *?["):
                 _add_opening_quote = True
 
                 # Determine best quote (single vs double) based on text content
