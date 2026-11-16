@@ -15,6 +15,12 @@
       [Updating Output in Place](docs/features/generating_output.md#updating-output-in-place)
       documentation for details, including why a carriage return embedded in a string passed to
       `poutput()` does not move the cursor.
+    - Added the
+      [textual_tty_toolbar.py](https://github.com/python-cmd2/cmd2/blob/main/examples/textual_tty_toolbar.py)
+      example, which shows how to keep a bottom toolbar on the screen while commands run by running
+      a `cmd2` application inside a Textual application which draws the toolbar. See
+      [Embedding in Textual](docs/examples/embedding_in_textual.md#a-bottom-toolbar-which-stays-while-commands-run)
+      for how it works and what it costs.
 
 ## 4.4.2 (November 11, 2026)
 

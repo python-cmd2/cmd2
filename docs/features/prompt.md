@@ -133,3 +133,8 @@ example for a demonstration of this technique.
     `cmd2` application inside a [Textual](https://textual.textualize.io/) application, next to
     widgets which display that information. See
     [Embedding in Textual](../examples/embedding_in_textual.md).
+
+    The same technique can keep a toolbar on the screen while a command runs, which this one is
+    not: it is part of the prompt. See
+    [A Bottom Toolbar Which Stays While Commands Run](../examples/embedding_in_textual.md#a-bottom-toolbar-which-stays-while-commands-run)
+    for an example, and for what it costs.
