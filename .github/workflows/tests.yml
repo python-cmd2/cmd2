@@ -19,6 +19,11 @@ jobs:
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      # Lets the Codecov steps authenticate with a short-lived OIDC token instead of the
+      # CODECOV_TOKEN secret, which Dependabot-triggered runs are not given.
+      id-token: write
     defaults:
       run:
         shell: bash
@@ -48,7 +53,7 @@ jobs:
           flags: python${{ matrix.python-version }}
           name: codecov-umbrella-test-results
           report_type: test_results
-          token: ${{ secrets.CODECOV_TOKEN }}
+          use_oidc: true
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
@@ -56,7 +61,7 @@ jobs:
           fail_ci_if_error: true
           flags: unittests
           name: codecov-umbrella
-          token: ${{ secrets.CODECOV_TOKEN }}
+          use_oidc: true
           verbose: true
 
   # Single stable status check for the whole test matrix, so branch protection
