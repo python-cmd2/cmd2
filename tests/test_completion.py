@@ -912,27 +912,113 @@ def test_add_opening_quote_nothing_added(cmd_app) -> None:
     assert not completions._quote_char
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="these characters are either illegal in Windows file names or not special")
 @pytest.mark.parametrize(
-    "name",
+    ("name", "text", "quote_char"),
     [
-        "[ab].txt",
-        pytest.param("my*file.txt", marks=pytest.mark.skipif(sys.platform == "win32", reason="illegal Windows file name")),
-        pytest.param("my?file.txt", marks=pytest.mark.skipif(sys.platform == "win32", reason="illegal Windows file name")),
+        # Glob characters
+        ("[ab].txt", "[ab", '"'),
+        ("my*file.txt", "my*", '"'),
+        ("my?file.txt", "my", '"'),
+        # Characters which are shell syntax
+        ("file(1).txt", "fi", '"'),
+        ("a&b.txt", "a", '"'),
+        ("semi;colon.txt", "se", '"'),
+        ("{x,y}.txt", "", '"'),
+        ("#autosave#", "", '"'),
+        # A quote character is quoted with the other one
+        ("it's.txt", "it", '"'),
+        ('say"hi".txt', "say", "'"),
+        # Characters which a shell still expands within double quotes
+        ("cost$5.txt", "co", "'"),
+        ("back`tick.txt", "ba", "'"),
+        ("back\\slash.txt", "ba", "'"),
+        ("cost[$5].txt", "", "'"),
     ],
 )
-def test_add_opening_quote_glob_character(cmd_app, tmp_path, monkeypatch, name) -> None:
+def test_add_opening_quote_shell_special_path(cmd_app, tmp_path, monkeypatch, name, text, quote_char) -> None:
     (tmp_path / name).touch()
     monkeypatch.chdir(tmp_path)
-    text = name[:3]
     line = f"shell cat {text}"
     endidx = len(line)
     begidx = endidx - len(text)
 
-    # The match has a glob character, so quote it to keep a shell from expanding it
+    # The path has a character which is special to a shell, so quote it
     completions = cmd_app.complete(text, line, begidx, endidx)
     assert completions.to_strings() == (name,)
     assert completions._add_opening_quote
+    assert completions._quote_char == quote_char
+
+
+def test_add_opening_quote_shell_special_command(cmd_app, tmp_path, monkeypatch) -> None:
+    make_exes(tmp_path, ["my&tool"])
+    monkeypatch.setenv("PATH", str(tmp_path))
+    text = "my"
+    line = f"shell {text}"
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # Shell commands completed from PATH are quoted like paths are
+    completions = cmd_app.complete(text, line, begidx, endidx)
+    assert completions.to_strings() == ("my&tool",)
+    assert completions._add_opening_quote
     assert completions._quote_char == '"'
+
+
+def test_add_opening_quote_unpaired_bracket_not_special(cmd_app, tmp_path, monkeypatch) -> None:
+    # A '[' which isn't followed by a ']' can't begin a glob pattern. Executables named '[' and 'g[' are
+    # common, and they must not cause every other shell command to be quoted.
+    make_exes(tmp_path, ["[", "g[", "git"])
+    monkeypatch.setenv("PATH", str(tmp_path))
+    text = "g"
+    line = f"shell {text}"
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    completions = cmd_app.complete(text, line, begidx, endidx)
+    assert sorted(completions.to_strings()) == ["g[", "git"]
+    assert not completions._add_opening_quote
+    assert not completions._quote_char
+
+
+class GlobChoicesApp(cmd2.Cmd):
+    """Application with completion results containing glob characters which are not paths."""
+
+    choices_parser = cmd2.Cmd2ArgumentParser()
+    choices_parser.add_argument("item", choices=["all", "*", "pkg[extra]"])
+
+    @cmd2.with_argparser(choices_parser, preserve_quotes=True)
+    def do_pick(self, args: argparse.Namespace) -> None:
+        self.poutput(f"picked {args.item}")
+
+
+@pytest.mark.parametrize(("text", "expected"), [("pk", "pkg[extra]"), ("*", "*")])
+def test_add_opening_quote_not_added_to_non_path(text, expected) -> None:
+    app = GlobChoicesApp()
+    line = f"pick {text}"
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # Only paths are quoted for a shell. Quoting this would break a command which preserves quotes.
+    completions = app.complete(text, line, begidx, endidx)
+    assert completions.to_strings() == (expected,)
+    assert not completions._add_opening_quote
+
+    out, _err = run_cmd(app, f"pick {expected}")
+    assert out == [f"picked {expected}"]
+
+
+def test_add_opening_quote_not_added_to_command_name(cmd_app) -> None:
+    # An alias name can have a glob character in it
+    run_cmd(cmd_app, "alias create zz* help")
+    text = "zz"
+    line = text
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    completions = cmd_app.complete(text, line, begidx, endidx)
+    assert completions.to_strings() == ("zz*",)
+    assert not completions._add_opening_quote
 
 
 def test_add_opening_quote_glob_character_already_quoted(cmd_app, tmp_path, monkeypatch) -> None:

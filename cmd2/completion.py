@@ -305,3 +305,7 @@ class Completions(CompletionResultsBase):
 
     # The quote character to use if adding an opening or closing quote to the matches.
     _quote_char: str = ""
+
+    # Whether the matches are file system paths or shell commands. Either can end up on a shell's command
+    # line, so these are also quoted when a match has a character which is special to a shell.
+    _quote_for_shell: bool = False

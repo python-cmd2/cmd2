@@ -2387,7 +2387,8 @@ class Cmd:
 
         Apart from a leading ``~``, which refers to a user's home directory, every character in ``text`` is
         matched literally. Glob characters like ``*``, ``?``, and ``[`` are not expanded, and they are not
-        escaped in the results.
+        escaped in the results. When these results are used for tab completion, quotes are added if any
+        of them has a character which is special to a shell.
 
         :param text: the string prefix we are attempting to match (all matches must begin with it)
         :param line: the current input line with leading whitespace removed
@@ -2480,7 +2481,7 @@ class Cmd:
             for match, display in zip(matches, display_matches, strict=True)
         ]
 
-        return Completions(items=items, allow_finalization=allow_finalization)
+        return Completions(items=items, allow_finalization=allow_finalization, _quote_for_shell=True)
 
     def shell_cmd_complete(
         self, text: str, line: str, begidx: int, endidx: int, *, complete_blank: bool = False
@@ -2502,7 +2503,7 @@ class Cmd:
         # If the search text is a bare command name (no '~' or path separator), complete executables from PATH
         if not text.startswith("~") and os.path.sep not in text:
             items = [CompletionItem(exe) for exe in utils.get_exes_in_path(text)]
-            return Completions(items=items)
+            return Completions(items=items, _quote_for_shell=True)
 
         # Otherwise look for executables in the given path
         return self.path_complete(
@@ -2727,9 +2728,14 @@ class Cmd:
         if not completion_token_quote:
             matches = completions.to_strings()
 
-            # A match with a space needs quotes to remain a single token. A match with a glob character
-            # gets them so it isn't expanded if the command line is passed to a shell.
-            if any(char in match for match in matches for char in " *?["):
+            # Paths and shell commands can end up on a shell's command line, so
+            # they need quotes if any of them has a character special to a shell.
+            if completions._quote_for_shell:
+                _quote_char = utils._path_quote_char(matches)
+                _add_opening_quote = bool(_quote_char)
+
+            # Everything else only needs quotes to keep a match with a space as a single token
+            elif any(" " in match for match in matches):
                 _add_opening_quote = True
 
                 # Determine best quote (single vs double) based on text content

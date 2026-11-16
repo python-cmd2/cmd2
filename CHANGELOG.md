@@ -8,15 +8,16 @@
     - File path completion, shell command completion, and `get_exes_in_path()` now match `*` and `?`
       literally instead of returning nothing when the text being completed contains one, so names
       containing those characters can be completed.
-    - Tab completion now adds quotes to a match containing one of the glob characters `*`, `?`, and
-      `[`, as it already did for a match containing a space. This keeps a shell from expanding the
-      completed text when it is passed to one by the `shell` command or a pipe. See the
+    - Tab completion of file paths and shell commands now adds quotes when a match has a character
+      which is special to a shell, such as `*`, `?`, `(`, `&`, or `$`. Previously only a space did
+      this. This keeps a shell from interpreting the completed text when it is passed to one by the
+      `shell` command or a pipe. See the
       [Special Characters in Paths](docs/features/completion.md#special-characters-in-paths)
       documentation for details.
     - `get_exes_in_path()`, `find_editor()`, and shell command completion no longer skip `PATH`
       entries which are symbolic links to directories.
     - `find_editor()` now finds the `edit` editor on Windows. It was the preferred default editor
-      there but could never be found because the search did not try any file extensions.
+      there but could never be found because it was searched for without its `.exe` extension.
     - A command which prints through a `cmd2` console of its own, such as a `Cmd2GeneralConsole`
       showing a Rich progress bar, no longer ends with a `BrokenPipeError` message when its output
       is piped to something that exits early, as `head` does. `cmd2` now ends the command quietly

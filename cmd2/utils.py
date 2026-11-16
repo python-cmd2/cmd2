@@ -6,9 +6,9 @@ import functools
 import glob
 import inspect
 import io
+import itertools
 import os
 import re
-import shutil
 import subprocess
 import sys
 import threading
@@ -17,6 +17,7 @@ from collections.abc import (
     Generator,
     Iterable,
     MutableSequence,
+    Sequence,
 )
 from difflib import SequenceMatcher
 from typing import (
@@ -323,6 +324,39 @@ def expand_user_in_tokens(tokens: MutableSequence[str]) -> None:
         tokens[index] = expand_user(tokens[index])
 
 
+# Matches a character in a path which is special to a POSIX shell or to cmd2's own parser.
+# A '[' only counts when a ']' follows it, since it can't begin a glob pattern otherwise and
+# there are common executables with that name. A '#' only counts where it begins a comment.
+_POSIX_SPECIAL_RE = re.compile(r"""[ \t"';|<>&()*?{}$`\\]|\[.*]|^#""")
+
+# The same for cmd.exe, which does not expand glob patterns and has '\' as its path separator
+_WINDOWS_SPECIAL_RE = re.compile(r"""[ \t"';|<>&()^]""")
+
+
+def _path_quote_char(paths: Sequence[str]) -> str:
+    """Return the quote character which paths offered as completions need to be wrapped in.
+
+    A completed path becomes part of a command line which cmd2 parses and which may then be passed to a
+    shell, so it needs quotes if it has a character which is special to either of them.
+
+    :param paths: the paths being offered as completions
+    :return: the quote character to use, or an empty string if none of the paths need quotes
+    """
+    if sys.platform.startswith("win"):
+        # cmd.exe only treats double quotes as quotes, and a Windows file name can't contain one
+        return '"' if any(_WINDOWS_SPECIAL_RE.search(path) for path in paths) else ""
+
+    if not any(_POSIX_SPECIAL_RE.search(path) for path in paths):
+        return ""
+
+    # A quote character within a path has to be quoted with the other quote character
+    if any("'" in path for path in paths):
+        return '"'
+
+    # Only use single quotes when a shell would still expand something within double quotes
+    return "'" if any(char in path for path in paths for char in '"$`\\') else '"'
+
+
 def _quote_shell_arg(arg: str) -> str:
     """Quote a string so the OS shell treats it as one literal argument.
 
@@ -345,6 +379,21 @@ def _quote_shell_arg(arg: str) -> str:
     return shlex.quote(arg)
 
 
+def _get_path_dirs() -> set[str]:
+    """Return the directories listed in the PATH environment variable.
+
+    Symbolic links are resolved so a directory which is reachable through more than one entry is only
+    returned once. Relative entries are returned as they are since resolving one raises an exception if
+    the current working directory no longer exists.
+
+    :return: the directories, which is an empty set if PATH is not set
+    """
+    env_path = os.getenv("PATH")
+    if env_path is None:
+        return set()
+    return {os.path.realpath(p) if os.path.isabs(p) else p for p in env_path.split(os.path.pathsep)}
+
+
 def find_editor() -> str | None:
     """Set cmd2.Cmd.DEFAULT_EDITOR. If EDITOR env variable is set, that will be used.
 
@@ -354,16 +403,22 @@ def find_editor() -> str | None:
     editor = os.environ.get("EDITOR")
     if not editor:
         if sys.platform[:3] == "win":
-            editors = ["edit", "code.cmd", "notepad++.exe", "notepad.exe"]
+            editors = ["edit.exe", "code.cmd", "notepad++.exe", "notepad.exe"]
         else:
             editors = ["vim", "vi", "emacs", "nano", "pico", "joe", "code", "subl", "gedit", "kate"]
 
-        # Use the first of these editors which the shell would be able to find
-        editor = next((cur_editor for cur_editor in editors if shutil.which(cur_editor)), None)
-
-        # Remove extension from Windows file names
-        if editor is not None and sys.platform[:3] == "win":
-            editor = os.path.splitext(editor)[0]
+        # Use the most preferred editor which is in any of the PATH directories
+        for possible_editor, path in itertools.product(editors, _get_path_dirs()):
+            editor_path = os.path.join(path, possible_editor)
+            if os.path.isfile(editor_path) and os.access(editor_path, os.X_OK):
+                if sys.platform[:3] == "win":
+                    # Remove extension from Windows file names
+                    editor = os.path.splitext(possible_editor)[0]
+                else:
+                    editor = possible_editor
+                break
+        else:
+            editor = None
 
     return editor
 
@@ -405,21 +460,11 @@ def get_exes_in_path(starts_with: str) -> list[str]:
     :param starts_with: what the exes should start with. leave blank for all exes in path.
     :return: a list of matching exe names
     """
-    # Get every directory in the PATH environment variable. Resolve symbolic links so a directory which is reachable
-    # through more than one entry is only searched once. Relative entries are left as they are since resolving one
-    # raises an exception if the current working directory no longer exists.
-    env_path = os.getenv("PATH")
-    paths = (
-        set()
-        if env_path is None
-        else {os.path.realpath(p) if os.path.isabs(p) else p for p in env_path.split(os.path.pathsep)}
-    )
-
     # Use a set to store exe names since there can be duplicates
     exes_set = set()
 
     # Find every executable file in the user's path that matches the pattern
-    for path in paths:
+    for path in _get_path_dirs():
         full_path = os.path.join(path, starts_with)
         matches = files_from_glob_pattern(glob.escape(full_path) + "*", access=os.X_OK)
 

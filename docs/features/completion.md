@@ -42,22 +42,35 @@ does in a shell.
 
 Completion results are literal names too. `cmd2` does not escape them, because it has no way of
 knowing how a command will use a path. Most commands use a path directly in Python, where the
-literal name is exactly what is wanted. What `cmd2` does do is add quotes when a match contains a
-space or one of the glob characters `*`, `?`, and `[`:
+literal name is exactly what is wanted. What `cmd2` does do is add quotes when a completed path or
+shell command has a character which is special to a shell:
 
 ```text
 (Cmd) !ls my*<TAB>
 (Cmd) !ls "my*file.txt"
 ```
 
-The quotes keep a match with a space together as a single argument. They also keep a shell from
-expanding a glob character if the command line is passed to one, as the
-[shell](./builtin_commands.md#shell) command and a [pipe](./redirection.md) do. `cmd2` removes the
-quotes before passing the argument to a command, unless that command asked to preserve them.
+The quotes keep a shell from interpreting the name if the command line is passed to one, as the
+[shell](./builtin_commands.md#shell) command and a [pipe](./redirection.md) do. They also keep
+`cmd2` from treating a character like `;` or `>` in the name as part of its own syntax. `cmd2`
+removes the quotes before passing the argument to a command, unless that command asked to preserve
+them.
 
-Characters which stay special to a shell inside double quotes, such as `$` and a backtick, are not
-covered by this. If a path containing one is going to be passed to a shell, then quote or escape it
-yourself.
+On POSIX systems the characters which get a name quoted are a space, a quote character, `*`, `?`,
+`[` when a `]` follows it, `{`, `}`, `(`, `)`, `<`, `>`, `|`, `&`, `;`, `$`, a backtick, a
+backslash, and a leading `#`. Single quotes are used when a name has a `$`, a backtick, or a
+backslash, since a shell still interprets those within double quotes. On Windows the characters are
+a space, `'`, `&`, `(`, `)`, `^`, and `;`, and the quotes are always double quotes.
+
+There are limits to this:
+
+- The quotes go around the whole argument, so when several matches are offered and only one of them
+  needs quotes, they all get them.
+- A name with a single quote in it is wrapped in double quotes, so a `$`, a backtick, or a backslash
+  in that same name is still interpreted by a shell.
+- A `%` in a name is still interpreted by `cmd.exe` on Windows.
+- Only paths and shell commands completed by `cmd2` are quoted this way. Results from your own
+  completers and choices are only quoted when one of them contains a space.
 
 ## Included Tab Completion Functions
 
