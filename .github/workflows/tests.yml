@@ -19,6 +19,11 @@ jobs:
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      # Lets the Codecov steps authenticate with a short-lived OIDC token instead of the
+      # CODECOV_TOKEN secret, which Dependabot-triggered runs are not given.
+      id-token: write
     defaults:
       run:
         shell: bash
@@ -28,7 +33,7 @@ jobs:
         with:
           fetch-depth: 0 # Needed for setuptools_scm to work correctly
       - name: Install uv
-        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -48,7 +53,7 @@ jobs:
           flags: python${{ matrix.python-version }}
           name: codecov-umbrella-test-results
           report_type: test_results
-          token: ${{ secrets.CODECOV_TOKEN }}
+          use_oidc: true
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
@@ -56,7 +61,7 @@ jobs:
           fail_ci_if_error: true
           flags: unittests
           name: codecov-umbrella
-          token: ${{ secrets.CODECOV_TOKEN }}
+          use_oidc: true
           verbose: true
 
   # Single stable status check for the whole test matrix, so branch protection
