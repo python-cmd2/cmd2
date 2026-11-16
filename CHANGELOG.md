@@ -3,8 +3,15 @@
 - Bug Fixes
     - Fixed file path completion for names containing square brackets, including bracketed working
       directories and home directories.
-    - Fixed `get_exes_in_path()` when executable names or `PATH` directories contain square
-      brackets.
+    - Fixed `get_exes_in_path()` and shell command completion when executable names or `PATH`
+      directories contain square brackets.
+    - File path completion, shell command completion, and `get_exes_in_path()` now match `*` and `?`
+      literally instead of returning nothing when the text being completed contains one, so names
+      containing those characters can be completed. Completion results are not escaped for a shell.
+      See the [Special Characters in Paths](docs/features/completion.md#special-characters-in-paths)
+      documentation for details.
+    - `get_exes_in_path()`, `find_editor()`, and shell command completion no longer skip `PATH`
+      entries which are symbolic links to directories.
     - A command which prints through a `cmd2` console of its own, such as a `Cmd2GeneralConsole`
       showing a Rich progress bar, no longer ends with a `BrokenPipeError` message when its output
       is piped to something that exits early, as `head` does. `cmd2` now ends the command quietly

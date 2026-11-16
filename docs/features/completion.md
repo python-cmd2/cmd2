@@ -33,6 +33,23 @@ line of code similar to the following to your class which inherits from `cmd2.Cm
 complete_bar = functools.partialmethod(cmd2.Cmd.path_complete, path_filter=os.path.isdir)
 ```
 
+### Special Characters in Paths
+
+Path and shell command completion match the text being completed literally. Glob characters such as
+`*`, `?`, and `[` are never expanded, so a file named `my*file.txt` or `notes[2026].txt` completes
+like any other.
+
+Completion results are literal names too. `cmd2` adds an opening quote when a match contains a
+space, but it does not escape characters which are special to a shell, because it has no way of
+knowing how a command will use the path. Most commands use a path directly in Python, where the
+literal name is exactly what is wanted. If a completed path is going to be passed to a shell, as the
+[shell](./builtin_commands.md#shell) command does with its arguments, then quote or escape it
+yourself:
+
+```text
+(Cmd) !ls 'my*file.txt'
+```
+
 ## Included Tab Completion Functions
 
 [cmd2.Cmd][] provides the following tab completion functions

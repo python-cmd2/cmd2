@@ -377,7 +377,7 @@ def test_shell_command_completion_shortcut(cmd_app) -> None:
     assert [item.display for item in completions] == [item.display for item in expected_completions]
 
 
-def test_shell_command_completion_does_not_match_wildcards(cmd_app) -> None:
+def test_shell_command_completion_does_not_expand_wildcards(cmd_app) -> None:
     if sys.platform == "win32":
         text = "c*"
     else:
@@ -387,8 +387,67 @@ def test_shell_command_completion_does_not_match_wildcards(cmd_app) -> None:
     endidx = len(line)
     begidx = endidx - len(text)
 
+    # A wildcard is matched as a literal character, so this doesn't complete to commands like calc.exe or egrep
     completions = cmd_app.complete(text, line, begidx, endidx)
     assert not completions
+
+
+def _make_exes(directory, names) -> None:
+    """Create an executable file in directory for each name."""
+    for name in names:
+        exe = directory / name
+        exe.touch()
+        exe.chmod(0o755)
+
+
+@pytest.mark.parametrize("prefix", ["[ab]", "[!ab]"])
+def test_shell_command_completion_literal_brackets_in_name(cmd_app, tmp_path, monkeypatch, prefix) -> None:
+    _make_exes(tmp_path, ("[ab]-tool", "[!ab]-tool", "a-tool", "c-tool"))
+    monkeypatch.setenv("PATH", str(tmp_path))
+    line = f"shell {prefix}"
+
+    completions = cmd_app.shell_cmd_complete(prefix, line, len(line) - len(prefix), len(line))
+
+    assert completions.to_strings() == (f"{prefix}-tool",)
+
+
+def test_shell_command_completion_literal_brackets_in_path_directory(cmd_app, tmp_path, monkeypatch) -> None:
+    bin_dir = tmp_path / "bin[2026]"
+    bin_dir.mkdir()
+    _make_exes(bin_dir, ("mytool", "other"))
+    monkeypatch.setenv("PATH", str(bin_dir))
+    text = "my"
+    line = f"shell {text}"
+
+    completions = cmd_app.shell_cmd_complete(text, line, len(line) - len(text), len(line))
+
+    assert completions.to_strings() == ("mytool",)
+
+
+def test_shell_command_completion_literal_brackets_in_given_path(cmd_app, tmp_path, monkeypatch) -> None:
+    # Search text containing a path separator is completed from that path instead of from PATH
+    bin_dir = tmp_path / "bin[2026]"
+    bin_dir.mkdir()
+    _make_exes(bin_dir, ("[ab]-tool", "a-tool"))
+    monkeypatch.setenv("PATH", "")
+    text = str(bin_dir / "[ab]")
+    line = f"shell {text}"
+
+    completions = cmd_app.shell_cmd_complete(text, line, len(line) - len(text), len(line))
+
+    assert completions.to_strings() == (str(bin_dir / "[ab]-tool"),)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="'*' and '?' are not legal in Windows file names")
+@pytest.mark.parametrize("prefix", ["my*", "my?"])
+def test_shell_command_completion_literal_wildcards_in_name(cmd_app, tmp_path, monkeypatch, prefix) -> None:
+    _make_exes(tmp_path, ("my*tool", "my?tool", "mytool", "myxtool"))
+    monkeypatch.setenv("PATH", str(tmp_path))
+    line = f"shell {prefix}"
+
+    completions = cmd_app.shell_cmd_complete(prefix, line, len(line) - len(prefix), len(line))
+
+    assert completions.to_strings() == (f"{prefix}tool",)
 
 
 def test_shell_command_complete(cmd_app) -> None:
@@ -554,7 +613,7 @@ def test_path_completion_cwd_is_root_dir(cmd_app) -> None:
         os.chdir(cwd)
 
 
-def test_path_completion_does_not_match_wildcards(cmd_app, request) -> None:
+def test_path_completion_does_not_expand_wildcards(cmd_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, "c*")
@@ -563,9 +622,38 @@ def test_path_completion_does_not_match_wildcards(cmd_app, request) -> None:
     endidx = len(line)
     begidx = endidx - len(text)
 
-    # Currently path completion doesn't accept wildcards, so will always return empty results
+    # A wildcard is matched as a literal character, so this doesn't complete to files like conftest.py
     completions = cmd_app.path_complete(text, line, begidx, endidx)
     assert not completions
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="'*' and '?' are not legal in Windows file names")
+@pytest.mark.parametrize("prefix", ["my*", "my?"])
+def test_path_completion_literal_wildcards_in_filename(cmd_app, tmp_path, monkeypatch, prefix) -> None:
+    for name in ("my*file.txt", "my?file.txt", "myfile.txt", "myxfile.txt"):
+        (tmp_path / name).touch()
+    monkeypatch.chdir(tmp_path)
+    line = f"shell cat {prefix}"
+
+    completions = cmd_app.path_complete(prefix, line, len(line) - len(prefix), len(line))
+
+    assert completions.to_strings() == (f"{prefix}file.txt",)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="'*' and '?' are not legal in Windows file names")
+@pytest.mark.parametrize("dir_name", ["project*", "project?"])
+def test_path_completion_literal_wildcards_in_directory(cmd_app, tmp_path, monkeypatch, dir_name) -> None:
+    # The wildcard in the directory name would also match this directory if it were expanded
+    for cur_dir, file_name in ((dir_name, "target.txt"), ("project2", "tardy.txt")):
+        (tmp_path / cur_dir).mkdir()
+        (tmp_path / cur_dir / file_name).touch()
+    monkeypatch.chdir(tmp_path)
+    text = os.path.join(dir_name, "tar")
+    line = f"shell cat {text}"
+
+    completions = cmd_app.path_complete(text, line, len(line) - len(text), len(line))
+
+    assert completions.to_strings() == (os.path.join(dir_name, "target.txt"),)
 
 
 def test_path_completion_complete_user(cmd_app) -> None:

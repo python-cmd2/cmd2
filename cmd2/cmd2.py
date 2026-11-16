@@ -2385,6 +2385,9 @@ class Cmd:
     ) -> Completions:
         """Perform completion of local file system paths.
 
+        Every character in ``text`` is matched literally. Glob characters like ``*``, ``?``, and ``[`` are not
+        expanded, and they are not escaped in the results.
+
         :param text: the string prefix we are attempting to match (all matches must begin with it)
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
@@ -2412,12 +2415,6 @@ class Cmd:
             search_str = os.path.join(os.getcwd(), "")
             cwd_added = True
         else:
-            # Purposely don't match any path containing wildcards
-            wildcards = ["*", "?"]
-            for wildcard in wildcards:
-                if wildcard in text:
-                    return Completions()
-
             # Start the search string
             search_str = text
 

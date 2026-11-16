@@ -1806,6 +1806,22 @@ def test_find_editor_not_specified() -> None:
     assert editor is None
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="creating symbolic links requires elevated privileges on Windows")
+def test_find_editor_symlinked_directory(tmp_path, monkeypatch) -> None:
+    real_dir = tmp_path / "real_bin"
+    real_dir.mkdir()
+    exe = real_dir / "nano"
+    exe.touch()
+    exe.chmod(0o755)
+    link_dir = tmp_path / "link_bin"
+    link_dir.symlink_to(real_dir, target_is_directory=True)
+
+    # A PATH entry which is a symbolic link to a directory is searched
+    monkeypatch.delenv("EDITOR", raising=False)
+    monkeypatch.setenv("PATH", str(link_dir))
+    assert cu.find_editor() == "nano"
+
+
 def test_similarity() -> None:
     suggested_command = cu.suggest_similar("comand", ["command", "UNRELATED", "NOT_SIMILAR"])
     assert suggested_command == "command"
@@ -2007,3 +2023,54 @@ def test_get_exes_in_path_literal_brackets_in_directory(tmp_path, monkeypatch) -
     assert cu.get_exes_in_path("my") == ["mytool"]
     assert cu.get_exes_in_path("my*") == []
     assert cu.get_exes_in_path("my?") == []
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="'*' and '?' are not legal in Windows file names")
+@pytest.mark.parametrize("prefix", ["my*", "my?"])
+def test_get_exes_in_path_literal_wildcards_in_name(tmp_path, monkeypatch, prefix: str) -> None:
+    for name in ("my*tool", "my?tool", "mytool", "myxtool"):
+        exe = tmp_path / name
+        exe.touch()
+        exe.chmod(0o755)
+    monkeypatch.setenv("PATH", str(tmp_path))
+
+    # A wildcard is matched as a literal character instead of being expanded
+    assert cu.get_exes_in_path(prefix) == [f"{prefix}tool"]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="'*' and '?' are not legal in Windows file names")
+@pytest.mark.parametrize("dir_name", ["bin*", "bin?"])
+def test_get_exes_in_path_literal_wildcards_in_directory(tmp_path, monkeypatch, dir_name: str) -> None:
+    # The wildcard in the PATH directory would also match this directory if it were expanded
+    for cur_dir, exe_name in ((dir_name, "mytool"), ("bin2", "decoy")):
+        bin_dir = tmp_path / cur_dir
+        bin_dir.mkdir()
+        exe = bin_dir / exe_name
+        exe.touch()
+        exe.chmod(0o755)
+    monkeypatch.setenv("PATH", str(tmp_path / dir_name))
+
+    assert cu.get_exes_in_path("") == ["mytool"]
+    assert cu.get_exes_in_path("my") == ["mytool"]
+    assert cu.get_exes_in_path("de") == []
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="creating symbolic links requires elevated privileges on Windows")
+def test_get_exes_in_path_symlinked_directory(tmp_path, monkeypatch) -> None:
+    real_dir = tmp_path / "real_bin"
+    real_dir.mkdir()
+    exe = real_dir / "mytool"
+    exe.touch()
+    exe.chmod(0o755)
+    link_dir = tmp_path / "link_bin"
+    link_dir.symlink_to(real_dir, target_is_directory=True)
+
+    # A PATH entry which is a symbolic link to a directory is searched
+    monkeypatch.setenv("PATH", str(link_dir))
+    assert cu.get_exes_in_path("my") == ["mytool"]
+
+    # A directory reachable through more than one PATH entry is only searched once
+    monkeypatch.setenv("PATH", os.pathsep.join([str(real_dir), str(link_dir)]))
+    with mock.patch("cmd2.utils.files_from_glob_pattern", wraps=cu.files_from_glob_pattern) as glob_mock:
+        assert cu.get_exes_in_path("my") == ["mytool"]
+    glob_mock.assert_called_once()

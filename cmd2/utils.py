@@ -358,9 +358,9 @@ def find_editor() -> str | None:
         else:
             editors = ["vim", "vi", "emacs", "nano", "pico", "joe", "code", "subl", "gedit", "kate"]
 
-        # Get a list of every directory in the PATH environment variable and ignore symbolic links
+        # Get a list of every directory in the PATH environment variable
         env_path = os.getenv("PATH")
-        paths = [] if env_path is None else [p for p in env_path.split(os.path.pathsep) if not os.path.islink(p)]
+        paths = [] if env_path is None else env_path.split(os.path.pathsep)
 
         for possible_editor, path in itertools.product(editors, paths):
             editor_path = os.path.join(path, possible_editor)
@@ -408,18 +408,16 @@ def files_from_glob_patterns(patterns: Iterable[str], access: int = os.F_OK) -> 
 def get_exes_in_path(starts_with: str) -> list[str]:
     """Return names of executables in a user's path.
 
+    Every character in ``starts_with`` is matched literally. Glob characters like ``*``, ``?``, and ``[``
+    are not expanded.
+
     :param starts_with: what the exes should start with. leave blank for all exes in path.
     :return: a list of matching exe names
     """
-    # Purposely don't match any executable containing wildcards
-    wildcards = ["*", "?"]
-    for wildcard in wildcards:
-        if wildcard in starts_with:
-            return []
-
-    # Get a list of every directory in the PATH environment variable and ignore symbolic links
+    # Get every directory in the PATH environment variable. Resolve symbolic links so
+    # a directory which is reachable through more than one entry is only searched once.
     env_path = os.getenv("PATH")
-    paths = [] if env_path is None else [p for p in env_path.split(os.path.pathsep) if not os.path.islink(p)]
+    paths = [] if env_path is None else list(dict.fromkeys(os.path.realpath(p) for p in env_path.split(os.path.pathsep)))
 
     # Use a set to store exe names since there can be duplicates
     exes_set = set()
