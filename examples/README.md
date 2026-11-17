@@ -100,6 +100,10 @@ each:
       application using [textual-tty](https://github.com/ttygroup/textual-tty), with a realtime
       status panel next to the terminal. Requires a POSIX system such as Linux or macOS and
       `textual-tty`, which is part of the `cmd2` development environment but not a `cmd2` dependency
+- [textual_tty_toolbar.py](https://github.com/python-cmd2/cmd2/blob/main/examples/textual_tty_toolbar.py)
+    - Shows how to keep a bottom toolbar on the screen while commands run, by running a `cmd2`
+      application inside a [Textual](https://textual.textualize.io/) application which draws the
+      toolbar. Requires a POSIX system and `textual-tty`, like `textual_tty_embed.py`
 - [tmux_launch.sh](https://github.com/python-cmd2/cmd2/blob/main/examples/tmux_launch.sh)
     - Shell script that launches two applications using tmux in different windows/tabs
 - [tmux_split.sh](https://github.com/python-cmd2/cmd2/blob/main/examples/tmux_split.sh)
