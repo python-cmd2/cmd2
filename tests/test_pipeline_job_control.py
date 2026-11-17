@@ -18,6 +18,10 @@ import pytest
 
 pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX job control")
 
+# More output than a pipe and the relay's pipe hold, so a producer blocks until the consumer reads. Linux sizes a pipe
+# in pages, 16 by default, so follow the page size: 256 KiB with 4 KiB pages, 4 MiB with the 64 KiB pages of ppc64le.
+PIPE_FILL = 64 * (os.sysconf("SC_PAGE_SIZE") if hasattr(os, "sysconf") else 4096)
+
 
 def describe_processes(root: int, master: int) -> str:
     """Report the terminal's foreground group and every descendant of root, for a timeout.
@@ -154,13 +158,13 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
         "class App(Cmd):\n"
         "    def do_busy(self, statement):\n"
         "        os.write(2, b'BUSY_READY\\n')\n"
-        "        self.stdout.write('x' * 262144)\n"
+        f"        self.stdout.write('x' * {PIPE_FILL})\n"
         "        self.stdout.flush()\n"
         "        time.sleep(30)\n"
         "    def do_ask(self, statement):\n"
         "        self.poutput(self.read_input('INPUT> '))\n"
         "    def do_direct(self, statement):\n"
-        "        self.stdout.buffer.write(b'x' * 262144)\n"
+        f"        self.stdout.buffer.write(b'x' * {PIPE_FILL})\n"
         "        self.stdout.flush()\n"
         "        assert self.select('first second', 'SELECT> ') == 'first'\n"
         "        assert input('PLAIN> ') == 'answer'\n"
@@ -305,7 +309,7 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
                 "import os, signal, sys, time\n"
                 "signal.signal(signal.SIGINT, signal.SIG_DFL)\n"
                 "os.write(2, b'BUSY_READY\\n')\n"
-                "sys.stdout.write('x' * 262144)\n"
+                f"sys.stdout.write('x' * {PIPE_FILL})\n"
                 "sys.stdout.flush()\n"
                 "time.sleep(30)\n",
                 encoding="utf-8",
