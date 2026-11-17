@@ -678,6 +678,9 @@ class Cmd:
             self.pager = "less -RXF"
             self.pager_chop = "less -SRXF"
 
+        # Pager commands which the shell could not run. Each is tried, and reported by the shell, only once.
+        self._unrunnable_pagers: set[str] = set()
+
         # This boolean flag stores whether cmd2 will allow clipboard related features
         self.allow_clipboard = allow_clipboard
 
@@ -1970,6 +1973,31 @@ class Cmd:
                 rich_print_kwargs=rich_print_kwargs,
             )
 
+    @staticmethod
+    def _pager_failed_to_start(command: str, returncode: int) -> bool:
+        """Return whether the shell could not run a pager at all, so that it showed nothing.
+
+        A pager which did run has had the output, whatever status it exited with.
+
+        :param command: the pager command given to the shell
+        :param returncode: the status the shell exited with
+        """
+        if returncode == 0:
+            return False
+        if sys.platform.startswith("win"):
+            # cmd.exe exits with 1 for a command it cannot find, which a pager may also do for
+            # reasons of its own. Tell them apart by whether there is such a program.
+            import shlex
+            import shutil
+
+            try:
+                words = shlex.split(command, posix=False)
+            except ValueError:
+                return False
+            return bool(words) and shutil.which(words[0].strip('"')) is None
+        # What a POSIX shell exits with for a command it cannot find, or cannot execute.
+        return returncode in (126, 127)
+
     def ppaged(
         self,
         *objects: Any,
@@ -1996,6 +2024,9 @@ class Cmd:
         command instead; external pagers temporarily hide the toolbar. Where no toolbar is
         running, such as outside the command loop, the external pager is used regardless.
 
+        If the pager program cannot be run, for example because it is not installed, the output
+        is printed without one. That pager command is not tried again while the application runs.
+
         :param chop: True -> causes lines longer than the screen width to be chopped (truncated) rather than wrapped
                               - truncated text is still accessible by scrolling with the right & left arrow keys
                               - chopping is ideal for displaying wide tabular data as is done in utilities like pgcli
@@ -2021,11 +2052,12 @@ class Cmd:
         # A pager application blocks, so only run one if not redirecting or running a script (either text or Python).
         can_block = not (self._redirecting or self.in_pyscript() or self.in_script())
 
-        # Check if we are outputting to a pager.
-        if functional_terminal and can_block:
-            # Chopping overrides soft_wrap
-            if chop:
-                soft_wrap = True
+        pager = self.pager_chop if chop else self.pager
+
+        # Check if we are outputting to a pager. One which the shell could not run is not tried again.
+        if functional_terminal and can_block and pager not in self._unrunnable_pagers:
+            # Chopping overrides soft_wrap, but only for what the pager is given
+            pager_soft_wrap = soft_wrap or chop
 
             # Generate the bytes to send to the pager
             console = self._get_core_print_console(
@@ -2041,7 +2073,7 @@ class Cmd:
                     end=end,
                     style=style,
                     justify=justify,
-                    soft_wrap=soft_wrap,
+                    soft_wrap=pager_soft_wrap,
                     **(rich_print_kwargs if rich_print_kwargs is not None else {}),
                 )
             output = capture.get()
@@ -2062,7 +2094,7 @@ class Cmd:
                 import subprocess
 
                 pipe_proc = subprocess.Popen(  # noqa: S602
-                    self.pager_chop if chop else self.pager,
+                    pager,
                     shell=True,
                     stdin=subprocess.PIPE,
                     stdout=self.stdout,
@@ -2087,19 +2119,26 @@ class Cmd:
                     except (OSError, termios.error):
                         pass
 
-        else:
-            self.poutput(
-                *objects,
-                sep=sep,
-                end=end,
-                style=style,
-                soft_wrap=soft_wrap,
-                justify=justify,
-                emoji=emoji,
-                markup=markup,
-                highlight=highlight,
-                rich_print_kwargs=rich_print_kwargs,
-            )
+            if not self._pager_failed_to_start(pager, pipe_proc.returncode):
+                return
+
+            # The shell has said why there is no pager. Remember that, so it is not asked every time.
+            # Nothing has been shown, so this once the objects are rendered a second time below.
+            self._unrunnable_pagers.add(pager)
+
+        # Nothing is paging the output, so print it.
+        self.poutput(
+            *objects,
+            sep=sep,
+            end=end,
+            style=style,
+            soft_wrap=soft_wrap,
+            justify=justify,
+            emoji=emoji,
+            markup=markup,
+            highlight=highlight,
+            rich_print_kwargs=rich_print_kwargs,
+        )
 
     def ppretty(
         self,
