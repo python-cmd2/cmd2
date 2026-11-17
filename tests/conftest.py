@@ -4,8 +4,12 @@ import io
 import os
 import subprocess
 import sys
-from collections.abc import Callable
+from collections.abc import (
+    Callable,
+    Iterable,
+)
 from contextlib import redirect_stderr
+from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     ParamSpec,
@@ -65,6 +69,14 @@ def normalize(block: str) -> list[str]:
     assert isinstance(block, str)
     block = block.strip("\n")
     return [line.rstrip() for line in block.splitlines()]
+
+
+def make_exes(directory: Path, names: Iterable[str]) -> None:
+    """Create an executable file in directory for each name."""
+    for name in names:
+        exe = directory / name
+        exe.touch()
+        exe.chmod(0o755)
 
 
 def run_cmd(app: cmd2.Cmd, cmd: str) -> tuple[list[str], list[str]]:
