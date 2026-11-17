@@ -13,13 +13,15 @@ The
 [textual_tty_embed.py](https://github.com/python-cmd2/cmd2/blob/main/examples/textual_tty_embed.py)
 example shows how to do this. It has a `cmd2` application in a terminal pane on the left. On the
 right, a status panel shows whether the `cmd2` application is idle or running a command, how many
-commands it has run, and how long the last one took, and a clock is updated by Textual on its own.
+commands it has run, and how long the last one took, and a clock is updated by Textual on its own. A
+second example uses the same technique for
+[a bottom toolbar which stays while commands run](#a-bottom-toolbar-which-stays-while-commands-run).
 
 !!! warning
 
-    textual-tty is still pre-alpha software, so its API may change. The example was written for
+    textual-tty is still pre-alpha software, so its API may change. The examples were written for
     textual-tty 0.4. Also, on Windows textual-tty can only start a program by name and can't pass
-    it arguments, so the example's Textual application requires a POSIX system such as Linux or
+    it arguments, so the examples' Textual applications require a POSIX system such as Linux or
     macOS.
 
 ## Running the Example
@@ -115,3 +117,63 @@ The example handles several details which are easy to miss when building somethi
   rows than are visible and its prompt can end up hidden.
 - The focused `Terminal` sends almost every key press to the `cmd2` application. Textual's built-in
   ++ctrl+q++ binding to quit is a priority binding, so it still works.
+
+## A Bottom Toolbar Which Stays While Commands Run
+
+A [bottom toolbar](../features/prompt.md#bottom-toolbar) is drawn by `prompt-toolkit` as part of the
+prompt, so it is only on the screen while the prompt is. The same embedding technique gives you one
+which stays, and keeps refreshing, while a command runs. The
+[textual_tty_toolbar.py](https://github.com/python-cmd2/cmd2/blob/main/examples/textual_tty_toolbar.py)
+example is a Textual application which is nothing but a terminal pane running a `cmd2` application
+and a toolbar docked below it, so it looks like the `cmd2` application running on its own:
+
+```shell
+uv run examples/textual_tty_toolbar.py
+```
+
+Try `slow`, `burst 2000 1`, or resizing the window while a command runs. Pass `--cmd2-only` to see
+what `cmd2` does without Textual, where the toolbar disappears for as long as a command runs.
+
+Here the `cmd2` application doesn't draw the toolbar at all. It passes `enable_bottom_toolbar=False`
+to [cmd2.Cmd.__init__][] when it is running inside the Textual application, and sends what
+`get_bottom_toolbar()` returns to the Textual application, which shows it in a widget of its own:
+
+```py
+def compose(self) -> ComposeResult:
+    yield Terminal(command=self._cmd2_command, id="cmd2")
+    yield Static("", id="toolbar")
+
+
+def on_toolbar_changed(self, message: ToolbarChanged) -> None:
+    self.query_one("#toolbar", Static).update(Text.from_ansi(message.rendered))
+```
+
+Command output can't overwrite the toolbar or make it flicker, because it goes to a different
+widget, and a toolbar of more than one row simply takes rows from the terminal pane.
+
+The first example sends its status through the window title, from hooks which run between one
+command's output and the next. A toolbar which refreshes _during_ a command has to be sent from
+another thread, and a window title written into the terminal's stream from another thread could land
+in the middle of the command's output. So this example uses a Unix socket instead:
+
+- The Textual application listens on a socket in a temporary directory before it starts the `cmd2`
+  application, and passes it the path with `--toolbar-socket`.
+- In the `cmd2` application, a thread calls `get_bottom_toolbar()` every half second, and at once
+  when a postparsing or command finalization hook says a command has started or ended. It renders
+  the result to text with ANSI style sequences using `prompt-toolkit`, so anything
+  `get_bottom_toolbar()` is allowed to return works, and sends it as a line of JSON when it has
+  changed.
+- `get_bottom_toolbar()` is therefore called on that thread while a command is running on the main
+  thread, so it must only read state which is safe to read from another thread.
+
+This approach has costs which are easy to overlook, and they are why `cmd2` doesn't do it for you:
+
+- There is no scrollback. The terminal pane keeps none, so output which scrolls off its top is gone,
+  and Textual uses the terminal's alternate screen, so none of the session is in the scrollback of
+  the user's own terminal either.
+- It doesn't work on Windows, for the reason given in the warning above.
+- ++ctrl+z++ does nothing, because inside the terminal pane there is no shell to return to.
+- Textual takes the mouse, so selecting text the way the user's terminal does it needs that
+  terminal's modifier key.
+- All output passes through a second terminal emulator, and the program is started twice: once as
+  the Textual application and once, inside it, as the `cmd2` application.
