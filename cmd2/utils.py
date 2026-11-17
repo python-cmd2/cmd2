@@ -17,6 +17,7 @@ from collections.abc import (
     Generator,
     Iterable,
     MutableSequence,
+    Sequence,
 )
 from difflib import SequenceMatcher
 from typing import (
@@ -323,6 +324,36 @@ def expand_user_in_tokens(tokens: MutableSequence[str]) -> None:
         tokens[index] = expand_user(tokens[index])
 
 
+# Matches a character which is special to a POSIX shell. A '[' counts even when no ']' follows it since
+# some shells, like zsh, reject that as a bad pattern. A '#' and a '=' only count at the start of a word.
+_POSIX_SPECIAL_RE = re.compile(r"""[ \t"';|<>&()*?\[{}$`\\]|^[#=]""")
+
+# Matches a character which cmd.exe documents as requiring quotes. A '~' is left out because it is not
+# special to cmd.exe itself, and quoting it would quote every path below a home directory.
+_WINDOWS_SPECIAL_RE = re.compile(r"""[ \t&()\[\]{}^=;!'+,`]""")
+
+
+def _shell_quote_char(matches: Sequence[str]) -> str:
+    """Return the quote character which completions being passed to a shell need to be wrapped in.
+
+    :param matches: the completions being offered for part of a command line which is passed to a shell
+    :return: the quote character to use, or an empty string if none of the matches need quotes
+    """
+    if sys.platform.startswith("win"):
+        # cmd.exe only treats double quotes as quotes, and a Windows file name can't contain one
+        return '"' if any(_WINDOWS_SPECIAL_RE.search(match) for match in matches) else ""
+
+    if not any(_POSIX_SPECIAL_RE.search(match) for match in matches):
+        return ""
+
+    # A quote character within a match has to be quoted with the other quote character
+    if any("'" in match for match in matches):
+        return '"'
+
+    # Only use single quotes when a shell would still expand something within double quotes
+    return "'" if any(char in match for match in matches for char in '"$`\\') else '"'
+
+
 def _quote_shell_arg(arg: str) -> str:
     """Quote a string so the OS shell treats it as one literal argument.
 
@@ -345,6 +376,21 @@ def _quote_shell_arg(arg: str) -> str:
     return shlex.quote(arg)
 
 
+def _get_path_dirs() -> set[str]:
+    """Return the directories listed in the PATH environment variable.
+
+    The entries are returned as they are written. Resolving them would avoid searching a directory twice
+    when it is listed under two names, but doing so can raise an exception for an entry which can't be reached.
+
+    An empty entry is kept because a POSIX shell searches the current working directory for one. A PATH which
+    is set to an empty string is a single empty entry, so it is not the same as a PATH which is not set.
+
+    :return: the directories, which is an empty set if PATH is not set
+    """
+    env_path = os.getenv("PATH")
+    return set() if env_path is None else set(env_path.split(os.path.pathsep))
+
+
 def find_editor() -> str | None:
     """Set cmd2.Cmd.DEFAULT_EDITOR. If EDITOR env variable is set, that will be used.
 
@@ -354,15 +400,12 @@ def find_editor() -> str | None:
     editor = os.environ.get("EDITOR")
     if not editor:
         if sys.platform[:3] == "win":
-            editors = ["edit", "code.cmd", "notepad++.exe", "notepad.exe"]
+            editors = ["edit.exe", "code.cmd", "notepad++.exe", "notepad.exe"]
         else:
             editors = ["vim", "vi", "emacs", "nano", "pico", "joe", "code", "subl", "gedit", "kate"]
 
-        # Get a list of every directory in the PATH environment variable and ignore symbolic links
-        env_path = os.getenv("PATH")
-        paths = [] if env_path is None else [p for p in env_path.split(os.path.pathsep) if not os.path.islink(p)]
-
-        for possible_editor, path in itertools.product(editors, paths):
+        # Use the most preferred editor which is in any of the PATH directories
+        for possible_editor, path in itertools.product(editors, _get_path_dirs()):
             editor_path = os.path.join(path, possible_editor)
             if os.path.isfile(editor_path) and os.access(editor_path, os.X_OK):
                 if sys.platform[:3] == "win":
@@ -408,26 +451,19 @@ def files_from_glob_patterns(patterns: Iterable[str], access: int = os.F_OK) -> 
 def get_exes_in_path(starts_with: str) -> list[str]:
     """Return names of executables in a user's path.
 
+    Every character in ``starts_with`` is matched literally. Glob characters like ``*``, ``?``, and ``[``
+    are not expanded.
+
     :param starts_with: what the exes should start with. leave blank for all exes in path.
     :return: a list of matching exe names
     """
-    # Purposely don't match any executable containing wildcards
-    wildcards = ["*", "?"]
-    for wildcard in wildcards:
-        if wildcard in starts_with:
-            return []
-
-    # Get a list of every directory in the PATH environment variable and ignore symbolic links
-    env_path = os.getenv("PATH")
-    paths = [] if env_path is None else [p for p in env_path.split(os.path.pathsep) if not os.path.islink(p)]
-
     # Use a set to store exe names since there can be duplicates
     exes_set = set()
 
     # Find every executable file in the user's path that matches the pattern
-    for path in paths:
+    for path in _get_path_dirs():
         full_path = os.path.join(path, starts_with)
-        matches = files_from_glob_pattern(full_path + "*", access=os.X_OK)
+        matches = files_from_glob_pattern(glob.escape(full_path) + "*", access=os.X_OK)
 
         for match in matches:
             exes_set.add(os.path.basename(match))
