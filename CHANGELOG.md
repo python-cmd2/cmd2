@@ -1,4 +1,4 @@
-## 4.4.3 (TBD)
+## 4.4.3 (2026-11-16)
 
 - Bug Fixes
     - Fixed file path completion for names containing square brackets, including bracketed working
@@ -41,7 +41,7 @@
       [Embedding in Textual](docs/examples/embedding_in_textual.md#a-bottom-toolbar-which-stays-while-commands-run)
       for how it works and what it costs.
 
-## 4.4.2 (November 11, 2026)
+## 4.4.2 (2026-11-11)
 
 - Security
     - Fixed shell command injection through file names in the `edit` command and `Cmd.run_editor()`.
@@ -53,14 +53,14 @@
       POSIX), since history can contain secrets typed as command arguments. The permissions of an
       existing history file are tightened the next time history is saved.
 
-## 4.4.1 (November 2, 2026)
+## 4.4.1 (2026-11-02)
 
 - Enhancements
     - Improve PyPI release security by publishing
       [provenance](https://docs.pypi.org/using-pypi/package-security/provenance/) info via shared
       attestations.
 
-## 4.4.0 (October 31, 2026) 🎃
+## 4.4.0 (2026-10-31) 🎃
 
 - Breaking Changes
     - `set_window_title()` is now an instance method. Call `app.set_window_title(title)` or
@@ -119,7 +119,7 @@
     - Added `History.is_persisted()` to check whether a history entry was loaded from a previous
       session.
 
-## 4.3.1 (October 24, 2026)
+## 4.3.1 (2026-10-24)
 
 - Bug Fixes
     - Fixed `@with_annotated` command `--help` output bypassing the application's output stream,
@@ -133,7 +133,7 @@
       much richer information than a bottom toolbar. See the
       [Embedding in Textual](docs/examples/embedding_in_textual.md) documentation for details.
 
-## 4.3.0 (October 13, 2026)
+## 4.3.0 (2026-10-13)
 
 - Stabilized features
     - `@with_annotated` is no longer experimental. It was introduced as an experimental feature in
@@ -164,7 +164,7 @@
     - When a pipe's process exits before the command runs, what it wrote, such as the shell's
       "command not found", is no longer lost when cmd2 captures the output, as in a pyscript
 
-## 4.2.4 (September 8, 2026)
+## 4.2.4 (2026-09-08)
 
 - Bug Fixes
     - Fixed output redirection and piping raising `UnicodeEncodeError` and leaving an empty file
@@ -177,7 +177,7 @@
       terminal; it is now hidden there, as the bottom toolbar already was, and stays on the live
       prompt line only
 
-## 4.2.3 (September 2, 2026)
+## 4.2.3 (2026-09-02)
 
 - Bug Fixes
     - Fix some links which were broken when published to PyPI
@@ -185,13 +185,13 @@
     - Converted `BoundCommandFunc` and `UnboundCommandFunc` TypeAliases in `types.py` to Protocol
       classes for stricter type checking on `cmd2` command method references
 
-## 4.2.2 (August 25, 2026)
+## 4.2.2 (2026-08-25)
 
 - Documentation Improvements
     - Improved documentation in attempt at making some recommended best-practices more discoverable
     - Fixed the broken `cmd_as_argument` example
 
-## 4.2.1 (August 22, 2026)
+## 4.2.1 (2026-08-22)
 
 - Enhancements
     - Added bracketed paste support so multiple pasted commands execute sequentially and multiline
@@ -199,7 +199,7 @@
 - Bug Fixes
     - Enabled Ctrl-Z suspension at the prompt
 
-## 4.2.0 (August 6, 2026)
+## 4.2.0 (2026-08-06)
 
 - Enhancements
     - `@with_annotated` argument groups can now contain an `ArgumentBlock`'s arguments. A `Group`
@@ -228,20 +228,20 @@
     - Fixed bug where already sorted `choices_provider` results were being re-sorted
       ([#1727](https://github.com/python-cmd2/cmd2/issues/1727)).
 
-## 4.1.2 (July 16, 2026)
+## 4.1.2 (2026-07-16)
 
 - Enhancements
     - Added possibility to use rich Text objects to set the description argument of a `Settable`
     - Removed redundant `ipython` import which slowed application startup time
 
-## 4.1.1 (July 9, 2026)
+## 4.1.1 (2026-07-09)
 
 - Bug Fixes
     - Fixed a couple type issues that emerged with the upgrade to `mypy` 2.2.0
 - Enhancements
     - Async alert messages can now be Rich renderables.
 
-## 4.1.0 (July 7, 2026)
+## 4.1.0 (2026-07-07)
 
 - Breaking Changes
     - Renamed the `bottom_toolbar` argument in `Cmd.__init__()` to `enable_bottom_toolbar`. It is
@@ -312,7 +312,7 @@
     - A command can share an argument block with its subcommands via `cmd2_base_args` /
       `cmd2_parent_args` parameters, passing parent-level options down without redeclaring them.
 
-## 4.0.0 (June 5, 2026)
+## 4.0.0 (2026-06-05)
 
 ### Summary
 
@@ -498,18 +498,18 @@ prompt is displayed.
         - You use declarative syntax to define the arguments a command takes and the
           `@with_annotated` decorator builds an `argparse` parser for you
 
-## 3.5.1 (April 24, 2026)
+## 3.5.1 (2026-04-24)
 
 - Bug Fixes
     - Fixed `ArgparseCompleter.print_help()` not passing file stream to recursive call.
     - Fixed issue where `constants.REDIRECTION_TOKENS` was being mutated.
 
-## 3.5.0 (April 13, 2026)
+## 3.5.0 (2026-04-13)
 
 - Bug Fixes
     - Fixed issue where Rich stripped colors from text in test environments where TERM=dumb.
 
-## 3.4.0 (March 3, 2026)
+## 3.4.0 (2026-03-03)
 
 - Enhancements
     - Moved cmd2-specific printing logic from `Cmd.print_to()` into `Cmd2BaseConsole.print()` and
@@ -521,7 +521,7 @@ prompt is displayed.
     - Renamed the `destination` parameter of `Cmd.print_to()` back to `file` since you can no longer
       pass in a console.
 
-## 3.3.0 (March 1, 2026)
+## 3.3.0 (2026-03-01)
 
 - Enhancements
     - Added ability to pass a console object to `Cmd.print_to()`. This provides support for things
@@ -534,13 +534,13 @@ prompt is displayed.
     - `Cmd2BaseConsole(file)` argument is now a keyword-only argument to be consistent with the
       `rich.console.Console` class.
 
-## 3.2.2 (February 21, 2026)
+## 3.2.2 (2026-02-21)
 
 - Bug Fixes
     - Updated `rich_utils.ANSI_STYLE_SEQUENCE_RE` to only match ANSI SGR (Select Graphic Rendition)
       sequences for text styling. It previously also matched DEC Private Mode sequences.
 
-## 3.2.1 (February 21, 2026)
+## 3.2.1 (2026-02-21)
 
 - Bug Fixes
     - The `async_alert` and `async_prompt_update` methods of `cmd2.Cmd` now respect the current
@@ -548,7 +548,7 @@ prompt is displayed.
         - If `allow_style` is `NEVER`, all style-related ANSI escape codes will be stripped to
           ensure plain text output
 
-## 3.2.0 (February 5, 2026)
+## 3.2.0 (2026-02-05)
 
 - Bug Fixes
     - Fixed incompatibilities with Python 3.14.3.
@@ -558,30 +558,30 @@ prompt is displayed.
       functions. This should not break an application, but it could affect unit tests which parse
       help text.
 
-## 3.1.3 (February 3, 2026)
+## 3.1.3 (2026-02-03)
 
 - Bug Fixes
     - Fixed issue where `delimiter_complete()` could cause more matches than display matches
     - Fixed issue where `CommandSet` registration did not respect disabled categories
 
-## 3.1.2 (January 26, 2026)
+## 3.1.2 (2026-01-26)
 
 - Bug Fixes
     - Fixed missing `typing-extensions` dependency for Python 3.10
 
-## 3.1.1 (January 26, 2026)
+## 3.1.1 (2026-01-26)
 
 - Bug Fixes
     - Fixed bug where `rich-argparse` was not coloring cmd2's custom `nargs` formatting
 
-## 3.1.0 (December 25, 2025)
+## 3.1.0 (2025-12-25)
 
 - Potentially Breaking Changes
     - `cmd2` no longer has a dependency on `cmd` and `cmd2.Cmd` no longer inherits from `cmd.Cmd`
         - We don't _think_ this should impact users, but there is theoretically a possibility
         - This opens the door for more impactful changes in the next major release
 
-## 3.0.0 (December 7, 2025)
+## 3.0.0 (2025-12-07)
 
 ### Summary
 
@@ -657,12 +657,12 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Published new [cmd2-table](https://pypi.org/project/cmd2-table/) module which is a backport of
       the `cmd2.table_creator` module present in `cmd2` 2.7.0
 
-## 2.7.0 (June 30, 2025)
+## 2.7.0 (2025-06-30)
 
 - Enhancements
     - Integrated rich-argparse with cmd2's default argparse help formatter (`Cmd2HelpFormatter`).
 
-## 2.6.2 (June 26, 2025)
+## 2.6.2 (2025-06-26)
 
 - Enhancements
     - Added explicit support for free-threaded versions of Python, starting with version 3.14
@@ -672,12 +672,12 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
       preserve backward compatibility in the `cmd2` 2.0 family. This functionality will be removed
       in `cmd2` 3.0.0.
 
-## 2.6.1 (June 8, 2025)
+## 2.6.1 (2025-06-08)
 
 - Bug Fixes
     - Fixed bug that prevented `cmd2` from working with `from __future__ import annotations`
 
-## 2.6.0 (May 31, 2025)
+## 2.6.0 (2025-05-31)
 
 - Breaking Change
     - `cmd2` 2.6 supports Python 3.9+ (removed support for Python 3.8)
@@ -686,69 +686,69 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Added new `Cmd.ppretty()` method for pretty printing arbitrary Python data structures
     - Clarified help text for `-t`/`--transcript` argument to the `history` command
 
-## 2.5.11 (January 25, 2025)
+## 2.5.11 (2025-01-25)
 
 - Bug Fixes
     - Fixed duplicated parameter tables in API documentation.
 
-## 2.5.10 (January 25, 2025)
+## 2.5.10 (2025-01-25)
 
 - Bug Fixes
     - Fixed docstring style for MkDocs API documentation so parameters are displayed properly.
 
-## 2.5.9 (January 17, 2025)
+## 2.5.9 (2025-01-17)
 
 - Bug Fixes
     - Fixed 'index out of range' error when passing no arguments to an argparse-based command
       function.
 
-## 2.5.8 (December 17, 2024)
+## 2.5.8 (2024-12-17)
 
 - Bug Fixes
     - Rolled back undocumented changes to printing functions introduced in 2.5.0.
 
-## 2.5.7 (November 22, 2024)
+## 2.5.7 (2024-11-22)
 
 - Bug Fixes
     - Fixed issue where argument parsers for overridden commands were not being created.
     - Fixed issue where `Cmd.ppaged()` was not writing to the passed in destination.
 
-## 2.5.6 (November 14, 2024)
+## 2.5.6 (2024-11-14)
 
 - Bug Fixes
     - Fixed type hint for `with_default_category` decorator which caused type checkers to mistype a
       subclass of `CommandSet` as a plain `CommandSet`.
 
-## 2.5.5 (November 13, 2024)
+## 2.5.5 (2024-11-13)
 
 - Bug Fixes
     - Fixed type hints for passing a class method to `with_argparser` and `as_subcommand_to`.
     - Fixed issue where `set` command was not always printing a settable's current value.
 
-## 2.5.4 (November 6, 2024)
+## 2.5.4 (2024-11-06)
 
 - Bug Fixes
     - Fixed `ZeroDivisionError` in `async_alert()` when `shutil.get_terminal_size().columns` is 0.
 
-## 2.5.3 (November 5, 2024)
+## 2.5.3 (2024-11-05)
 
 - Enhancements
     - Changed `CommandSet._cmd` to a read-only property which never returns `None` because it is
       meant to be called after the `CommandSet` is registered. This addresses type checker errors
       that occurred if `CommandSet._cmd` wasn't cast or checked if `None` before use.
 
-## 2.5.2 (November 3, 2024)
+## 2.5.2 (2024-11-03)
 
 - Bug Fixes
     - Fixed default `pytest` execution when not using cmd2's custom `invoke` command via
       `inv pytest`
 
-## 2.5.1 (November 2, 2024)
+## 2.5.1 (2024-11-02)
 
 - Bug Fixes
     - Fixed readline bug when using `ipy` command with `gnureadline` and Python 3.13
 
-## 2.5.0 (October 23, 2024)
+## 2.5.0 (2024-10-23)
 
 - Breaking Change
     - `cmd2` 2.5 supports Python 3.8+ (removed support for Python 3.6 and 3.7)
@@ -774,7 +774,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
 - Deletions (potentially breaking changes)
     - Removed `apply_style` from `Cmd.pwarning()`.
 
-## 2.4.3 (January 27, 2023)
+## 2.4.3 (2023-01-27)
 
 - Bug Fixes
     - Fixed ValueError caused when passing `Cmd.columnize()` strings wider than `display_width`.
@@ -783,14 +783,14 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Enhanced `utils.to_bool()` so that it accepts and converts `bool`, `int`, and `float` in
       addition to `str`.
 
-## 2.4.2 (July 13, 2022)
+## 2.4.2 (2022-07-13)
 
 - Enhancements
     - Updated argparse decorator to remove annotations when the docstring is used for a command's
       help text.
     - Updated unit test to be Python 3.11 compliant.
 
-## 2.4.1 (April 13, 2022)
+## 2.4.1 (2022-04-13)
 
 - Bug Fixes
     - Fixed value for `ansi.Bg.YELLOW`.
@@ -798,7 +798,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
 - Enhancements
     - `async_alert()` raises a `RuntimeError` if called from the main thread.
 
-## 2.4.0 (February 22, 2022)
+## 2.4.0 (2022-02-22)
 
 - Bug Fixes
     - Fixed issue in `ansi.async_alert_str()` which would raise `IndexError` if prompt was blank.
@@ -812,18 +812,18 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Deleted `cmd2.fg` and `cmd2.bg` which were deprecated in 2.3.0. Use `cmd2.Fg` and `cmd2.Bg`
       instead.
 
-## 2.3.3 (November 29, 2021)
+## 2.3.3 (2021-11-29)
 
 - Enhancements
     - Added clearer exception handling to `BorderedTable` and `SimpleTable`.
 
-## 2.3.2 (November 22, 2021)
+## 2.3.2 (2021-11-22)
 
 - Bug Fixes
     - Fixed issue where a `ns_provider` could be passed `None` instead of its correct `cmd2.Cmd` or
       `CommandSet` value.
 
-## 2.3.1 (November 18, 2021)
+## 2.3.1 (2021-11-18)
 
 - Bug Fixes
     - Fixed issue introduced in 2.3.0 with `AlternatingTable`, `BorderedTable`, and `SimpleTable`
@@ -837,7 +837,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
         - Sorts completion hints numerically
         - Right-aligns the left-most column in completion hint table
 
-## 2.3.0 (November 11, 2021)
+## 2.3.0 (2021-11-11)
 
 - Bug Fixes
     - Fixed `AttributeError` in `rl_get_prompt()` when prompt is `None`.
@@ -864,7 +864,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - To support the color upgrade, all cmd2 colors now inherit from either `ansi.FgColor` or
       `ansi.BgColor`. Therefore, `ansi.style()` no longer accepts colors as strings.
 
-## 2.2.0 (September 14, 2021)
+## 2.2.0 (2021-09-14)
 
 - Bug Fixes
     - Fixed extra space appended to each alias by "alias list" command
@@ -898,7 +898,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
 - Breaking Changes
     - Renamed `set_default_argument_parser()` to `set_default_argument_parser_type()`
 
-## 2.1.2 (July 5, 2021)
+## 2.1.2 (2021-07-05)
 
 - Enhancements
     - Added the following accessor methods for cmd2-specific attributes to the `argparse.Action`
@@ -919,7 +919,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
         - Change `set_choices_provider(action, provider)` to `action.set_choices_provider(provider)`
         - Change `set_completer(action, completer)` to `action.set_completer(completer)`
 
-## 2.1.1 (June 17, 2021)
+## 2.1.1 (2021-06-17)
 
 - Bug Fixes
     - Fixed handling of argparse's default options group name which was changed in Python 3.10
@@ -927,18 +927,18 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Restored `plugins` and `tests_isolated` directories to tarball published to PyPI for `cmd2`
       release
 
-## 2.1.0 (June 14, 2021)
+## 2.1.0 (2021-06-14)
 
 - Enhancements
     - Converted persistent history files from pickle to compressed JSON
 
-## 2.0.1 (June 7, 2021)
+## 2.0.1 (2021-06-07)
 
 - Bug Fixes
     - Exclude `plugins` and `tests_isolated` directories from tarball published to PyPI for `cmd2`
       release
 
-## 2.0.0 (June 6, 2021)
+## 2.0.0 (2021-06-06)
 
 - Bug Fixes
     - Fixed issue where history indexes could get repeated
@@ -1005,7 +1005,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
       environment variable. If that doesn't exist or is empty, then /bin/sh is used.
     - Changed `cmd2.Cmd._run_editor()` to the public method `cmd2.Cmd.run_editor()`
 
-## 1.5.0 (January 31, 2021)
+## 1.5.0 (2021-01-31)
 
 - Bug Fixes
     - Fixed bug where setting `always_show_hint=True` did not show a hint when completing
@@ -1022,14 +1022,14 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
 - Notes
     - This is the last release planned to support Python 3.5
 
-## 1.4.0 (November 11, 2020)
+## 1.4.0 (2020-11-11)
 
 - Bug Fixes
     - Fixed tab completion crash on Windows
 - Enhancements
     - Changed how multiline doc string help is formatted to match style of other help messages
 
-## 1.3.11 (October 1, 2020)
+## 1.3.11 (2020-10-01)
 
 - Bug Fixes
     - Fixed issue where quoted redirectors and terminators in aliases and macros were not being
@@ -1038,7 +1038,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
       `@as_subcommand_to` decorator resulted in duplicated help text in the base command the
       subcommands belong to.
 
-## 1.3.10 (September 17, 2020)
+## 1.3.10 (2020-09-17)
 
 - Enhancements
     - Added user-settable option called `always_show_hint`. If True, then tab completion hints will
@@ -1055,7 +1055,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
 - Bug Fixes
     - Fixed issue where flag names weren't always sorted correctly in argparse tab completion
 
-## 1.3.9 (September 03, 2020)
+## 1.3.9 (2020-09-03)
 
 - Breaking Changes
     - `CommandSet.on_unregister()` is now called as first step in unregistering a `CommandSet` and
@@ -1066,7 +1066,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Added `CommandSet.on_unregistered()`. This is called by `cmd2.Cmd` after a `CommandSet` is
       unregistered and all its commands have been removed from the CLI.
 
-## 1.3.8 (August 28, 2020)
+## 1.3.8 (2020-08-28)
 
 - Bug Fixes
     - Fixed issue where subcommand added with `@as_subcommand_to` decorator did not display help
@@ -1076,13 +1076,13 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
       Only pass this if your subcommand should not have the `-h/--help` help option (as stated in
       argparse documentation).
 
-## 1.3.7 (August 27, 2020)
+## 1.3.7 (2020-08-27)
 
 - Bug Fixes
     - Fixes an issue introduced in 1.3.0 with processing command strings containing
       terminator/separator character(s) that are manually passed to a command that uses argparse.
 
-## 1.3.6 (August 27, 2020)
+## 1.3.6 (2020-08-27)
 
 - Breaking changes
     - The functions cmd2 adds to Namespaces (`get_statement()` and `get_handler()`) are now
@@ -1092,7 +1092,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - `Namespace.__statement__` will be removed in `cmd2` 2.0.0. Use
       `Namespace.cmd2_statement.get()` going forward.
 
-## 1.3.5 (August 25, 2020)
+## 1.3.5 (2020-08-25)
 
 - Bug Fixes
     - Fixed `RecursionError` when printing an `argparse.Namespace` caused by custom attribute cmd2
@@ -1101,7 +1101,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Added `get_statement()` function to `argparse.Namespace` which returns `__statement__`
       attribute
 
-## 1.3.4 (August 20, 2020)
+## 1.3.4 (2020-08-20)
 
 - Bug Fixes
     - Fixed `AttributeError` when `CommandSet` that uses `as_subcommand_to` decorator is loaded
@@ -1111,7 +1111,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
       [testing](https://cmd2.readthedocs.io/en/latest/testing.html) documentation for more details
       on testing cmd2-based applications with mock.
 
-## 1.3.3 (August 13, 2020)
+## 1.3.3 (2020-08-13)
 
 - Breaking changes
     - CommandSet command functions (do*, complete*, help\_) will no longer have the cmd2 app passed
@@ -1131,7 +1131,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Added missing doc-string for new cmd2.Cmd **init** parameters introduced by CommandSet
       enhancement
 
-## 1.3.2 (August 10, 2020)
+## 1.3.2 (2020-08-10)
 
 - Bug Fixes
     - Fixed `prog` value of subcommands added with `as_subcommand_to()` decorator.
@@ -1141,7 +1141,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
 - Enhancements
     - Added functions to fetch registered CommandSets by type and command name
 
-## 1.3.1 (August 6, 2020)
+## 1.3.1 (2020-08-06)
 
 - Bug Fixes
     - Fixed issue determining whether an argparse completer function required a reference to a
@@ -1149,7 +1149,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
       calling the argparse argument completer function. Manifested as a TypeError when using
       `cmd2.Cmd.path_complete` as a completer for an argparse-based command defined in a CommandSet
 
-## 1.3.0 (August 4, 2020)
+## 1.3.0 (2020-08-04)
 
 - Enhancements
     - Added CommandSet - Enables defining a separate loadable module of commands to
@@ -1158,12 +1158,12 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Marked with_argparser_and_unknown_args pending deprecation and consolidated implementation
       into with_argparser
 
-## 1.2.1 (July 14, 2020)
+## 1.2.1 (2020-07-14)
 
 - Bug Fixes
     - Relax minimum version of `importlib-metadata` to >= 1.6.0 when using Python < 3.8
 
-## 1.2.0 (July 13, 2020)
+## 1.2.0 (2020-07-13)
 
 - Bug Fixes
     - Fixed `typing` module compatibility issue with Python 3.5 prior to 3.5.4
@@ -1173,7 +1173,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
           `sys.path`
         - Added dependency on `importlib_metadata` when running on versions of Python prior to 3.8
 
-## 1.1.0 (June 6, 2020)
+## 1.1.0 (2020-06-06)
 
 - Bug Fixes
     - Fixed issue where subcommand usage text could contain a subcommand alias instead of the actual
@@ -1205,7 +1205,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Added explicit handling of `SystemExit`. If a command raises this exception, the command loop
       will be gracefully stopped.
 
-## 1.0.2 (April 06, 2020)
+## 1.0.2 (2020-04-06)
 
 - Bug Fixes
     - Ctrl-C now stops a running text script instead of just the current `run_script` command
@@ -1213,12 +1213,12 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - `do_shell()` now saves the return code of the command it runs in `self.last_result` for use in
       pyscripts
 
-## 1.0.1 (March 13, 2020)
+## 1.0.1 (2020-03-13)
 
 - Bug Fixes
     - Fixed issue where postcmd hooks were running after an `argparse` exception in a command.
 
-## 1.0.0 (March 1, 2020)
+## 1.0.0 (2020-03-01)
 
 - Enhancements
     - The documentation at [cmd2.rftd.io](https://cmd2.readthedocs.io) received a major overhaul
@@ -1229,7 +1229,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Now that the 1.0 release is out, `cmd2` intends to follow
       [Semantic Versioning](https://semver.org)
 
-## 0.10.1 (February 19, 2020)
+## 0.10.1 (2020-02-19)
 
 - Bug Fixes
     - Corrected issue where the actual new value was not always being printed in do_set. This
@@ -1259,7 +1259,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - We intend no more breaking changes prior to 1.0.0
         - Just bug fixes, documentation updates, and enhancements
 
-## 0.10.0 (February 7, 2020)
+## 0.10.0 (2020-02-07)
 
 - Enhancements
     - Changed the default help text to make `help -v` more discoverable
@@ -1291,13 +1291,13 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - We intend no more breaking changes prior to 1.0.0
         - Just bug fixes, documentation updates, and enhancements
 
-## 0.9.25 (January 26, 2020)
+## 0.9.25 (2020-01-26)
 
 - Enhancements
     - Reduced what gets put in package downloadable from PyPI (removed irrelevant CI config files
       and such)
 
-## 0.9.24 (January 23, 2020)
+## 0.9.24 (2020-01-23)
 
 - Enhancements
     - Flushing stderr when setting the window title and printing alerts for better responsiveness in
@@ -1308,7 +1308,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Added line truncation support to `cmd2.utils` text alignment functions.
     - Added support for Python 3.9 alpha
 
-## 0.9.23 (January 9, 2020)
+## 0.9.23 (2020-01-09)
 
 - Bug Fixes
     - Fixed bug where startup script containing a single quote in its file name was incorrectly
@@ -1326,7 +1326,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
         - `ansi.BRIGHT` -> `ansi.INTENSITY_BRIGHT`
         - `ansi.NORMAL` -> `ansi.INTENSITY_NORMAL`
 
-## 0.9.22 (December 9, 2019)
+## 0.9.22 (2019-12-09)
 
 - Bug Fixes
     - Fixed bug where a redefined `ansi.style_error` was not being used in all `cmd2` files
@@ -1336,7 +1336,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
       functions support ANSI escape sequences and characters with display widths greater than 1.
       They wrap `align_text()` which is also in utils.py.
 
-## 0.9.21 (November 26, 2019)
+## 0.9.21 (2019-11-26)
 
 - Bug Fixes
     - Fixed bug where pipe processes were not being stopped by Ctrl-C
@@ -1355,7 +1355,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
         - Made `end` and `chop` keyword-only arguments of `ppaged()`
         - `end` is always added to message in `ppaged()`
 
-## 0.9.20 (November 12, 2019)
+## 0.9.20 (2019-11-12)
 
 - Bug Fixes
     - Fixed bug where setting `use_ipython` to False removed ipy command from the entire `cmd2.Cmd`
@@ -1374,7 +1374,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - cmd2 command decorators were moved to decorators.py. If you were importing them via cmd2's
       \_\_init\_\_.py, then there will be no issues.
 
-## 0.9.19 (October 14, 2019)
+## 0.9.19 (2019-10-14)
 
 - Bug Fixes
     - Fixed `ValueError` exception which could occur when an old format persistent history file is
@@ -1382,7 +1382,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
 - Enhancements
     - Improved displaying multiline CompletionErrors by indenting all lines
 
-## 0.9.18 (October 1, 2019)
+## 0.9.18 (2019-10-01)
 
 - Bug Fixes
     - Fixed bug introduced in 0.9.17 where help functions for hidden and disabled commands were not
@@ -1394,7 +1394,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - `AutoCompleter` now uses the passed-in parser's help formatter to generate hint text. This
       gives help and hint text for an argument consistent formatting.
 
-## 0.9.17 (September 23, 2019)
+## 0.9.17 (2019-09-23)
 
 - Bug Fixes
     - Fixed a bug when using WSL when all Windows paths have been removed from $PATH
@@ -1412,7 +1412,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
         - `Cmd.in_script()` - return whether a text script is running
         - `Cmd.in_pyscript()` - return whether a pyscript is running
 
-## 0.9.16 (August 7, 2019)
+## 0.9.16 (2019-08-07)
 
 - Bug Fixes
     - Fixed inconsistent parsing/tab completion behavior based on the value of `allow_redirection`.
@@ -1428,7 +1428,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
 - Breaking Changes
     - Aliases and macros can no longer have the same name as a command
 
-## 0.9.15 (July 24, 2019)
+## 0.9.15 (2019-07-24)
 
 - Bug Fixes
     - Fixed exception caused by tab completing after an invalid subcommand was entered
@@ -1476,7 +1476,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Renamed `Cmd.pystate` to `Cmd.py_locals`
     - Renamed `PyscriptBridge` to `PyBridge`
 
-## 0.9.14 (June 29, 2019)
+## 0.9.14 (2019-06-29)
 
 - Enhancements
     - Added support for and testing with Python 3.8, starting with 3.8 beta
@@ -1491,8 +1491,8 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
       value of `allow_ansi` to determine if ANSI escape sequences should be stripped when not
       writing to a tty. See documentation for more information on the `allow_ansi` setting.
 - Breaking Changes
-    - Python 3.4 reached its [end of life](https://www.python.org/dev/peps/pep-0429/) on March 18,
-      2019 and is no longer supported by `cmd2`
+    - Python 3.4 reached its [end of life](https://www.python.org/dev/peps/pep-0429/) on 2019-03-18
+      and is no longer supported by `cmd2`
         - If you need to use Python 3.4, you should pin your requirements to use `cmd2` 0.9.13
     - Made lots of changes to minimize the public API of the `cmd2.Cmd` class
         - Attributes and methods we do not intend to be public now all begin with an underscore
@@ -1522,7 +1522,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
         - `_relative_load` --> `_relative_run_script`
         - `pyscript` --> `run_pyscript`
 
-## 0.9.13 (June 14, 2019)
+## 0.9.13 (2019-06-14)
 
 - Bug Fixes
     - Fixed issue where the wrong terminator was being appended by
@@ -1593,11 +1593,10 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Removed support for `cmd.cmdqueue`
     - `allow_cli_args` is now an argument to **init** instead of a `cmd2` class member
 - **Python 3.4 EOL notice**
-    - Python 3.4 reached its [end of life](https://www.python.org/dev/peps/pep-0429/) on March 18,
-      2019
+    - Python 3.4 reached its [end of life](https://www.python.org/dev/peps/pep-0429/) on 2019-03-18
     - This is the last release of `cmd2` which will support Python 3.4
 
-## 0.9.12 (April 22, 2019)
+## 0.9.12 (2019-04-22)
 
 - Bug Fixes
     - Fixed a bug in how redirection and piping worked inside `py` or `pyscript` commands
@@ -1641,7 +1640,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Removed `reserved_words` class attribute due to lack of use
     - Removed `keywords` instance attribute due to lack of use
 
-## 0.9.11 (March 13, 2019)
+## 0.9.11 (2019-03-13)
 
 - Bug Fixes
     - Fixed bug in how **history** command deals with multiline commands when output to a script
@@ -1687,12 +1686,12 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
       middle of a multiline command, even if it is the first character on a line. _ \# this is a
       comment _ this # is not a comment
 
-## 0.9.10 (February 22, 2019)
+## 0.9.10 (2019-02-22)
 
 - Bug Fixes
     - Fixed unit test that hangs on Windows
 
-## 0.9.9 (February 21, 2019)
+## 0.9.9 (2019-02-21)
 
 - Bug Fixes
     - Fixed bug where the `set` command was not tab completing from the current `settable`
@@ -1700,7 +1699,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
 - Enhancements
     - Changed edit command to use do_shell() instead of calling os.system()
 
-## 0.9.8 (February 06, 2019)
+## 0.9.8 (2019-02-06)
 
 - Bug Fixes
     - Fixed issue with echoing strings in StdSim. Because they were being sent to a binary buffer,
@@ -1709,7 +1708,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Made quit() and exit() functions available to scripts run with pyscript. This allows those
       scripts to exit back to the console's prompt instead of exiting the whole application.
 
-## 0.9.7 (January 08, 2019)
+## 0.9.7 (2019-01-08)
 
 - Bug Fixes
     - Fixed bug when user chooses a zero or negative index when calling `Cmd.select()`
@@ -1727,7 +1726,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
       function that is used to filter paths out of completion results.
     - `perror()` no longer prepends "ERROR: " to the error message being printed
 
-## 0.9.6 (October 13, 2018)
+## 0.9.6 (2018-10-13)
 
 - Bug Fixes
     - Fixed bug introduced in 0.9.5 caused by backing up and restoring `self.prompt` in
@@ -1739,7 +1738,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Macros now accept extra arguments when called. These will be tacked onto the resolved command.
     - All cmd2 commands run via `py` now go through `onecmd_plus_hooks`.
 
-## 0.9.5 (October 11, 2018)
+## 0.9.5 (2018-10-11)
 
 - Bug Fixes
     - Fixed bug where `get_all_commands` could return non-callable attributes
@@ -1794,7 +1793,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
       with this release.
     - `unalias` was deleted since `alias delete` replaced it
 
-## 0.9.4 (August 21, 2018)
+## 0.9.4 (2018-08-21)
 
 - Bug Fixes
     - Fixed bug where `preparse` was not getting called
@@ -1817,12 +1816,12 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
         - `cmd2.Cmd.postparsing_postcmd()` - equivalent functionality available via
           `cmd2.Cmd.register_postcmd_hook()`
 
-## 0.8.9 (August 20, 2018)
+## 0.8.9 (2018-08-20)
 
 - Bug Fixes
     - Fixed extra slash that could print when tab completing users on Windows
 
-## 0.9.3 (July 12, 2018)
+## 0.9.3 (2018-07-12)
 
 - Bug Fixes
     - Fixed bug when StatementParser `__init__()` was called with `terminators` equal to `None`
@@ -1834,7 +1833,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
       deleted
         - It has been replaced by the improved `CommandResult` class
 
-## 0.9.2 (June 28, 2018)
+## 0.9.2 (2018-06-28)
 
 - Bug Fixes
     - Fixed issue where piping and redirecting did not work correctly with paths that had spaces
@@ -1859,7 +1858,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
             - `CmdResult` had attributes of: **out**, **err**, **war**
         - `CmdResult` will be deleted in the next release
 
-## 0.8.8 (June 28, 2018)
+## 0.8.8 (2018-06-28)
 
 - Bug Fixes
     - Prevent crashes that could occur attempting to open a file in non-existent directory or with
@@ -1867,13 +1866,13 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
 - Enhancements
     - `display_matches` is no longer restricted to delimited strings
 
-## 0.9.1 (May 28, 2018)
+## 0.9.1 (2018-05-28)
 
 - Bug Fixes
     - fix packaging error for 0.8.x versions (yes we had to deploy a new version of the 0.9.x series
       to fix a packaging error with the 0.8.x version)
 
-## 0.9.0 (May 28, 2018)
+## 0.9.0 (2018-05-28)
 
 - Bug Fixes
     - If self.default_to_shell is true, then redirection and piping are now properly passed to the
@@ -1932,7 +1931,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Some developers have noted very slow performance when importing the `cmd2` module. The issue
       it intermittent, and investigation of the root cause is ongoing.
 
-## 0.8.6 (May 27, 2018)
+## 0.8.6 (2018-05-27)
 
 - Bug Fixes
     - Commands using the @with_argparser_and_unknown_args were not correctly recognized when tab
@@ -1947,7 +1946,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
         - Added tab completion of Python identifiers instead of **cmd2** commands
         - Separated the `py` console history from the **cmd2** history
 
-## 0.8.5 (April 15, 2018)
+## 0.8.5 (2018-04-15)
 
 - Bug Fixes
     - Fixed a bug with all argument decorators where the wrapped function wasn't returning a value
@@ -1975,14 +1974,14 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - The 0.9.0 release of `cmd2` will support Python 3.4+ only
     - Additional 0.8.x releases may be created to supply bug fixes for Python 2.7 up until August
       31, 2018
-    - After August 31, 2018 not even bug fixes will be provided for Python 2.7
+    - After 2018-08-31 not even bug fixes will be provided for Python 2.7
 
-## 0.8.4 (April 10, 2018)
+## 0.8.4 (2018-04-10)
 
 - Bug Fixes
     - Fixed conditional dependency issue in setup.py that was in 0.8.3.
 
-## 0.8.3 (April 09, 2018)
+## 0.8.3 (2018-04-09)
 
 - Bug Fixes
     - Fixed `help` command not calling functions for help topics
@@ -2015,7 +2014,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
       example of how to use tab completion in subcommands. In addition, the docstring for
       `cmd_with_subs_completer()` offers more details.
 
-## 0.8.2 (March 21, 2018)
+## 0.8.2 (2018-03-21)
 
 - Bug Fixes
     - Fixed a bug in tab completion of command names within sub-menus
@@ -2041,7 +2040,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
       KeyboardInterrupt
     - For macOS, will load the `gnureadline` module if available and `readline` if not
 
-## 0.8.1 (March 9, 2018)
+## 0.8.1 (2018-03-09)
 
 - Bug Fixes
     - Fixed a bug if a non-existent **do\_\*** method was added to the `exclude_from_help` list
@@ -2077,7 +2076,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - `case_insensitive` - Removed support for case-insensitive command parsing
         - Its presence wasn't very helpful and could cause harmful unintended actions
 
-## 0.8.0 (February 1, 2018)
+## 0.8.0 (2018-02-01)
 
 - Bug Fixes
     - Fixed unit tests on Python 3.7 due to changes in how re.escape() behaves in Python 3.7
@@ -2136,7 +2135,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
         - `cmd2` no longer includes **optparse.make_option**, so if your app needs it import
           directly from optparse
 
-## 0.7.9 (January 4, 2018)
+## 0.7.9 (2018-01-04)
 
 - Bug Fixes
     - Fixed a couple broken examples
@@ -2147,7 +2146,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Abandoned official support for Python 3.3. It should still work, just don't have an easy way
       to test it anymore.
 
-## 0.7.8 (November 8, 2017)
+## 0.7.8 (2017-11-08)
 
 - Bug Fixes
     - Fixed `poutput()` so it can print an integer zero and other **falsy** things
@@ -2159,7 +2158,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Improved documentation for overriding the default supported comment styles
     - Added `runcmds_plus_hooks()` method to run multiple commands w/o a cmdloop
 
-## 0.7.7 (August 25, 2017)
+## 0.7.7 (2017-08-25)
 
 - Bug Fixes
     - Added workaround for bug which occurs in Python 2.7 on Linux when `pygtk` is installed
@@ -2175,7 +2174,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
         - Prior version did not allow regexes with whitespace, new version allows any regex
     - Improved display for `load` command and input redirection when **echo** is `True`
 
-## 0.7.6 (August 11, 2017)
+## 0.7.6 (2017-08-11)
 
 - Bug Fixes
     - Case-sensitive command parsing was completely broken and has been fixed
@@ -2188,7 +2187,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Improved how transcript testing handles prompts with ANSI escape codes by stripping them
     - Greatly improved implementation for how command output gets piped to a shell command
 
-## 0.7.5 (July 8, 2017)
+## 0.7.5 (2017-07-08)
 
 - Bug Fixes
     - `case_insensitive` is no longer a runtime-settable parameter, but it was still listed as such
@@ -2206,7 +2205,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
         - And it can create complications if you are't careful
     - Improved implementation of `load` to use command queue instead of nested inner loop
 
-## 0.7.4 (July 3, 2017)
+## 0.7.4 (2017-07-03)
 
 - Bug fixes
     - Fixed a couple bugs in interacting with pastebuffer/clipboard on macOS and Linux
@@ -2230,7 +2229,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Removed pause command
     - Added a dependency on the **pyperclip** module
 
-## 0.7.3 (June 23, 2017)
+## 0.7.3 (2017-06-23)
 
 - Bug fixes
     - Fixed a bug in displaying a span of history items when only an end index is supplied
@@ -2250,12 +2249,12 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
         - This change improves argument parsing for all new applications
     - Refactored code to encapsulate most of the pyparsing logic into a ParserManager class
 
-## 0.7.2 (May 22, 2017)
+## 0.7.2 (2017-05-22)
 
 - Added a MANIFEST.ini file to make sure a few extra files get included in the PyPI source
   distribution
 
-## 0.7.1 (May 22, 2017)
+## 0.7.1 (2017-05-22)
 
 - Bug fixes
     - `-` wasn't being treated as a legal character
@@ -2280,7 +2279,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
 - Add shell command completion for `shell` command or `!` shortcut
 - Abbreviated multiline commands are no longer allowed (they never worked correctly anyways)
 
-## 0.7.0 (February 23, 2017)
+## 0.7.0 (2017-02-23)
 
 - Refactored to use six module for a unified codebase which supports both Python 2 and Python 3
 - Stabilized on all platforms (Windows, Mac, Linux) and all supported Python versions (2.7, 3.3,
@@ -2288,33 +2287,33 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
 - Added lots of unit tests and fixed a number of bugs
 - Improved documentation and moved it to cmd2.readthedocs.io
 
-## 0.6.9 (October 3, 2016)
+## 0.6.9 (2016-10-03)
 
 - Support Python 3 input()
 - Fix subprocess.mswindows bug
 - Add Python3.6 support
 - Drop distutils from setup.py
 
-## 0.6.8 (December 9, 2014)
+## 0.6.8 (2014-12-09)
 
 - better editor checking (by Ian Cordascu)
 
-## 0.6.6.1 (August 14, 2013)
+## 0.6.6.1 (2013-08-14)
 
 - No changes to code trunk. Generated sdist from Python 2.7 to avoid 2to3 changes being applied to
   source. ( Issue https://bitbucket.org/catherinedevlin/cmd2/issue/6/packaging-bug)
 
-## 0.6.6 (August 6, 2013)
+## 0.6.6 (2013-08-06)
 
 - Added fix by bitbucket.org/desaintmartin to silence the editor check.
   bitbucket.org/catherinedevlin/cmd2/issue/1/silent-editor-check
 
-## 0.6.5.1 (March 18, 2013)
+## 0.6.5.1 (2013-03-18)
 
 - Bugfix for setup.py version check for Python 2.6, contributed by Tomaz Muraus
   (https://bitbucket.org/kami)
 
-## 0.6.5 (February 29, 2013)
+## 0.6.5 (2013-02-28)
 
 - Belatedly began a NEWS.txt
 - Changed pyparsing requirement for compatibility with Python version (2 vs 3)
