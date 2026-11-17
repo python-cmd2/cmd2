@@ -2453,6 +2453,10 @@ class Cmd:
     ) -> Completions:
         """Perform completion of local file system paths.
 
+        Apart from a leading ``~``, which refers to a user's home directory, every character in ``text`` is
+        matched literally. Glob characters like ``*``, ``?``, and ``[`` are not expanded, and they are not
+        escaped in the results.
+
         :param text: the string prefix we are attempting to match (all matches must begin with it)
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
@@ -2467,7 +2471,7 @@ class Cmd:
         if endidx == len(line) or (endidx < len(line) and line[endidx] != os.path.sep):
             add_trailing_sep_if_dir = True
 
-        # Used to replace cwd in the final results
+        # Used to replace CWD in the final results
         cwd = os.getcwd()
         cwd_added = False
 
@@ -2475,17 +2479,11 @@ class Cmd:
         orig_tilde_path = ""
         expanded_tilde_path = ""
 
-        # If the search text is blank, then search in the CWD for *
+        # If the search text is blank, then complete all entries in the CWD
         if not text:
             search_str = os.path.join(os.getcwd(), "")
             cwd_added = True
         else:
-            # Purposely don't match any path containing wildcards
-            wildcards = ["*", "?"]
-            for wildcard in wildcards:
-                if wildcard in text:
-                    return Completions()
-
             # Start the search string
             search_str = text
 
@@ -2504,7 +2502,7 @@ class Cmd:
                 orig_tilde_path = text[:sep_index]
                 expanded_tilde_path = os.path.expanduser(orig_tilde_path)
 
-            # If the search text does not have a directory, then use the cwd
+            # If the search text does not have a directory, then use the CWD
             elif not os.path.dirname(text):
                 search_str = os.path.join(os.getcwd(), search_str)
                 cwd_added = True
@@ -2533,7 +2531,7 @@ class Cmd:
                 matches[index] += os.path.sep
                 display_matches[index] += os.path.sep
 
-        # Remove cwd if it was added to match the text prompt-toolkit expects
+        # Remove CWD if it was added to match the text prompt-toolkit expects
         if cwd_added:
             to_replace = cwd if cwd == os.path.sep else cwd + os.path.sep
             matches = [cur_path.replace(to_replace, "", 1) for cur_path in matches]
@@ -2569,7 +2567,7 @@ class Cmd:
         if not complete_blank and not text:
             return Completions()
 
-        # If there are no path characters in the search text, then do shell command completion in the user's path
+        # If the search text is a bare command name (no '~' or path separator), complete executables from PATH
         if not text.startswith("~") and os.path.sep not in text:
             items = [CompletionItem(exe) for exe in utils.get_exes_in_path(text)]
             return Completions(items=items)
@@ -2604,6 +2602,9 @@ class Cmd:
             # True when command line contains any redirection tokens
             has_redirection = False
 
+            # True when the first redirection token is a pipe, which means everything after it is passed to a shell
+            piped_to_shell = False
+
             # Keep track of state while examining tokens
             in_pipe = False
             in_file_redir = False
@@ -2614,6 +2615,8 @@ class Cmd:
             for cur_token in raw_tokens:
                 # Process redirection tokens
                 if cur_token in constants.REDIRECTION_TOKENS:
+                    if not has_redirection:
+                        piped_to_shell = cur_token == constants.REDIRECTION_PIPE
                     has_redirection = True
 
                     # Check if we are at a pipe
@@ -2646,11 +2649,10 @@ class Cmd:
 
                 prior_token = cur_token
 
-            if do_shell_completion:
-                return self.shell_cmd_complete(text, line, begidx, endidx)
-
-            if do_path_completion:
-                return self.path_complete(text, line, begidx, endidx)
+            if do_shell_completion or do_path_completion:
+                completer = self.shell_cmd_complete if do_shell_completion else self.path_complete
+                completions = completer(text, line, begidx, endidx)
+                return self._for_shell(completions) if piped_to_shell else completions
 
             # If there were redirection strings anywhere on the command line, then we
             # are no longer completing for the current command
@@ -2797,7 +2799,13 @@ class Cmd:
         if not completion_token_quote:
             matches = completions.to_strings()
 
-            if any(" " in match for match in matches):
+            # Matches which are being passed to a shell need quotes if any of them has a character special to it
+            if completions._quote_for_shell:
+                _quote_char = utils._shell_quote_char(matches)
+                _add_opening_quote = bool(_quote_char)
+
+            # Everything else only needs quotes to keep a match with a space as a single token
+            elif any(" " in match for match in matches):
                 _add_opening_quote = True
 
                 # Determine best quote (single vs double) based on text content
@@ -5130,12 +5138,28 @@ class Cmd:
     @classmethod
     def _build_shell_parser(cls) -> Cmd2ArgumentParser:
         shell_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description="Execute a command as if at the OS prompt.")
-        shell_parser.add_argument("command", help="the command to run", completer=cls.shell_cmd_complete)
+        shell_parser.add_argument("command", help="the command to run", completer=cls._complete_shell_command)
         shell_parser.add_argument(
-            "command_args", nargs=argparse.REMAINDER, help="arguments to pass to command", completer=cls.path_complete
+            "command_args", nargs=argparse.REMAINDER, help="arguments to pass to command", completer=cls._complete_shell_arg
         )
 
         return shell_parser
+
+    @staticmethod
+    def _for_shell(completions: Completions) -> Completions:
+        """Mark completions as being for part of the command line which is passed to a shell.
+
+        This is what gets them quoted when one of them has a character which is special to that shell.
+        """
+        return dataclasses.replace(completions, _quote_for_shell=True)
+
+    def _complete_shell_command(self, text: str, line: str, begidx: int, endidx: int) -> Completions:
+        """Complete the command which do_shell passes to a shell."""
+        return self._for_shell(self.shell_cmd_complete(text, line, begidx, endidx))
+
+    def _complete_shell_arg(self, text: str, line: str, begidx: int, endidx: int) -> Completions:
+        """Complete an argument of the command which do_shell passes to a shell."""
+        return self._for_shell(self.path_complete(text, line, begidx, endidx))
 
     # Preserve quotes since we are passing these strings to the shell
     @with_argparser(_build_shell_parser, preserve_quotes=True)
