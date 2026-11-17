@@ -181,6 +181,10 @@ once and the command carries on without the toolbar.
     widgets which display that information. See
     [Embedding in Textual](../examples/embedding_in_textual.md).
 
+    The same technique can also draw the toolbar itself, in a widget of the Textual application. See
+    [A Bottom Toolbar Which Stays While Commands Run](../examples/embedding_in_textual.md#a-bottom-toolbar-which-stays-while-commands-run)
+    for an example, and for what it costs.
+
 ### Commands That Take Over the Terminal
 
 While the toolbar is running, `ppaged()` uses an embedded pager which keeps the same toolbar visible
