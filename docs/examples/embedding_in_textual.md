@@ -177,8 +177,3 @@ This approach has costs which are easy to overlook, and they are why `cmd2` does
   terminal's modifier key.
 - All output passes through a second terminal emulator, and the program is started twice: once as
   the Textual application and once, inside it, as the `cmd2` application.
-
-Pull request [#1816](https://github.com/python-cmd2/cmd2/pull/1816) is a prototype which goes
-further, with measurements: it moves the technique into `cmd2` behind a single function call and
-adds a scrollback to the terminal pane. It is kept for reference and isn't intended to be merged,
-because of the costs above and because it relies on parts of textual-tty which aren't public.
