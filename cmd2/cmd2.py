@@ -2024,8 +2024,9 @@ class Cmd:
         command instead; external pagers temporarily hide the toolbar. Where no toolbar is
         running, such as outside the command loop, the external pager is used regardless.
 
-        If the pager program cannot be run, for example because it is not installed, the output
-        is printed without one. That pager command is not tried again while the application runs.
+        If the external pager program cannot be run, for example because it is not installed, the
+        output is printed without one. That pager command is not tried again while the application
+        runs. The built-in pager is not affected.
 
         :param chop: True -> causes lines longer than the screen width to be chopped (truncated) rather than wrapped
                               - truncated text is still accessible by scrolling with the right & left arrow keys
@@ -2054,8 +2055,15 @@ class Cmd:
 
         pager = self.pager_chop if chop else self.pager
 
-        # Check if we are outputting to a pager. One which the shell could not run is not tried again.
-        if functional_terminal and can_block and pager not in self._unrunnable_pagers:
+        # Page inside the toolbar's display only when the command loop is already
+        # running one. Starting one here would seize the terminal for commands run
+        # outside that loop, which the toolbar is documented not to do.
+        toolbar = self._command_toolbar
+        builtin_pager = toolbar if self.use_builtin_pager and toolbar is not None and toolbar.is_active else None
+
+        # Check if we are outputting to a pager. An external one which the shell could not run is not tried again,
+        # which is no reason to go without the built-in pager.
+        if functional_terminal and can_block and (builtin_pager is not None or pager not in self._unrunnable_pagers):
             # Chopping overrides soft_wrap, but only for what the pager is given
             pager_soft_wrap = soft_wrap or chop
 
@@ -2078,11 +2086,8 @@ class Cmd:
                 )
             output = capture.get()
 
-            # Page inside the toolbar's display only when the command loop is already
-            # running one. Starting one here would seize the terminal for commands run
-            # outside that loop, which the toolbar is documented not to do.
-            if self.use_builtin_pager and self._command_toolbar is not None and self._command_toolbar.is_active:
-                self._command_toolbar.page(output, chop=chop)
+            if builtin_pager is not None:
+                builtin_pager.page(output, chop=chop)
                 return
 
             # As for a pipe: the pager gets UTF-8, and on Windows the console is UTF-8 while it runs.

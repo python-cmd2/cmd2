@@ -1258,6 +1258,24 @@ def test_builtin_pager_needs_an_already_running_toolbar(toolbar_app, monkeypatch
     external.assert_called_once()
 
 
+def test_builtin_pager_is_used_after_the_external_pager_could_not_be_run(toolbar_app, monkeypatch) -> None:
+    app, _, _ = toolbar_app
+    app.use_builtin_pager = True
+    monkeypatch.setattr(app, "stdin", Terminal())
+    monkeypatch.setenv("TERM", "xterm")
+    # The external pager is what pages outside the command loop, and one the shell could not run there is not
+    # tried again. That says nothing about the built-in pager, which runs no program.
+    app._unrunnable_pagers.add(app.pager)
+    with (
+        mock.patch.object(command_toolbar.CommandToolbar, "page") as page,
+        mock.patch("subprocess.Popen") as external,
+        app._command_toolbar_context(),
+    ):
+        app.ppaged("row\n" * 200)
+    page.assert_called_once()
+    external.assert_not_called()
+
+
 def test_external_pager_suspends_shared_application(toolbar_app, monkeypatch) -> None:
     app, _, _ = toolbar_app
     app.use_builtin_pager = False
