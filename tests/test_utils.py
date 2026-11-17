@@ -539,6 +539,10 @@ def test_pipeline_writer_relay_lends_only_while_a_producer_waits(pauses) -> None
             time.sleep(0.01)
         assert not lends
         if pauses:
+            # The child can exit before the consumer has read all of its first page, so give it time.
+            deadline = time.monotonic() + 5
+            while len(received) < first_read and time.monotonic() < deadline:
+                time.sleep(0.01)
             assert len(received) == first_read
         # cmd2's own writes follow what the child wrote, which is still pending.
         threading.Timer(0.3, resume.set).start()
