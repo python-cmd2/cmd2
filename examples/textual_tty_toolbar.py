@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Keep a bottom toolbar on the screen while commands run, by letting Textual draw it using textual-tty.
 
-cmd2's bottom toolbar is drawn by prompt-toolkit as part of the prompt, so it is only there while the prompt is.
-This example shows a way to have one which stays, and keeps refreshing, while a command runs: the cmd2
-application doesn't draw the toolbar at all. A small Textual application owns the terminal instead. It shows the
-cmd2 application in a terminal pane which fills the screen except for the bottom, where it draws the toolbar.
+cmd2 can keep its own bottom toolbar on the screen while a command runs. It draws that toolbar in the terminal
+which the command is using, so it has to hide it whenever something else takes over the terminal, as a shell
+command does. This example shows a way to have one which stays, and keeps refreshing, whatever runs there: the
+cmd2 application doesn't draw the toolbar at all. A small Textual application owns the terminal instead. It shows
+the cmd2 application in a terminal pane which fills the screen except for the bottom, where it draws the toolbar.
 
 How it works:
   - [textual-tty](https://github.com/ttygroup/textual-tty) provides the ``Terminal`` widget, a terminal
@@ -22,7 +23,7 @@ socket, which is simpler. That works there because the status is only sent from 
 output. A toolbar which refreshes during a command is sent from another thread, and a window title written into
 the terminal's stream from another thread could land in the middle of the command's output.
 
-Things this approach gives up, which is why cmd2 doesn't do it for you:
+Things this approach gives up, which is why cmd2 draws its own toolbar in your terminal instead:
   - Scrollback. The terminal pane keeps none, so output which scrolls off its top is gone, and Textual uses
     the terminal's alternate screen, so none of the session is in your terminal's own scrollback either.
     Pipe long output to a pager.
@@ -38,8 +39,9 @@ development environment on POSIX systems, so run this example with:
 Otherwise, install textual-tty into your own environment with ``pip install textual-tty`` and then run
 ``python examples/textual_tty_toolbar.py``.
 
-Things to try: ``slow``, ``burst 2000 1``, ``page``, ``ask``, resizing the window while a command runs, and
-Ctrl-C during ``slow``. To compare with what cmd2 does on its own, run just the cmd2 application, on any platform:
+Things to try: ``slow``, ``burst 2000 1``, ``page``, ``ask``, ``shell sleep 5``, resizing the window while a
+command runs, and Ctrl-C during ``slow``. To compare with the toolbar cmd2 draws itself, run just the cmd2
+application, on any platform:
 
     python examples/textual_tty_toolbar.py --cmd2-only
 
@@ -171,8 +173,7 @@ class ToolbarApp(cmd2.Cmd):
         """Initialize the cmd2 application.
 
         :param toolbar_socket: the Unix socket of the Textual application which draws the toolbar, or None if this
-                               application isn't running inside one. Then prompt-toolkit draws the toolbar as usual,
-                               which means only while the prompt is on the screen.
+                               application isn't running inside one. Then cmd2 draws the toolbar itself.
         """
         refresh_interval = 0.5
         super().__init__(
