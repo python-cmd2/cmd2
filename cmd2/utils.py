@@ -382,6 +382,9 @@ def _get_path_dirs() -> set[str]:
     The entries are returned as they are written. Resolving them would avoid searching a directory twice
     when it is listed under two names, but doing so can raise an exception for an entry which can't be reached.
 
+    An empty entry is kept because a POSIX shell searches the current working directory for one. A PATH which
+    is set to an empty string is a single empty entry, so it is not the same as a PATH which is not set.
+
     :return: the directories, which is an empty set if PATH is not set
     """
     env_path = os.getenv("PATH")
