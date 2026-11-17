@@ -1215,6 +1215,9 @@ class ProcReader:
             stream.buffer.write(to_write)
 
 
+_RELAY_CHUNK_SIZE = 65536
+
+
 class _DescriptorRelay:
     """Carry output that subprocesses write to a terminal pipeline's descriptor.
 
@@ -1304,7 +1307,7 @@ class _DescriptorRelay:
                 # yet counted would look passed on to idle() and flush(), and cmd2's next write could overtake it.
                 incoming.poll()
                 with self._lock:
-                    data = os.read(self._in_fd, 65536)
+                    data = os.read(self._in_fd, _RELAY_CHUNK_SIZE)
                     self._received += len(data)
                 if not data:
                     return

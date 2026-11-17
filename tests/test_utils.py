@@ -21,6 +21,13 @@ from .conftest import make_exes
 HELLO_WORLD = "Hello, world!"
 
 
+def _pipe_capacity(fd: int) -> int:
+    """Return the pipe capacity, falling back to the macOS/BSD maximum where it cannot be queried."""
+    import fcntl
+
+    return fcntl.fcntl(fd, fcntl.F_GETPIPE_SZ) if hasattr(fcntl, "F_GETPIPE_SZ") else 65536
+
+
 def test_remove_duplicates_no_duplicates() -> None:
     no_dups = [5, 4, 3, 2, 1]
     assert cu.remove_duplicates(no_dups) == no_dups
@@ -480,18 +487,15 @@ def test_pipeline_writer_relay_lends_only_while_a_producer_waits(pauses) -> None
     waiting, command code gets the terminal back, whether or not the consumer has read all
     its output yet. That is as between cmd2's own writes.
     """
-    import fcntl
     import subprocess
     import threading
 
     read_fd, write_fd = os.pipe()
-    # Size the payload from the consumer's pipe. Linux reports its capacity, which follows the page size (16 pages by
-    # default); macOS and the BSDs cap a pipe at 64 KiB.
-    capacity = fcntl.fcntl(write_fd, fcntl.F_GETPIPE_SZ) if hasattr(fcntl, "F_GETPIPE_SZ") else 65536
+    capacity = _pipe_capacity(write_fd)
     # More than the relay and both pipes hold, so the child blocks until the consumer reads. What remains after the consumer's
     # first read fits, so the child can then finish. It is also more than the consumer's pipe holds, so part of it is still
     # in the relay when cmd2 writes after it.
-    payload = b"x" * (2 * capacity + 2 * 65536)
+    payload = b"x" * (2 * capacity + 2 * cu._RELAY_CHUNK_SIZE)
     first_read = len(payload) - capacity - 16384 if pauses else len(payload)
     received = bytearray()
     lent = threading.Event()
@@ -559,8 +563,9 @@ def test_pipeline_writer_relay_lends_only_to_a_consumer_waiting_for_the_terminal
     import subprocess
     import threading
 
-    payload = b"x" * 262144
     read_fd, write_fd = os.pipe()
+    capacity = _pipe_capacity(write_fd)
+    payload = b"x" * (4 * capacity)
     received = bytearray()
     lends = []
 
@@ -571,7 +576,7 @@ def test_pipeline_writer_relay_lends_only_to_a_consumer_waiting_for_the_terminal
 
     def drain() -> None:
         # So much slower than the producer that the relay's pipe fills up and its writes stall
-        while chunk := os.read(read_fd, 16384):
+        while chunk := os.read(read_fd, capacity // 4):
             received.extend(chunk)
             time.sleep(0.15)
 
@@ -599,8 +604,9 @@ def test_pipeline_writer_relay_lends_only_to_a_consumer_waiting_for_the_terminal
 def test_pipeline_writer_relay_leaves_the_terminal_after_a_producer_finishes() -> None:
     import subprocess
 
-    payload = b"x" * 70000
     read_fd, write_fd = os.pipe()
+    capacity = _pipe_capacity(write_fd)
+    payload = b"x" * (capacity + 4096)
     reader = mock.Mock(_lend_terminal=mock.Mock(side_effect=contextlib.nullcontext))
     writer = cu._PipelineWriter(write_fd, reader)
     try:
