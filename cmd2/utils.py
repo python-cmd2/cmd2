@@ -1215,6 +1215,8 @@ class ProcReader:
             stream.buffer.write(to_write)
 
 
+# How much a _DescriptorRelay reads from its pipe at once, which is also the most producer output it holds in memory. A relay
+# test sizes its payload from this, so that its producer still blocks if the value changes.
 _RELAY_CHUNK_SIZE = 65536
 
 
