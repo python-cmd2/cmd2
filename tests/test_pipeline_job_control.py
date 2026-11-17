@@ -18,6 +18,15 @@ import pytest
 
 pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX job control")
 
+# Slow builders, such as emulated or heavily loaded ones, can take longer than these tests allow. Set
+# CMD2_TEST_TIMEOUT_SCALE to multiply how long a test waits before giving up. Pauses that check nothing happens are not scaled.
+TIMEOUT_SCALE = float(os.environ.get("CMD2_TEST_TIMEOUT_SCALE", "1"))
+
+
+def timeout(seconds: float) -> float:
+    """Scale a limit on how long a test waits for something to happen."""
+    return seconds * TIMEOUT_SCALE
+
 
 def describe_processes(root: int, master: int) -> str:
     """Report the terminal's foreground group and every descendant of root, for a timeout.
@@ -156,7 +165,7 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
         "        os.write(2, b'BUSY_READY\\n')\n"
         "        self.stdout.write('x' * 262144)\n"
         "        self.stdout.flush()\n"
-        "        time.sleep(30)\n"
+        f"        time.sleep({timeout(30)})\n"
         "    def do_ask(self, statement):\n"
         "        self.poutput(self.read_input('INPUT> '))\n"
         "    def do_direct(self, statement):\n"
@@ -233,7 +242,7 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
 
     def wait_until(predicate):
         nonlocal transcript
-        deadline = time.monotonic() + 10
+        deadline = time.monotonic() + timeout(10)
         while time.monotonic() < deadline:
             if select.select([master], [], [], 0.05)[0]:
                 data = decoder.decode(os.read(master, 65536))
@@ -307,7 +316,7 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
                 "os.write(2, b'BUSY_READY\\n')\n"
                 "sys.stdout.write('x' * 262144)\n"
                 "sys.stdout.flush()\n"
-                "time.sleep(30)\n",
+                f"time.sleep({timeout(30)})\n",
                 encoding="utf-8",
             )
             command = f"shell {shlex.quote(sys.executable)} {shlex.quote(str(busy_script))}"
@@ -441,7 +450,7 @@ def test_pipeline_stops_with_cmd2_and_returns_terminal(
         # terminal teardown blocked.
         os.close(master)
         process.kill()
-        process.wait(timeout=5)
+        process.wait(timeout=timeout(5))
 
 
 def test_pipeline_from_worker_thread_stays_isolated(tmp_path) -> None:
@@ -486,7 +495,7 @@ def test_pipeline_from_worker_thread_stays_isolated(tmp_path) -> None:
 
     def wait_until(predicate):
         nonlocal transcript
-        deadline = time.monotonic() + 10
+        deadline = time.monotonic() + timeout(10)
         while time.monotonic() < deadline:
             if select.select([master], [], [], 0.05)[0]:
                 transcript += decoder.decode(os.read(master, 65536))
@@ -504,7 +513,7 @@ def test_pipeline_from_worker_thread_stays_isolated(tmp_path) -> None:
     finally:
         os.close(master)
         process.kill()
-        process.wait(timeout=5)
+        process.wait(timeout=timeout(5))
 
 
 @pytest.mark.parametrize("parent_delay", [False, True])
@@ -556,7 +565,7 @@ def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path, parent_delay
         "def held_startup_wait(reader, timeout=None):\n"
         "    utils.ProcReader._wait_for_exit = startup_wait\n"
         f"    outcome = pathlib.Path({str(outcome)!r})\n"
-        "    deadline = time.monotonic() + 5\n"
+        f"    deadline = time.monotonic() + {timeout(5)}\n"
         "    while time.monotonic() < deadline and not (outcome.exists() and outcome.read_text()):\n"
         "        time.sleep(0.01)\n"
         "    return startup_wait(reader, timeout)\n"
@@ -588,7 +597,7 @@ def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path, parent_delay
 
     def wait_until(predicate):
         nonlocal transcript
-        deadline = time.monotonic() + 10
+        deadline = time.monotonic() + timeout(10)
         while time.monotonic() < deadline:
             if select.select([master], [], [], 0.05)[0]:
                 data = decoder.decode(os.read(master, 65536))
@@ -618,7 +627,7 @@ def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path, parent_delay
     finally:
         os.close(master)
         process.kill()
-        process.wait(timeout=5)
+        process.wait(timeout=timeout(5))
 
 
 @pytest.mark.parametrize("producer", ["command", "shell"])
@@ -671,7 +680,7 @@ def test_pipeline_children_inherit_an_ordinary_signal_mask(tmp_path, producer) -
 
     def wait_until(predicate):
         nonlocal transcript
-        deadline = time.monotonic() + 10
+        deadline = time.monotonic() + timeout(10)
         while time.monotonic() < deadline:
             if select.select([master], [], [], 0.05)[0]:
                 data = decoder.decode(os.read(master, 65536))
@@ -697,7 +706,7 @@ def test_pipeline_children_inherit_an_ordinary_signal_mask(tmp_path, producer) -
     finally:
         os.close(master)
         process.kill()
-        process.wait(timeout=5)
+        process.wait(timeout=timeout(5))
 
 
 @pytest.mark.parametrize("suspend", [False, True])
@@ -749,7 +758,7 @@ def test_shell_producer_keeps_the_terminal_after_its_consumer_exits(tmp_path, su
 
     def wait_until(predicate):
         nonlocal transcript
-        deadline = time.monotonic() + 10
+        deadline = time.monotonic() + timeout(10)
         while time.monotonic() < deadline:
             if select.select([master], [], [], 0.05)[0]:
                 data = decoder.decode(os.read(master, 65536))
@@ -787,7 +796,7 @@ def test_shell_producer_keeps_the_terminal_after_its_consumer_exits(tmp_path, su
     finally:
         os.close(master)
         process.kill()
-        process.wait(timeout=5)
+        process.wait(timeout=timeout(5))
 
 
 @pytest.mark.parametrize("producer", ["subprocess", "script_shell", "nested_pipe"])
@@ -851,7 +860,7 @@ def test_pager_gets_the_terminal_for_output_written_to_the_descriptor(tmp_path, 
 
     def wait_until(predicate):
         nonlocal transcript
-        deadline = time.monotonic() + 10
+        deadline = time.monotonic() + timeout(10)
         while time.monotonic() < deadline:
             if select.select([master], [], [], 0.05)[0]:
                 data = decoder.decode(os.read(master, 65536))
@@ -882,7 +891,7 @@ def test_pager_gets_the_terminal_for_output_written_to_the_descriptor(tmp_path, 
     finally:
         os.close(master)
         process.kill()
-        process.wait(timeout=5)
+        process.wait(timeout=timeout(5))
 
 
 def test_ctrl_z_between_pipe_writes_stops_the_whole_pipeline(tmp_path) -> None:
@@ -932,7 +941,7 @@ def test_ctrl_z_between_pipe_writes_stops_the_whole_pipeline(tmp_path) -> None:
 
     def wait_until(predicate):
         nonlocal transcript
-        deadline = time.monotonic() + 10
+        deadline = time.monotonic() + timeout(10)
         while time.monotonic() < deadline:
             if select.select([master], [], [], 0.05)[0]:
                 data = decoder.decode(os.read(master, 65536))
@@ -975,7 +984,7 @@ def test_ctrl_z_between_pipe_writes_stops_the_whole_pipeline(tmp_path) -> None:
     finally:
         os.close(master)
         process.kill()
-        process.wait(timeout=5)
+        process.wait(timeout=timeout(5))
 
 
 def test_pipeline_continued_in_the_background_leaves_the_terminal_to_the_shell(tmp_path) -> None:
@@ -1032,7 +1041,7 @@ def test_pipeline_continued_in_the_background_leaves_the_terminal_to_the_shell(t
 
     def wait_until(predicate):
         nonlocal transcript
-        deadline = time.monotonic() + 10
+        deadline = time.monotonic() + timeout(10)
         while time.monotonic() < deadline:
             if select.select([master], [], [], 0.05)[0]:
                 data = decoder.decode(os.read(master, 65536))
@@ -1080,7 +1089,7 @@ def test_pipeline_continued_in_the_background_leaves_the_terminal_to_the_shell(t
     finally:
         os.close(master)
         process.kill()
-        process.wait(timeout=5)
+        process.wait(timeout=timeout(5))
 
 
 def test_pipeline_when_the_application_ignores_sigchld(tmp_path) -> None:
@@ -1122,7 +1131,7 @@ def test_pipeline_when_the_application_ignores_sigchld(tmp_path) -> None:
 
     def wait_until(predicate):
         nonlocal transcript
-        deadline = time.monotonic() + 10
+        deadline = time.monotonic() + timeout(10)
         while time.monotonic() < deadline:
             if select.select([master], [], [], 0.05)[0]:
                 data = decoder.decode(os.read(master, 65536))
@@ -1155,7 +1164,7 @@ def test_pipeline_when_the_application_ignores_sigchld(tmp_path) -> None:
     finally:
         os.close(master)
         process.kill()
-        process.wait(timeout=5)
+        process.wait(timeout=timeout(5))
 
 
 def test_ctrl_c_ending_the_pager_does_not_interrupt_protected_code(tmp_path) -> None:
@@ -1204,7 +1213,7 @@ def test_ctrl_c_ending_the_pager_does_not_interrupt_protected_code(tmp_path) -> 
 
     def wait_until(predicate):
         nonlocal transcript
-        deadline = time.monotonic() + 10
+        deadline = time.monotonic() + timeout(10)
         while time.monotonic() < deadline:
             if select.select([master], [], [], 0.05)[0]:
                 data = decoder.decode(os.read(master, 65536))
@@ -1234,7 +1243,7 @@ def test_ctrl_c_ending_the_pager_does_not_interrupt_protected_code(tmp_path) -> 
     finally:
         os.close(master)
         process.kill()
-        process.wait(timeout=5)
+        process.wait(timeout=timeout(5))
 
 
 @pytest.mark.parametrize("launcher", ["plain", "exec"])
@@ -1284,7 +1293,7 @@ def test_ctrl_z_with_a_shell_producer_in_the_pipeline(tmp_path, launcher, consum
 
     def wait_until(predicate):
         nonlocal transcript
-        deadline = time.monotonic() + 10
+        deadline = time.monotonic() + timeout(10)
         while time.monotonic() < deadline:
             if select.select([master], [], [], 0.05)[0]:
                 data = decoder.decode(os.read(master, 65536))
@@ -1321,7 +1330,7 @@ def test_ctrl_z_with_a_shell_producer_in_the_pipeline(tmp_path, launcher, consum
     finally:
         os.close(master)
         process.kill()
-        process.wait(timeout=5)
+        process.wait(timeout=timeout(5))
 
 
 @pytest.mark.parametrize("launcher", ["plain", "exec"])
@@ -1383,7 +1392,7 @@ def test_command_reads_the_terminal_after_a_subprocess_wrote_to_a_slow_pipe(tmp_
 
     def wait_until(predicate):
         nonlocal transcript
-        deadline = time.monotonic() + 15
+        deadline = time.monotonic() + timeout(15)
         while time.monotonic() < deadline:
             if select.select([master], [], [], 0.05)[0]:
                 data = decoder.decode(os.read(master, 65536))
@@ -1420,4 +1429,4 @@ def test_command_reads_the_terminal_after_a_subprocess_wrote_to_a_slow_pipe(tmp_
                     os.kill(int(pid_file.read_text()), signal.SIGKILL)
         os.close(master)
         process.kill()
-        process.wait(timeout=5)
+        process.wait(timeout=timeout(5))
