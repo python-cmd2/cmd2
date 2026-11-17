@@ -134,9 +134,10 @@ uv run examples/textual_tty_toolbar.py
 Try `slow`, `burst 2000 1`, or resizing the window while a command runs. Pass `--cmd2-only` to see
 what `cmd2` does without Textual, where the toolbar disappears for as long as a command runs.
 
-Here the `cmd2` application doesn't draw the toolbar at all. It passes `enable_bottom_toolbar=False`
-to [cmd2.Cmd.__init__][] when it is running inside the Textual application, and sends what
-`get_bottom_toolbar()` returns to the Textual application, which shows it in a widget of its own:
+Here the `cmd2` application doesn't draw the toolbar at all. It passes
+`bottom_toolbar_mode=cmd2.ToolbarMode.OFF` to [cmd2.Cmd.__init__][] when it is running inside the
+Textual application, and sends what `get_bottom_toolbar()` returns to the Textual application, which
+shows it in a widget of its own:
 
 ```py
 def compose(self) -> ComposeResult:

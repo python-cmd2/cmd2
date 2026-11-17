@@ -177,8 +177,8 @@ class ToolbarApp(cmd2.Cmd):
         refresh_interval = 0.5
         super().__init__(
             allow_cli_args=False,
-            # Inside the Textual application, don't have prompt-toolkit draw a second toolbar in the terminal pane
-            enable_bottom_toolbar=toolbar_socket is None,
+            # Inside the Textual application, don't have cmd2 draw a second toolbar in the terminal pane
+            bottom_toolbar_mode=cmd2.ToolbarMode.AUTO if toolbar_socket is None else cmd2.ToolbarMode.OFF,
             refresh_interval=refresh_interval,
         )
         self.prompt = "toolbar-demo> "
