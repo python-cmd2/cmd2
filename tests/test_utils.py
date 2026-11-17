@@ -16,6 +16,8 @@ import pytest
 
 import cmd2.utils as cu
 
+from .conftest import make_exes
+
 HELLO_WORLD = "Hello, world!"
 
 
@@ -1806,6 +1808,58 @@ def test_find_editor_not_specified() -> None:
     assert editor is None
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="creating symbolic links requires elevated privileges on Windows")
+def test_find_editor_symlinked_directory(tmp_path, monkeypatch) -> None:
+    real_dir = tmp_path / "real_bin"
+    real_dir.mkdir()
+    make_exes(real_dir, ["nano"])
+    link_dir = tmp_path / "link_bin"
+    link_dir.symlink_to(real_dir, target_is_directory=True)
+
+    # A PATH entry which is a symbolic link to a directory is searched
+    monkeypatch.delenv("EDITOR", raising=False)
+    monkeypatch.setenv("PATH", str(link_dir))
+    assert cu.find_editor() == "nano"
+
+
+def test_find_editor_prefers_earlier_editor(tmp_path, monkeypatch) -> None:
+    # The editors are tried in order of preference, regardless of which PATH directory they are in
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+    first_dir.mkdir()
+    second_dir.mkdir()
+    if sys.platform == "win32":
+        make_exes(first_dir, ["notepad.exe"])
+        make_exes(second_dir, ["edit.exe"])
+        expected = "edit"
+    else:
+        make_exes(first_dir, ["nano"])
+        make_exes(second_dir, ["emacs"])
+        expected = "emacs"
+
+    monkeypatch.delenv("EDITOR", raising=False)
+    monkeypatch.setenv("PATH", os.pathsep.join([str(first_dir), str(second_dir)]))
+    assert cu.find_editor() == expected
+
+
+def test_find_editor_path_not_set(tmp_path, monkeypatch) -> None:
+    # Nothing is searched when there is no PATH, not even a default one
+    monkeypatch.delenv("EDITOR", raising=False)
+    monkeypatch.delenv("PATH", raising=False)
+    assert cu.find_editor() is None
+
+
+def test_find_editor_ignores_cwd(tmp_path, monkeypatch) -> None:
+    # An editor in the current working directory isn't found unless that directory is in PATH
+    empty_dir = tmp_path / "empty"
+    empty_dir.mkdir()
+    make_exes(tmp_path, ["edit.exe", "edit.bat", "edit", "notepad.exe"] if sys.platform == "win32" else ["vim", "nano"])
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("EDITOR", raising=False)
+    monkeypatch.setenv("PATH", str(empty_dir))
+    assert cu.find_editor() is None
+
+
 def test_similarity() -> None:
     suggested_command = cu.suggest_similar("comand", ["command", "UNRELATED", "NOT_SIMILAR"])
     assert suggested_command == "command"
@@ -1981,3 +2035,149 @@ def test_proc_reader_relays_producer_stop(resolved, foreground_group) -> None:
         foreground.assert_called_once_with(10, pipeline._original_group)
     else:
         foreground.assert_not_called()
+
+
+@pytest.mark.parametrize("prefix", ["[ab]", "[!ab]"])
+def test_get_exes_in_path_literal_brackets_in_name(tmp_path, monkeypatch, prefix: str) -> None:
+    make_exes(tmp_path, ("[ab]-tool", "[!ab]-tool", "a-tool", "c-tool"))
+    monkeypatch.setenv("PATH", str(tmp_path))
+
+    assert cu.get_exes_in_path(prefix) == [f"{prefix}-tool"]
+
+
+def test_get_exes_in_path_literal_brackets_in_directory(tmp_path, monkeypatch) -> None:
+    bin_dir = tmp_path / "bin[2026]"
+    bin_dir.mkdir()
+    make_exes(bin_dir, ("mytool", "other"))
+    monkeypatch.setenv("PATH", str(bin_dir))
+
+    assert sorted(cu.get_exes_in_path("")) == ["mytool", "other"]
+    assert cu.get_exes_in_path("my") == ["mytool"]
+    assert cu.get_exes_in_path("my*") == []
+    assert cu.get_exes_in_path("my?") == []
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="'*' and '?' are not legal in Windows file names")
+@pytest.mark.parametrize("prefix", ["my*", "my?"])
+def test_get_exes_in_path_literal_wildcards_in_name(tmp_path, monkeypatch, prefix: str) -> None:
+    make_exes(tmp_path, ("my*tool", "my?tool", "mytool", "myxtool"))
+    monkeypatch.setenv("PATH", str(tmp_path))
+
+    # A wildcard is matched as a literal character instead of being expanded
+    assert cu.get_exes_in_path(prefix) == [f"{prefix}tool"]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="'*' and '?' are not legal in Windows file names")
+@pytest.mark.parametrize("dir_name", ["bin*", "bin?"])
+def test_get_exes_in_path_literal_wildcards_in_directory(tmp_path, monkeypatch, dir_name: str) -> None:
+    # The wildcard in the PATH directory would also match this directory if it were expanded
+    for cur_dir, exe_name in ((dir_name, "mytool"), ("bin2", "decoy")):
+        bin_dir = tmp_path / cur_dir
+        bin_dir.mkdir()
+        make_exes(bin_dir, [exe_name])
+    monkeypatch.setenv("PATH", str(tmp_path / dir_name))
+
+    assert cu.get_exes_in_path("") == ["mytool"]
+    assert cu.get_exes_in_path("my") == ["mytool"]
+    assert cu.get_exes_in_path("de") == []
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="creating symbolic links requires elevated privileges on Windows")
+def test_get_exes_in_path_symlinked_directory(tmp_path, monkeypatch) -> None:
+    real_dir = tmp_path / "real_bin"
+    real_dir.mkdir()
+    make_exes(real_dir, ["mytool"])
+    link_dir = tmp_path / "link_bin"
+    link_dir.symlink_to(real_dir, target_is_directory=True)
+
+    # A PATH entry which is a symbolic link to a directory is searched
+    monkeypatch.setenv("PATH", str(link_dir))
+    assert cu.get_exes_in_path("my") == ["mytool"]
+
+    # An executable reachable through more than one PATH entry is only returned once
+    monkeypatch.setenv("PATH", os.pathsep.join([str(real_dir), str(link_dir), str(real_dir)]))
+    assert cu.get_exes_in_path("my") == ["mytool"]
+
+
+def test_get_path_dirs_does_not_resolve_entries(monkeypatch) -> None:
+    # Resolving an entry can raise an exception, such as for one on a network share which can't be reached
+    # on Windows. Since find_editor() runs when cmd2 is imported, that would keep cmd2 from being imported.
+    monkeypatch.setenv("PATH", os.pathsep.join(["/unreachable/bin", "relative_bin", "/unreachable/bin"]))
+    with mock.patch("os.path.realpath", side_effect=OSError("network path was not found")):
+        assert cu._get_path_dirs() == {"/unreachable/bin", "relative_bin"}
+        assert cu.get_exes_in_path("my") == []
+        monkeypatch.delenv("EDITOR", raising=False)
+        assert cu.find_editor() is None
+
+    monkeypatch.delenv("PATH")
+    assert cu._get_path_dirs() == set()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows does not allow the current working directory to be removed")
+@pytest.mark.parametrize("unusable_entry", ["", "relative_bin"])
+def test_get_exes_in_path_removed_cwd(tmp_path, monkeypatch, unusable_entry: str) -> None:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    make_exes(bin_dir, ["mytool"])
+    cwd = tmp_path / "cwd"
+    cwd.mkdir()
+    monkeypatch.chdir(cwd)
+    cwd.rmdir()
+
+    # An empty or relative PATH entry can't be searched, but that doesn't stop the others from being searched
+    monkeypatch.setenv("PATH", os.pathsep.join([str(bin_dir), unusable_entry]))
+    assert cu.get_exes_in_path("my") == ["mytool"]
+
+
+@pytest.mark.parametrize(
+    ("platform", "matches", "expected"),
+    [
+        # Nothing special
+        ("linux", ["file.txt", "dir/other-file_2.txt", "~/caf\u00e9.txt", "a]b", "a=b", "c#.txt"], ""),
+        ("win32", ["file.txt", "C:\\dir\\other-file_2.txt", "~\\file.txt", "c#.txt", "cost$5.txt"], ""),
+        # One special match is enough
+        ("linux", ["file.txt", "my file.txt"], '"'),
+        ("win32", ["file.txt", "my file.txt"], '"'),
+        # Glob patterns
+        ("linux", ["my*file.txt"], '"'),
+        ("linux", ["my?file.txt"], '"'),
+        ("linux", ["notes[2026].txt"], '"'),
+        # A '[' is a bad pattern to some shells even without a ']'
+        ("linux", ["g["], '"'),
+        # These are only special at the start
+        ("linux", ["#autosave#"], '"'),
+        ("linux", ["=equals"], '"'),
+        # Shell syntax
+        ("linux", ["a&b"], '"'),
+        ("linux", ["a;b"], '"'),
+        ("linux", ["a|b"], '"'),
+        ("linux", ["a<b"], '"'),
+        ("linux", ["a>b"], '"'),
+        ("linux", ["a(b)"], '"'),
+        ("linux", ["{a,b}"], '"'),
+        # Quote with whichever quote character the matches don't contain
+        ("linux", ["it's"], '"'),
+        ("linux", ['say"hi"'], "'"),
+        # Single quotes are needed for what a shell expands within double quotes
+        ("linux", ["cost$5"], "'"),
+        ("linux", ["back`tick"], "'"),
+        ("linux", ["back\\slash"], "'"),
+        ("linux", ["cost$5", "it's"], '"'),
+        # cmd.exe only understands double quotes, and it has different special characters
+        ("win32", ["a&b.txt"], '"'),
+        ("win32", ["a^b.txt"], '"'),
+        ("win32", ["file(1).txt"], '"'),
+        ("win32", ["notes[2026].txt"], '"'),
+        ("win32", ["{guid}"], '"'),
+        ("win32", ["a,b.txt"], '"'),
+        ("win32", ["a=b.txt"], '"'),
+        ("win32", ["a;b.txt"], '"'),
+        ("win32", ["a+b.txt"], '"'),
+        ("win32", ["wow!.txt"], '"'),
+        ("win32", ["back`tick.txt"], '"'),
+        ("win32", ["it's.txt"], '"'),
+    ],
+)
+def test_shell_quote_char(monkeypatch, platform: str, matches: list[str], expected: str) -> None:
+    monkeypatch.setattr(sys, "platform", platform)
+    assert cu._shell_quote_char(matches) == expected

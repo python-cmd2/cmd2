@@ -33,6 +33,52 @@ line of code similar to the following to your class which inherits from `cmd2.Cm
 complete_bar = functools.partialmethod(cmd2.Cmd.path_complete, path_filter=os.path.isdir)
 ```
 
+## Special Characters in Paths
+
+Path and shell command completion match the text being completed literally. Glob characters such as
+`*`, `?`, and `[` are never expanded, so a file named `my*file.txt` or `notes[2026].txt` completes
+like any other. The one exception is a leading `~`, which refers to a user's home directory as it
+does in a shell.
+
+Completion results are literal names too. `cmd2` does not escape them, because most commands use a
+path directly in Python, where the literal name is exactly what is wanted. The only thing `cmd2`
+adds is quotes around a match which contains a space, so it stays a single argument.
+
+### Paths Passed to a Shell
+
+There are two places where `cmd2` knows that what is being completed will be passed to a shell: the
+arguments of the [shell](./builtin_commands.md#shell) command, including its `!` shortcut, and
+everything after a [pipe](./redirection.md). There `cmd2` also adds quotes when a match has a
+character which is special to that shell, so the shell does not interpret it. For example,
+completing `!ls my*` gives:
+
+```text
+(Cmd) !ls "my*file.txt"
+```
+
+On POSIX systems the characters which get a match quoted are a space, a quote character, `*`, `?`,
+`[`, `{`, `}`, `(`, `)`, `<`, `>`, `|`, `&`, `;`, `$`, a backtick, a backslash, and a leading `#` or
+`=`. Single quotes are used when a match has a `$`, a backtick, a backslash, or a double quote in
+it, since a shell still interprets those within double quotes. On Windows the characters are the
+ones `cmd.exe` documents as requiring quotes, other than `~`, and the quotes are always double
+quotes.
+
+There are limits to this:
+
+- One pair of quotes goes around the whole argument, and it is chosen before you pick a match. So
+  when several matches are offered and only one of them needs quotes, they all get them. An
+  executable named `[` is common, so completing a shell command which could match it quotes every
+  match.
+- For the same reason, one quote character is used for all the matches being offered. If any of them
+  has a single quote in it, double quotes are used, and a `$`, a backtick, or a backslash in any of
+  the matches is then still interpreted by a shell.
+- A `%` in a match is still interpreted by `cmd.exe` on Windows.
+- A [macro](./shortcuts_aliases_macros.md#macros) which runs a shell command is not covered. Its
+  arguments are completed as paths, but they are only quoted for a space. An alias for the `shell`
+  command is covered.
+- Your own commands are not covered, even if they pass their arguments to a shell. Quote or escape
+  those arguments in the command.
+
 ## Included Tab Completion Functions
 
 [cmd2.Cmd][] provides the following tab completion functions

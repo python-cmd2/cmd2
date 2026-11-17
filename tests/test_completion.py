@@ -24,6 +24,7 @@ from cmd2 import (
 )
 
 from .conftest import (
+    make_exes,
     normalize,
     run_cmd,
 )
@@ -377,7 +378,7 @@ def test_shell_command_completion_shortcut(cmd_app) -> None:
     assert [item.display for item in completions] == [item.display for item in expected_completions]
 
 
-def test_shell_command_completion_does_not_match_wildcards(cmd_app) -> None:
+def test_shell_command_completion_does_not_expand_wildcards(cmd_app) -> None:
     if sys.platform == "win32":
         text = "c*"
     else:
@@ -387,8 +388,59 @@ def test_shell_command_completion_does_not_match_wildcards(cmd_app) -> None:
     endidx = len(line)
     begidx = endidx - len(text)
 
+    # A wildcard is matched as a literal character, so this doesn't complete to commands like calc.exe or egrep
     completions = cmd_app.complete(text, line, begidx, endidx)
     assert not completions
+
+
+@pytest.mark.parametrize("prefix", ["[ab]", "[!ab]"])
+def test_shell_command_completion_literal_brackets_in_name(cmd_app, tmp_path, monkeypatch, prefix) -> None:
+    make_exes(tmp_path, ("[ab]-tool", "[!ab]-tool", "a-tool", "c-tool"))
+    monkeypatch.setenv("PATH", str(tmp_path))
+    line = f"shell {prefix}"
+
+    completions = cmd_app.shell_cmd_complete(prefix, line, len(line) - len(prefix), len(line))
+
+    assert completions.to_strings() == (f"{prefix}-tool",)
+
+
+def test_shell_command_completion_literal_brackets_in_path_directory(cmd_app, tmp_path, monkeypatch) -> None:
+    bin_dir = tmp_path / "bin[2026]"
+    bin_dir.mkdir()
+    make_exes(bin_dir, ("mytool", "other"))
+    monkeypatch.setenv("PATH", str(bin_dir))
+    text = "my"
+    line = f"shell {text}"
+
+    completions = cmd_app.shell_cmd_complete(text, line, len(line) - len(text), len(line))
+
+    assert completions.to_strings() == ("mytool",)
+
+
+def test_shell_command_completion_literal_brackets_in_given_path(cmd_app, tmp_path, monkeypatch) -> None:
+    # Search text containing a path separator is completed from that path instead of from PATH
+    bin_dir = tmp_path / "bin[2026]"
+    bin_dir.mkdir()
+    make_exes(bin_dir, ("[ab]-tool", "a-tool"))
+    monkeypatch.setenv("PATH", "")
+    text = str(bin_dir / "[ab]")
+    line = f"shell {text}"
+
+    completions = cmd_app.shell_cmd_complete(text, line, len(line) - len(text), len(line))
+
+    assert completions.to_strings() == (str(bin_dir / "[ab]-tool"),)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="'*' and '?' are not legal in Windows file names")
+@pytest.mark.parametrize("prefix", ["my*", "my?"])
+def test_shell_command_completion_literal_wildcards_in_name(cmd_app, tmp_path, monkeypatch, prefix) -> None:
+    make_exes(tmp_path, ("my*tool", "my?tool", "mytool", "myxtool"))
+    monkeypatch.setenv("PATH", str(tmp_path))
+    line = f"shell {prefix}"
+
+    completions = cmd_app.shell_cmd_complete(prefix, line, len(line) - len(prefix), len(line))
+
+    assert completions.to_strings() == (f"{prefix}tool",)
 
 
 def test_shell_command_complete(cmd_app) -> None:
@@ -554,7 +606,7 @@ def test_path_completion_cwd_is_root_dir(cmd_app) -> None:
         os.chdir(cwd)
 
 
-def test_path_completion_does_not_match_wildcards(cmd_app, request) -> None:
+def test_path_completion_does_not_expand_wildcards(cmd_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, "c*")
@@ -563,9 +615,38 @@ def test_path_completion_does_not_match_wildcards(cmd_app, request) -> None:
     endidx = len(line)
     begidx = endidx - len(text)
 
-    # Currently path completion doesn't accept wildcards, so will always return empty results
+    # A wildcard is matched as a literal character, so this doesn't complete to files like conftest.py
     completions = cmd_app.path_complete(text, line, begidx, endidx)
     assert not completions
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="'*' and '?' are not legal in Windows file names")
+@pytest.mark.parametrize("prefix", ["my*", "my?"])
+def test_path_completion_literal_wildcards_in_filename(cmd_app, tmp_path, monkeypatch, prefix) -> None:
+    for name in ("my*file.txt", "my?file.txt", "myfile.txt", "myxfile.txt"):
+        (tmp_path / name).touch()
+    monkeypatch.chdir(tmp_path)
+    line = f"shell cat {prefix}"
+
+    completions = cmd_app.path_complete(prefix, line, len(line) - len(prefix), len(line))
+
+    assert completions.to_strings() == (f"{prefix}file.txt",)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="'*' and '?' are not legal in Windows file names")
+@pytest.mark.parametrize("dir_name", ["project*", "project?"])
+def test_path_completion_literal_wildcards_in_directory(cmd_app, tmp_path, monkeypatch, dir_name) -> None:
+    # The wildcard in the directory name would also match this directory if it were expanded
+    for cur_dir, file_name in ((dir_name, "target.txt"), ("project2", "tardy.txt")):
+        (tmp_path / cur_dir).mkdir()
+        (tmp_path / cur_dir / file_name).touch()
+    monkeypatch.chdir(tmp_path)
+    text = os.path.join(dir_name, "tar")
+    line = f"shell cat {text}"
+
+    completions = cmd_app.path_complete(text, line, len(line) - len(text), len(line))
+
+    assert completions.to_strings() == (os.path.join(dir_name, "target.txt"),)
 
 
 def test_path_completion_complete_user(cmd_app) -> None:
@@ -829,6 +910,204 @@ def test_add_opening_quote_nothing_added(cmd_app) -> None:
     completions = cmd_app.complete(text, line, begidx, endidx)
     assert not completions._add_opening_quote
     assert not completions._quote_char
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="some of these are illegal in Windows file names or not special there")
+@pytest.mark.parametrize(
+    ("name", "text", "quote_char"),
+    [
+        # Glob characters
+        ("[ab].txt", "[ab", '"'),
+        ("my*file.txt", "my*", '"'),
+        ("my?file.txt", "my", '"'),
+        # Characters which are shell syntax
+        ("file(1).txt", "fi", '"'),
+        ("a&b.txt", "a", '"'),
+        ("semi;colon.txt", "se", '"'),
+        ("{x,y}.txt", "", '"'),
+        ("#autosave#", "", '"'),
+        # A quote character is quoted with the other one
+        ("it's.txt", "it", '"'),
+        ('say"hi".txt', "say", "'"),
+        # Characters which a shell still expands within double quotes
+        ("cost$5.txt", "co", "'"),
+        ("back`tick.txt", "ba", "'"),
+        ("back\\slash.txt", "ba", "'"),
+        ("cost[$5].txt", "", "'"),
+    ],
+)
+def test_add_opening_quote_shell_special_path(cmd_app, tmp_path, monkeypatch, name, text, quote_char) -> None:
+    (tmp_path / name).touch()
+    monkeypatch.chdir(tmp_path)
+    line = f"shell cat {text}"
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # The path has a character which is special to a shell, so quote it
+    completions = cmd_app.complete(text, line, begidx, endidx)
+    assert completions.to_strings() == (name,)
+    assert completions._add_opening_quote
+    assert completions._quote_char == quote_char
+
+
+def test_add_opening_quote_shell_special_command(cmd_app, tmp_path, monkeypatch) -> None:
+    make_exes(tmp_path, ["my&tool"])
+    monkeypatch.setenv("PATH", str(tmp_path))
+    text = "my"
+    line = f"shell {text}"
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # Shell commands completed from PATH are quoted like paths are
+    completions = cmd_app.complete(text, line, begidx, endidx)
+    assert completions.to_strings() == ("my&tool",)
+    assert completions._add_opening_quote
+    assert completions._quote_char == '"'
+
+
+def test_add_opening_quote_unpaired_bracket(cmd_app, tmp_path, monkeypatch) -> None:
+    # A '[' which isn't followed by a ']' is still a bad pattern to shells like zsh
+    make_exes(tmp_path, ["g[", "git"])
+    monkeypatch.setenv("PATH", str(tmp_path))
+    text = "g"
+    line = f"shell {text}"
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    completions = cmd_app.complete(text, line, begidx, endidx)
+    assert sorted(completions.to_strings()) == ["g[", "git"]
+    assert completions._add_opening_quote
+    assert completions._quote_char == '"'
+
+
+@pytest.mark.parametrize(
+    ("line_start", "quoted"),
+    [
+        # Arguments to the shell command and everything after a pipe are passed to a shell
+        ("shell cat ", True),
+        ("!cat ", True),
+        ("help | cat ", True),
+        ("help | cat -n ", True),
+        ("help | cat > ", True),
+        # Nothing else is, so these are only quoted if a match has a space
+        ("edit ", False),
+        ("run_script ", False),
+        ("help > ", False),
+        ("help >> ", False),
+        ("raw_path ", False),
+        ("help > out.txt | cat ", False),
+    ],
+)
+def test_add_opening_quote_only_for_shell(tmp_path, monkeypatch, line_start, quoted) -> None:
+    class RawPathApp(cmd2.Cmd):
+        """Application with a command that receives its argument exactly as it was typed."""
+
+        def do_raw_path(self, line: cmd2.Statement) -> None:
+            self.poutput(line)
+
+        complete_raw_path = cmd2.Cmd.path_complete
+
+    (tmp_path / "notes[2026].txt").touch()
+    monkeypatch.chdir(tmp_path)
+    app = RawPathApp()
+    text = "no"
+    line = line_start + text
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    completions = app.complete(text, line, begidx, endidx)
+    assert completions.to_strings() == ("notes[2026].txt",)
+    assert completions._add_opening_quote == quoted
+    assert completions._quote_char == ('"' if quoted else "")
+
+
+def test_add_opening_quote_shell_command_after_pipe(cmd_app, tmp_path, monkeypatch) -> None:
+    make_exes(tmp_path, ["my&tool"])
+    monkeypatch.setenv("PATH", str(tmp_path))
+    text = "my"
+    line = f"help | {text}"
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    completions = cmd_app.complete(text, line, begidx, endidx)
+    assert completions.to_strings() == ("my&tool",)
+    assert completions._add_opening_quote
+    assert completions._quote_char == '"'
+
+
+def test_add_opening_quote_space_outside_shell(cmd_app, tmp_path, monkeypatch) -> None:
+    (tmp_path / "my notes.txt").touch()
+    monkeypatch.chdir(tmp_path)
+    text = "my"
+    line = f"edit {text}"
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # A match with a space is quoted no matter which command it is for
+    completions = cmd_app.complete(text, line, begidx, endidx)
+    assert completions.to_strings() == ("my notes.txt",)
+    assert completions._add_opening_quote
+    assert completions._quote_char == '"'
+
+
+def test_quote_for_shell_ignored_in_comparison() -> None:
+    # This is an internal detail which must not make otherwise equal results differ
+    assert Completions.from_values(["a"]) == dataclasses.replace(Completions.from_values(["a"]), _quote_for_shell=True)
+
+
+class GlobChoicesApp(cmd2.Cmd):
+    """Application with completion results containing glob characters which are not paths."""
+
+    choices_parser = cmd2.Cmd2ArgumentParser()
+    choices_parser.add_argument("item", choices=["all", "*", "pkg[extra]"])
+
+    @cmd2.with_argparser(choices_parser, preserve_quotes=True)
+    def do_pick(self, args: argparse.Namespace) -> None:
+        self.poutput(f"picked {args.item}")
+
+
+@pytest.mark.parametrize(("text", "expected"), [("pk", "pkg[extra]"), ("*", "*")])
+def test_add_opening_quote_not_added_to_non_path(text, expected) -> None:
+    app = GlobChoicesApp()
+    line = f"pick {text}"
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # Only what is passed to a shell is quoted for one. Quoting this would break a command which preserves quotes.
+    completions = app.complete(text, line, begidx, endidx)
+    assert completions.to_strings() == (expected,)
+    assert not completions._add_opening_quote
+
+    out, _err = run_cmd(app, f"pick {expected}")
+    assert out == [f"picked {expected}"]
+
+
+def test_add_opening_quote_not_added_to_command_name(cmd_app) -> None:
+    # An alias name can have a glob character in it
+    run_cmd(cmd_app, "alias create zz* help")
+    text = "zz"
+    line = text
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    completions = cmd_app.complete(text, line, begidx, endidx)
+    assert completions.to_strings() == ("zz*",)
+    assert not completions._add_opening_quote
+
+
+def test_add_opening_quote_glob_character_already_quoted(cmd_app, tmp_path, monkeypatch) -> None:
+    (tmp_path / "[ab].txt").touch()
+    monkeypatch.chdir(tmp_path)
+    text = "[ab"
+    line = f"shell cat '{text}"
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # The search text already has an opening quote, so keep using it
+    completions = cmd_app.complete(text, line, begidx, endidx)
+    assert completions.to_strings() == ("[ab].txt",)
+    assert not completions._add_opening_quote
+    assert completions._quote_char == "'"
 
 
 def test_word_break_in_quote(cmd_app) -> None:
@@ -1112,10 +1391,10 @@ def test_redirect_complete(cmd_app, monkeypatch, line, comp_type) -> None:
     # Test both cases of allow_redirection
     cmd_app.allow_redirection = True
     for _ in range(2):
-        shell_cmd_complete_mock = mock.MagicMock(name="shell_cmd_complete")
+        shell_cmd_complete_mock = mock.MagicMock(name="shell_cmd_complete", return_value=Completions())
         monkeypatch.setattr("cmd2.Cmd.shell_cmd_complete", shell_cmd_complete_mock)
 
-        path_complete_mock = mock.MagicMock(name="path_complete")
+        path_complete_mock = mock.MagicMock(name="path_complete", return_value=Completions())
         monkeypatch.setattr("cmd2.Cmd.path_complete", path_complete_mock)
 
         default_complete_mock = mock.MagicMock(name="fake_completer")
