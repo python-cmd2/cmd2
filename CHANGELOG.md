@@ -18,6 +18,10 @@
       entries which are symbolic links to directories.
     - `find_editor()` now finds the `edit` editor on Windows. It was the preferred default editor
       there but could never be found because it was searched for without its `.exe` extension.
+    - `ppaged()` now prints its output when the configured pager program cannot be run, for example
+      where `less` is not installed. Previously only the shell's error was shown and the output was
+      lost. A pager command which could not be run is not tried again while the application is
+      running, so the shell's error is shown once for each pager command instead of every time.
     - A command which prints through a `cmd2` console of its own, such as a `Cmd2GeneralConsole`
       showing a Rich progress bar, no longer ends with a `BrokenPipeError` message when its output
       is piped to something that exits early, as `head` does. `cmd2` now ends the command quietly
