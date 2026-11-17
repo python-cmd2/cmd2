@@ -69,8 +69,10 @@ from prompt_toolkit.styles import DynamicStyle, default_ui_style, merge_styles
 import cmd2
 from cmd2.theme import get_pt_theme
 
-# Control sequences other than "select graphic rendition", which is how a style is written
-NOT_A_STYLE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-ln-~]")
+# Control sequences other than "select graphic rendition", which is how a style is written. A control sequence ends with
+# a final byte from "@" to "~" which says what it does, and the last character class is every one of those except the "m"
+# of "select graphic rendition".
+NOT_A_STYLE = re.compile(r"\x1b\[[0-?]*[ -/]*[@A-Z\[\\\]^_`a-ln-~]")
 
 
 def render_toolbar(content: AnyFormattedText) -> str:
