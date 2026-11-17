@@ -499,6 +499,7 @@ def test_pipeline_writer_relay_lends_only_while_a_producer_waits(pauses) -> None
     first_read = len(payload) - capacity - 16384 if pauses else len(payload)
     received = bytearray()
     lent = threading.Event()
+    paused = threading.Event()
     resume = threading.Event()
     lends = []
 
@@ -516,7 +517,12 @@ def test_pipeline_writer_relay_lends_only_while_a_producer_waits(pauses) -> None
         # the next key.
         lent.wait(10)
         while len(received) < first_read:
-            received.extend(os.read(read_fd, min(65536, first_read - len(received))))
+            chunk = os.read(read_fd, min(65536, first_read - len(received)))
+            if not chunk:
+                # The relay closed the pipe early. Stop here, so the test fails on what is missing instead of spinning.
+                return
+            received.extend(chunk)
+        paused.set()
         resume.wait(10)
         while chunk := os.read(read_fd, 65536):
             received.extend(chunk)
@@ -539,11 +545,9 @@ def test_pipeline_writer_relay_lends_only_while_a_producer_waits(pauses) -> None
             time.sleep(0.01)
         assert not lends
         if pauses:
-            # The child can exit before the consumer has read all of its first page, so give it time.
-            deadline = time.monotonic() + 5
-            while len(received) < first_read and time.monotonic() < deadline:
-                time.sleep(0.01)
-            assert len(received) == first_read
+            # The child can exit before the consumer has read all of its first page, so give it time. Its reads stop at that
+            # page until resumed, so the rest is still in the relay.
+            assert paused.wait(5), f"the consumer read {len(received)} of its first {first_read} bytes in time"
         # cmd2's own writes follow what the child wrote, which is still pending.
         threading.Timer(0.3, resume.set).start()
         assert writer.write(b"end") == 3
