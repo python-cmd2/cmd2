@@ -30,6 +30,8 @@ The cmd2 application can also be run on its own, without Textual, on any platfor
     python examples/textual_tty_embed.py --cmd2-only
 
 Use the ``quit`` command in the embedded cmd2 application, or press Ctrl-Q, to exit.
+
+See ``textual_tty_toolbar.py`` for the same technique used to keep a bottom toolbar on the screen while commands run.
 """
 
 import argparse
