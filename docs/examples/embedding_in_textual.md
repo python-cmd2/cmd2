@@ -120,9 +120,12 @@ The example handles several details which are easy to miss when building somethi
 
 ## A Bottom Toolbar Which Stays While Commands Run
 
-A [bottom toolbar](../features/prompt.md#bottom-toolbar) is drawn by `prompt-toolkit` as part of the
-prompt, so it is only on the screen while the prompt is. The same embedding technique gives you one
-which stays, and keeps refreshing, while a command runs. The
+`cmd2` can keep its own [bottom toolbar](../features/prompt.md#bottom-toolbar) on the screen while a
+command runs. It draws that toolbar in the terminal which the command is using, so it has to hide it
+whenever something else
+[takes over the terminal](../features/prompt.md#commands-that-take-over-the-terminal), as a shell
+command does. The same embedding technique gives you a toolbar which is drawn outside that terminal,
+so it stays, and keeps refreshing, whatever runs there. The
 [textual_tty_toolbar.py](https://github.com/python-cmd2/cmd2/blob/main/examples/textual_tty_toolbar.py)
 example is a Textual application which is nothing but a terminal pane running a `cmd2` application
 and a toolbar docked below it, so it looks like the `cmd2` application running on its own:
@@ -131,8 +134,9 @@ and a toolbar docked below it, so it looks like the `cmd2` application running o
 uv run examples/textual_tty_toolbar.py
 ```
 
-Try `slow`, `burst 2000 1`, or resizing the window while a command runs. Pass `--cmd2-only` to see
-what `cmd2` does without Textual, where the toolbar disappears for as long as a command runs.
+Try `slow`, `burst 2000 1`, `shell sleep 5`, or resizing the window while a command runs. Pass
+`--cmd2-only` to compare it with the toolbar `cmd2` draws itself, without Textual, which is hidden
+for as long as the shell command runs.
 
 Here the `cmd2` application doesn't draw the toolbar at all. It passes
 `bottom_toolbar_mode=cmd2.ToolbarMode.OFF` to [cmd2.Cmd.__init__][] when it is running inside the
@@ -167,7 +171,8 @@ in the middle of the command's output. So this example uses a Unix socket instea
 - `get_bottom_toolbar()` is therefore called on that thread while a command is running on the main
   thread, so it must only read state which is safe to read from another thread.
 
-This approach has costs which are easy to overlook, and they are why `cmd2` doesn't do it for you:
+This approach has costs which are easy to overlook, and they are why `cmd2` draws its own toolbar in
+the user's terminal instead:
 
 - There is no scrollback. The terminal pane keeps none, so output which scrolls off its top is gone,
   and Textual uses the terminal's alternate screen, so none of the session is in the scrollback of
