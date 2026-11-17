@@ -210,12 +210,12 @@ def test_worker_titles_during_a_real_select_and_after_cleanup(monkeypatch, inter
 def test_instance_titles_do_not_cross_between_concurrent_select_menus(monkeypatch):
     streams = [TtyStream(), TtyStream()]
     rendered = [threading.Event(), threading.Event()]
-    menus = []
+    menus = {}
     run = Application.run
 
     def run_menu(menu, *args, **kwargs):
         index = next(index for index, stream in enumerate(streams) if menu.output.stdout is stream)
-        menus.append(menu)
+        menus[index] = menu
         menu.after_render += lambda _sender: rendered[index].set()
         return run(menu, *args, set_exception_handler=False, **kwargs)
 
@@ -231,12 +231,19 @@ def test_instance_titles_do_not_cross_between_concurrent_select_menus(monkeypatc
                 assert all(event.wait(timeout=5) for event in rendered)
                 apps[0].set_window_title("A")
                 apps[1].set_window_title("B")
+
+                # The second menu's loop writes "B" in a callback. Wait for that loop to get past it, since a title
+                # set before the callback runs replaces "B" instead of following it.
+                title_written = threading.Event()
+                menus[1].loop.call_soon_threadsafe(title_written.set)
+                assert title_written.wait(timeout=5)
+
                 inputs[0].send_text("\r")
                 assert results[0].result(timeout=5) == "selected"
                 apps[0].set_window_title("A finished")
                 apps[1].set_window_title("B active")
             finally:
-                for menu in menus:
+                for menu in menus.values():
                     loop = menu.loop
                     if loop is not None and loop.is_running():
                         loop.call_soon_threadsafe(lambda menu=menu: menu.exit(result="selected"))
