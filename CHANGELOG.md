@@ -3,6 +3,21 @@
 - Bug Fixes
     - Fixed file path completion for names containing square brackets, including bracketed working
       directories and home directories.
+    - Fixed `get_exes_in_path()` and shell command completion when executable names or `PATH`
+      directories contain square brackets.
+    - File path completion, shell command completion, and `get_exes_in_path()` now match `*` and `?`
+      literally instead of returning nothing when the text being completed contains one, so names
+      containing those characters can be completed.
+    - Tab completion now adds quotes when a match has a character which is special to a shell, such
+      as `*`, `?`, `(`, `&`, or `$`, if what is being completed is passed to one. That is the case
+      for the arguments of the `shell` command and for everything after a pipe. Everywhere else,
+      only a match with a space is quoted, as before. See the
+      [Special Characters in Paths](docs/features/completion.md#special-characters-in-paths)
+      documentation for details.
+    - `get_exes_in_path()`, `find_editor()`, and shell command completion no longer skip `PATH`
+      entries which are symbolic links to directories.
+    - `find_editor()` now finds the `edit` editor on Windows. It was the preferred default editor
+      there but could never be found because it was searched for without its `.exe` extension.
     - `ppaged()` now prints its output when the configured pager program cannot be run, for example
       where `less` is not installed. Previously only the shell's error was shown and the output was
       lost. A pager command which could not be run is not tried again while the application is
