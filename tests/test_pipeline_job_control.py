@@ -511,6 +511,130 @@ def test_pipeline_from_worker_thread_stays_isolated(tmp_path) -> None:
         process.wait(timeout=5)
 
 
+def suspend_and_resume(tmp_path, command_source, command, waiting, finish) -> None:
+    """Start a command under an interactive bash, stop it with Ctrl-Z, resume it with fg, and let it finish.
+
+    The display thread sends the stop signal, which the kernel may hand to the main
+    thread. Unless the sending thread stops synchronously too, it restores raw mode
+    before the job has stopped, the shell puts its own modes back on fg, and every
+    cursor-position query afterwards is echoed as ^[[row;colR.
+
+    :param command_source: source of the application's ``do_`` method for the command
+    :param command: the command to type
+    :param waiting: returns whether the screen it is given shows the command waiting
+    :param finish: given ``send``, makes the waiting command finish
+    """
+    import fcntl
+    import pty
+    import struct
+    import termios
+
+    shell = shutil.which("bash")
+    if shell is None:
+        pytest.skip("requires an interactive bash shell")
+    application = tmp_path / "application.py"
+    application.write_text(
+        "from cmd2 import Cmd\n"
+        "class App(Cmd):\n"
+        f"{command_source}"
+        # A refreshing toolbar, as in the examples: its periodic redraws are what turn a cooked terminal into a stream of echoed
+        # cursor reports.
+        "app = App(enable_bottom_toolbar=True, refresh_interval=0.5)\n"
+        "app.prompt = 'TEST> '\n"
+        "app.main_session.bottom_toolbar = 'STATUS'\n"
+        "app.cmdloop()\n",
+        encoding="utf-8",
+    )
+    master, slave = pty.openpty()
+    fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 24, 80, 0, 0))
+    bootstrap = (
+        "import os, fcntl, termios; os.setsid(); "
+        "fcntl.ioctl(0, termios.TIOCSCTTY, 0); "
+        "os.execv(os.environ['TEST_SHELL'], ['bash', '--noprofile', '--norc', '-i'])"
+    )
+    env = dict(os.environ, TERM="xterm-256color", PS1="OUTER> ", TEST_SHELL=shell, SHELL=shell)
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
+    process = subprocess.Popen([sys.executable, "-c", bootstrap], stdin=slave, stdout=slave, stderr=slave, env=env)
+    os.close(slave)
+    screen = pyte.Screen(80, 24)
+    screen.write_process_input = lambda data: os.write(master, data.encode())
+    stream = pyte.Stream(screen)
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    transcript = ""
+
+    def send(data):
+        os.write(master, data.encode())
+
+    def pump(seconds, predicate=lambda: False):
+        nonlocal transcript
+        deadline = time.monotonic() + seconds
+        while time.monotonic() < deadline:
+            if select.select([master], [], [], 0.05)[0]:
+                data = decoder.decode(os.read(master, 65536))
+                transcript += data
+                stream.feed(data)
+            if predicate():
+                return True
+        return predicate()
+
+    def command_waiting():
+        return waiting(screen)
+
+    try:
+        assert pump(10, lambda: "OUTER> " in transcript)
+        send(f"{shlex.quote(sys.executable)} {shlex.quote(str(application))}\n")
+        assert pump(10, lambda: "TEST>" in "\n".join(screen.display)), transcript
+        # Let the prompt finish its cursor-position handshake before typing at it.
+        pump(0.5)
+        send(f"{command}\n")
+        assert pump(10, command_waiting), transcript
+        start = len(transcript)
+        send("\x1a")
+        assert pump(10, lambda: "OUTER> " in transcript[start:]), transcript
+        start = len(transcript)
+        send("fg\n")
+        assert pump(10, command_waiting), transcript[start:]
+        # Give a broken resume time to start looping before judging the transcript.
+        pump(1.5)
+        resumed = transcript[start:]
+        echoed = re.findall(r"\^\[\[\d+;\d+R", resumed)
+        assert not echoed, f"cursor position reports were echoed after fg: {echoed[:5]}\n{resumed}"
+        assert command_waiting(), "\n".join(screen.display)
+        start = len(transcript)
+        finish(send)
+        assert pump(10, lambda: "TEST>" in transcript[start:]), f"the command did not finish after fg:\n{transcript[start:]}"
+        send("quit\n")
+        pump(5, lambda: os.tcgetpgrp(master) == process.pid)
+    finally:
+        os.close(master)
+        process.kill()
+        process.wait(timeout=5)
+
+
+def test_command_resumes_with_raw_terminal_after_suspend(tmp_path) -> None:
+    """Ctrl-Z while a command runs under the toolbar, then fg, must leave the terminal raw.
+
+    The command keeps printing, and the display asks the terminal where its cursor is as it
+    puts each line above the toolbar. A terminal left cooked would echo every answer.
+    """
+    release = tmp_path / "release"
+
+    def printing(screen):
+        return any(line.startswith("waiting") for line in screen.display)
+
+    suspend_and_resume(
+        tmp_path,
+        "    def do_wait(self, statement):\n"
+        "        import os, time\n"
+        f"        while not os.path.exists({str(release)!r}):\n"
+        "            self.poutput('waiting')\n"
+        "            time.sleep(0.2)\n",
+        "wait",
+        printing,
+        lambda send: release.touch(),
+    )
+
+
 @pytest.mark.parametrize("parent_delay", [False, True])
 def test_pipeline_pager_can_set_terminal_modes_at_startup(tmp_path, parent_delay) -> None:
     """A pager such as less puts the terminal in raw mode as it starts, before reading its pipe.

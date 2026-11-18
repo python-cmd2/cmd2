@@ -42,7 +42,12 @@ system.
 
 ## Terminal pagers
 
-Output of any command can be displayed one page at a time using the [cmd2.Cmd.ppaged][] method.
+Output of any command can be displayed one page at a time using the [cmd2.Cmd.ppaged][] method. A
+pager is only used when the terminal is interactive. Inside a script, or when the command's output
+is redirected or piped, `ppaged()` falls back to `poutput()`.
+
+While the [bottom toolbar](./prompt.md#bottom-toolbar) is running, a pager temporarily hides it,
+because the pager takes over the terminal. The toolbar comes back when the pager exits.
 
 The pager is the command in `self.pager`, or `self.pager_chop` when chopping long lines: `less` on
 POSIX systems and `more` on Windows by default. If that program cannot be run, for example because

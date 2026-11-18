@@ -48,6 +48,7 @@ from code import InteractiveConsole
 from collections import deque
 from collections.abc import (
     Callable,
+    Generator,
     Iterable,
     Mapping,
     Sequence,
@@ -109,6 +110,7 @@ from rich.traceback import Traceback
 from . import (
     argparse_completer,
     argparse_utils,
+    command_toolbar,
     constants,
     plugin,
     utils,
@@ -429,7 +431,7 @@ class Cmd:
                              This allows CommandSets with custom constructor parameters to be
                              loaded.  This also allows the a set of CommandSets to be provided
                              when `auto_load_commands` is set to False
-        :param enable_bottom_toolbar: if ``True``, enables a bottom toolbar while at the main prompt.
+        :param enable_bottom_toolbar: if ``True``, enables a bottom toolbar at the main prompt and during commands.
                                       Override ``get_bottom_toolbar()`` to define its content.
         :param enable_rprompt: if ``True``, enables a right prompt while at the main prompt.
                                Override ``get_rprompt()`` to define its content.
@@ -572,6 +574,9 @@ class Cmd:
         # custom prompt). Completion and UI logic should reference this variable
         # to ensure they modify the correct session state.
         self.active_session = self.main_session
+        self._command_toolbar: command_toolbar.CommandToolbar | None = None
+        # Set once a toolbar fails to start, so the failure is reported only once
+        self._command_toolbar_disabled = False
 
         # Commands to exclude from the history command
         self.exclude_from_history = ["_eof", "history"]
@@ -2010,6 +2015,9 @@ class Cmd:
         fits on the screen. A pager is not used inside a script (Python or text) or when output is
         redirected or piped, and in these cases, output is sent to `poutput`.
 
+        The pager takes over the terminal, so the bottom toolbar is hidden while it is open and
+        comes back when it exits.
+
         If the pager program cannot be run, for example because it is not installed, the output
         is printed without one. That pager command is not tried again while the application runs.
 
@@ -2067,7 +2075,7 @@ class Cmd:
 
             # Prevent KeyboardInterrupts while in the pager. The pager application will
             # still receive the SIGINT since it is in the same process group as us.
-            with self.sigint_protection, utils._utf8_console():
+            with self.suspend_bottom_toolbar(), self.sigint_protection, utils._utf8_console():
                 import subprocess
 
                 pipe_proc = subprocess.Popen(  # noqa: S602
@@ -2170,7 +2178,7 @@ class Cmd:
     def get_bottom_toolbar(self) -> AnyFormattedText:
         """Get the bottom toolbar content.
 
-        This method is called by prompt-toolkit while at the main prompt if ``enable_bottom_toolbar``
+        This method is called by prompt-toolkit at the main prompt and during commands if ``enable_bottom_toolbar``
         was set to ``True`` during initialization. Because prompt-toolkit executes this callback
         on every UI refresh (such as on every keypress or at scheduled refresh intervals), keeping
         this function highly optimized is critical to ensuring the CLI remains responsive.
@@ -2179,9 +2187,69 @@ class Cmd:
         your application. This could be information like the application name, current state,
         or even a real-time clock.
 
+        During command execution this callback runs in a background UI thread. Protect shared
+        state with a lock when necessary, but never hold that lock in a command while it prompts
+        for input, pages output, runs a shell command, or otherwise pauses the toolbar: pausing
+        waits for this callback to return. The toolbar is suspended while another prompt, a
+        pager, or an interactive shell owns the terminal.
+
+        If this callback raises an exception during a command, the error is reported once and the
+        command carries on without the toolbar.
+
         :return: Content to populate the bottom toolbar.
         """
         return None
+
+    @contextlib.contextmanager
+    def suspend_bottom_toolbar(self) -> Generator[None]:
+        """Temporarily hide the command toolbar and give exclusive access to the terminal.
+
+        Use this context manager around application-specific calls to ``input()``, other
+        terminal UIs, or subprocesses that inherit the terminal. cmd2 automatically suspends
+        its toolbar for its own input prompts, external pagers, and shell commands.
+        """
+        if self._command_toolbar is None:
+            yield
+        else:
+            with self._command_toolbar.suspend():
+                yield
+
+    @contextlib.contextmanager
+    def _command_toolbar_context(self) -> Generator[None]:
+        """Display the toolbar around commands launched by the interactive command loop."""
+        if (
+            self._command_toolbar is not None
+            or self._command_toolbar_disabled
+            or self.main_session.bottom_toolbar is None
+            or not self._is_tty_session(self.main_session)
+        ):
+            yield
+            return
+
+        try:
+            with self.sigint_protection:
+                toolbar = command_toolbar.CommandToolbar(self)
+                toolbar.start()
+                self._command_toolbar = toolbar
+        except Exception as exc:  # noqa: BLE001
+            # The toolbar is cosmetic, so a display that cannot start must not take
+            # the command down, nor escape cmdloop() and leave its signal handlers
+            # installed. Report it once and run without it for the rest of the session.
+            self._command_toolbar_disabled = True
+            self.perror(f"Disabling the bottom toolbar during commands: {exc!r}")
+            yield
+            return
+
+        try:
+            yield
+        finally:
+            with self.sigint_protection:
+                try:
+                    toolbar.stop()
+                finally:
+                    # Always forget a toolbar that has been torn down. Keeping a failed
+                    # one would disable the toolbar for the rest of the session.
+                    self._command_toolbar = None
 
     def get_rprompt(self) -> AnyFormattedText:
         """Provide text to populate the prompt-toolkit right prompt.
@@ -3220,6 +3288,7 @@ class Cmd:
 
         return stop
 
+    @command_toolbar.suspend_toolbar
     def _run_cmdfinalization_hooks(self, stop: bool, statement: Statement | None) -> bool:
         """Run the command finalization hooks."""
         if not sys.platform.startswith("win") and self._initial_termios_settings is not None and self.stdin.isatty():
@@ -3445,9 +3514,15 @@ class Cmd:
                 if shell:
                     kwargs["executable"] = shell
 
-            # For any stream that is a StdSim, we will use a pipe so we can capture its output
-            pipe_stdout = None if isinstance(self.stdout, utils.StdSim) else self.stdout  # type: ignore[unreachable]
-            pipe_stderr = None if isinstance(sys.stderr, utils.StdSim) else sys.stderr
+            # Hand the pipe process the real terminal when there is one to inherit, since it
+            # may be interactive. Otherwise capture its output so it can pass through a Python
+            # stream, including the toolbar proxy which prints above the running display.
+            pipe_stdout = (
+                None
+                if isinstance(self.stdout, utils.StdSim)  # type: ignore[unreachable]
+                else command_toolbar.pipe_target(self.stdout)
+            )
+            pipe_stderr = None if isinstance(sys.stderr, utils.StdSim) else command_toolbar.pipe_target(sys.stderr)
 
             terminal_fd: int | None = None
             popen_command = statement.redirect_to
@@ -3480,6 +3555,12 @@ class Cmd:
                     kwargs["executable"] = posix_shell
 
             with contextlib.ExitStack() as pipe_stack, contextlib.ExitStack() as setup_stack:
+                # The toolbar can neither draw nor hold the keyboard while a pipe process owns the terminal, so step aside
+                # until _restore_output() has reaped it. Entered first, the suspension ends last, once cmd2 has the terminal
+                # back.
+                if pipe_stdout is not None or pipe_stderr is not None:
+                    pipe_stack.enter_context(self.suspend_bottom_toolbar())
+
                 # The console stays UTF-8 from before the pipe process starts, since a program may read the code page once as
                 # it starts, until _restore_output() has reaped it.
                 pipe_stack.enter_context(utils._utf8_console())
@@ -3551,7 +3632,8 @@ class Cmd:
                 self.stdout = new_stdout
                 setup_stack.pop_all()
 
-                # Keep the UTF-8 console and the pipeline's job control until _restore_output() reaps the pipe process.
+                # Keep the toolbar suspended, the UTF-8 console and the pipeline's job control until _restore_output() reaps
+                # the pipe process.
                 redir_saved_state.pipe_context = pipe_stack.pop_all()
 
         elif statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND):
@@ -3611,7 +3693,8 @@ class Cmd:
         :param statement: Statement object which contains the parsed input from the user
         :param saved_redir_state: contains information needed to restore state data
         """
-        # The UTF-8 console and the pipeline's job control end once its pipe process has been reaped.
+        # The UTF-8 console and the pipeline's job control end once its pipe process has been reaped, and then the toolbar
+        # gets the terminal back.
         with contextlib.ExitStack() as pipe_stack:
             if saved_redir_state.pipe_context is not None:
                 pipe_stack.callback(saved_redir_state.pipe_context.close)
@@ -3749,6 +3832,7 @@ class Cmd:
         # a DummyOutput.
         return not isinstance(session.input, DummyInput)
 
+    @command_toolbar.suspend_toolbar
     def _read_raw_input(
         self,
         prompt: Callable[[], ANSI | str] | ANSI | str,
@@ -3883,6 +3967,7 @@ class Cmd:
 
         temp_session: PromptSession[str] = PromptSession(
             auto_suggest=self.main_session.auto_suggest,
+            bottom_toolbar=self.get_bottom_toolbar if self.main_session.bottom_toolbar is not None else None,
             color_depth=self.main_session.color_depth,
             complete_style=self.main_session.complete_style,
             complete_in_thread=self.main_session.complete_in_thread,
@@ -3893,6 +3978,7 @@ class Cmd:
             key_bindings=self.main_session.key_bindings,
             input=self.main_session.input,
             output=self.main_session.output,
+            refresh_interval=self.main_session.refresh_interval,
             style=self.main_session.style,
         )
 
@@ -3910,10 +3996,12 @@ class Cmd:
         :raises Exception: any other exceptions raised by prompt()
         """
         temp_session: PromptSession[str] = PromptSession(
+            bottom_toolbar=self.get_bottom_toolbar if self.main_session.bottom_toolbar is not None else None,
             color_depth=self.main_session.color_depth,
             enable_suspend=self.main_session.enable_suspend,
             input=self.main_session.input,
             output=self.main_session.output,
+            refresh_interval=self.main_session.refresh_interval,
             style=self.main_session.style,
         )
 
@@ -4035,7 +4123,11 @@ class Cmd:
         """
         try:
             # Run startup commands
-            stop = self.runcmds_plus_hooks(self._startup_commands)
+            if self._startup_commands:
+                with self._command_toolbar_context():
+                    stop = self.runcmds_plus_hooks(self._startup_commands)
+            else:
+                stop = False
             self._startup_commands.clear()
 
             while not stop:
@@ -4049,7 +4141,8 @@ class Cmd:
                     line = "_eof"
 
                 # Run the command along with all associated pre and post hooks
-                stop = self.onecmd_plus_hooks(line)
+                with self._command_toolbar_context():
+                    stop = self.onecmd_plus_hooks(line)
         finally:
             with self.sigint_protection:
                 # Shut down the alert thread.
@@ -4879,6 +4972,7 @@ class Cmd:
         self.last_result = True
         return True
 
+    @command_toolbar.suspend_toolbar
     def select(self, opts: str | Iterable[str] | Iterable[tuple[Any, str | None]], prompt: str = "Your choice? ") -> Any:
         """Present a menu to the user.
 
@@ -5117,6 +5211,7 @@ class Cmd:
         utils.expand_user_in_tokens(tokens)
         self._run_shell_command(" ".join(tokens))
 
+    @command_toolbar.suspend_toolbar
     def _run_shell_command(self, command: str) -> None:
         """Run a command line in the OS shell and wait for it to finish.
 
@@ -5285,6 +5380,7 @@ class Cmd:
 
             readline.set_completer(cmd2_env.completer)
 
+    @command_toolbar.suspend_toolbar
     def _run_python(self, *, pyscript: str | None = None) -> bool | None:
         """Run an interactive Python shell or execute a pyscript file.
 
@@ -5496,6 +5592,7 @@ class Cmd:
         return argparse_utils.DEFAULT_ARGUMENT_PARSER(description="Run an interactive IPython shell.")
 
     @with_argparser(_build_ipython_parser)
+    @command_toolbar.suspend_toolbar
     def do_ipy(self, _: argparse.Namespace) -> bool | None:  # pragma: no cover
         """Run an interactive IPython shell.
 
@@ -6068,6 +6165,9 @@ class Cmd:
         several titles are set before then, only the latest is written. Output errors are ignored so
         they can't disrupt the prompt.
 
+        The bottom toolbar's display counts as a prompt here. While it is shown during a command, the
+        title is written on its event loop in the same way.
+
         :param title: the new window title
         """
         with self._window_title_lock:
@@ -6107,6 +6207,11 @@ class Cmd:
             select_app = select_app_session.app
             if select_app is not None:
                 apps.append(select_app)
+
+        # While a command runs, the bottom toolbar's display draws on this terminal from its own thread.
+        toolbar = self._command_toolbar
+        if toolbar is not None:
+            apps.append(toolbar.app)
 
         for app in apps:
             loop = app.loop
@@ -6358,19 +6463,21 @@ class Cmd:
             self.poutput(self.intro)
 
         # And then call _cmdloop() to enter the main loop
-        self._cmdloop()
+        try:
+            self._cmdloop()
+        finally:
+            # Restore original signal handlers however the loop ended. Leaving cmd2's
+            # handlers installed would outlive the application in its host process.
+            signal.signal(signal.SIGINT, original_sigint_handler)
+
+            if not sys.platform.startswith("win"):
+                signal.signal(signal.SIGHUP, original_sighup_handler)
+                signal.signal(signal.SIGTERM, original_sigterm_handler)
 
         # Run the postloop() no matter what
         for func in self._postloop_hooks:
             func()
         self.postloop()
-
-        # Restore original signal handlers
-        signal.signal(signal.SIGINT, original_sigint_handler)
-
-        if not sys.platform.startswith("win"):
-            signal.signal(signal.SIGHUP, original_sighup_handler)
-            signal.signal(signal.SIGTERM, original_sigterm_handler)
 
         return self.exit_code
 

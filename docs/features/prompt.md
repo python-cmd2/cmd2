@@ -81,7 +81,8 @@ example for a demonstration.
 ## Bottom Toolbar
 
 `cmd2` supports an optional, persistent bottom toolbar that is always visible at the bottom of the
-terminal window while the application is idle and waiting for input.
+terminal window while the application is waiting for input and while commands execute. Command
+output appears above the toolbar.
 
 ### Enabling the Toolbar
 
@@ -112,10 +113,10 @@ def get_bottom_toolbar(self) -> AnyFormattedText:
 
 ### Refreshing the Toolbar
 
-Since the toolbar is rendered by `prompt-toolkit` as part of the prompt, it is naturally redrawn
-whenever the prompt is refreshed. If you want the toolbar to update automatically (for example, to
-display a clock), you can set `refresh_interval` in the [cmd2.Cmd.__init__][] constructor to a value
-greater than 0.0.
+The toolbar is rendered by `prompt-toolkit` and is naturally redrawn whenever the prompt is
+refreshed. If you want the toolbar to update automatically during input and command execution (for
+example, to display a clock), you can set `refresh_interval` in the [cmd2.Cmd.__init__][]
+constructor to a value greater than 0.0.
 
 ```py
 class App(cmd2.Cmd):
@@ -125,7 +126,23 @@ class App(cmd2.Cmd):
 
 See the
 [getting_started.py](https://github.com/python-cmd2/cmd2/blob/main/examples/getting_started.py)
-example for a demonstration of this technique.
+example for a demonstration of this technique. Run its `work 5` command to see the clock update
+while the command prints output.
+
+During command execution, `get_bottom_toolbar()` runs in a background UI thread. Keep the callback
+fast and use a lock when reading state that a command or another thread modifies.
+
+!!! warning
+
+    A command must not hold a lock which `get_bottom_toolbar()` acquires while it calls anything
+    that pauses the toolbar: `read_input()`, `read_secret()`, `select()`, `ppaged()`, `do_shell()`,
+    `run_editor()`, an embedded Python shell, or `suspend_bottom_toolbar()`. To pause the toolbar,
+    `cmd2` waits for the refresh in progress to finish. A callback blocked on a lock the command is
+    holding never finishes, so the application hangs. Copy what you need while holding the lock,
+    release it, and then prompt or page.
+
+If `get_bottom_toolbar()` raises an exception while a command is running, `cmd2` reports the error
+once and the command carries on without the toolbar.
 
 !!! tip
 
@@ -134,7 +151,40 @@ example for a demonstration of this technique.
     widgets which display that information. See
     [Embedding in Textual](../examples/embedding_in_textual.md).
 
-    The same technique can keep a toolbar on the screen while a command runs, which this one is
-    not: it is part of the prompt. See
+    The same technique can also draw the toolbar itself, in a widget of the Textual application. See
     [A Bottom Toolbar Which Stays While Commands Run](../examples/embedding_in_textual.md#a-bottom-toolbar-which-stays-while-commands-run)
     for an example, and for what it costs.
+
+### Commands That Take Over the Terminal
+
+cmd2 temporarily hides the toolbar for pagers, Python environments, and shell commands. It also
+hides it while a command's output is piped to another process, since that process may be
+interactive, as `less` and `fzf` are. It restores the toolbar when those operations finish.
+
+[cmd2.Cmd.read_input][] and [cmd2.Cmd.read_secret][] keep the toolbar visible, and it continues to
+refresh at the same `refresh_interval` as the main prompt, so a clock or status display does not go
+stale while your command waits for input. [cmd2.Cmd.select][] does not yet show one, because
+prompt-toolkit's `choice()` has no way to configure a refresh interval and its toolbar would go
+stale while the selection sits idle.
+
+For custom terminal UIs, calls to `input()`, or subprocesses your own command code starts, use
+[cmd2.Cmd.suspend_bottom_toolbar][]:
+
+```py
+with self.suspend_bottom_toolbar():
+    answer = input("Continue? ")
+```
+
+Suspending matters for subprocesses even when they only print. While the toolbar is displayed, the
+terminal is in raw mode, so the kernel generates no signals from keystrokes. cmd2 sends `Ctrl-C` on
+to its own process group, which reaches a subprocess your command started and waits on, but `Ctrl-\`
+(`SIGQUIT`) does nothing, exactly as at the main prompt.
+
+Output which stops in the middle of a line, such as `Working...` or a progress line redrawn with
+carriage returns, stays on the screen and is continued by the output which follows it. A line still
+unfinished when the command ends, or when the toolbar is hidden for one of the operations above, is
+ended there, so whatever comes next starts on a new line.
+
+The command toolbar is used by the interactive command loop, including startup commands and scripts
+launched from that loop. It is disabled for non-interactive input. Calls to `onecmd_plus_hooks()`
+outside the command loop do not start a toolbar.
