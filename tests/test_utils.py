@@ -499,6 +499,7 @@ def test_pipeline_writer_relay_lends_only_while_a_producer_waits(pauses) -> None
     first_read = len(payload) - capacity - 16384 if pauses else len(payload)
     received = bytearray()
     lent = threading.Event()
+    paused = threading.Event()
     resume = threading.Event()
     lends = []
 
@@ -513,11 +514,18 @@ def test_pipeline_writer_relay_lends_only_while_a_producer_waits(pauses) -> None
 
     def drain() -> None:
         # Like a pager waiting for a key, drain nothing until lent the terminal. Then read a page, or all of it, and wait for
-        # the next key.
-        lent.wait(10)
+        # the next key. Neither wait has a timeout, which would let a slow test read ahead unnoticed: the test's cleanup
+        # releases both.
+        lent.wait()
         while len(received) < first_read:
-            received.extend(os.read(read_fd, min(65536, first_read - len(received))))
-        resume.wait(10)
+            chunk = os.read(read_fd, min(65536, first_read - len(received)))
+            if not chunk:
+                # End of file arrives only once the test's cleanup closes the writer. Reaching it here means the output fell
+                # short, so stop instead of spinning on empty reads.
+                return
+            received.extend(chunk)
+        paused.set()
+        resume.wait()
         while chunk := os.read(read_fd, 65536):
             received.extend(chunk)
 
@@ -539,11 +547,15 @@ def test_pipeline_writer_relay_lends_only_while_a_producer_waits(pauses) -> None
             time.sleep(0.01)
         assert not lends
         if pauses:
-            assert len(received) == first_read
+            # The child can exit before the consumer has read all of its first page, so give it time. Its reads stop at that
+            # page until resumed, so the rest is still in the relay.
+            assert paused.wait(5), f"the consumer read {len(received)} of its first {first_read} bytes in time"
         # cmd2's own writes follow what the child wrote, which is still pending.
         threading.Timer(0.3, resume.set).start()
         assert writer.write(b"end") == 3
     finally:
+        # Release the consumer wherever it waits, so a test that fails before a lend does not hold up the join.
+        lent.set()
         resume.set()
         writer.close()
         consumer.join(10)
