@@ -3,6 +3,8 @@
 import sys
 import threading
 import time
+from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
 from types import SimpleNamespace
 from unittest import mock
 
@@ -108,8 +110,10 @@ class FileTerminal:
         return getattr(self.file, name)
 
 
-def test_command_toolbar_pipe_process_inherits_terminal(toolbar_app, tmp_path) -> None:
+@pytest.mark.parametrize("builtin_pager", [False, True])
+def test_command_toolbar_pipe_process_inherits_terminal(toolbar_app, tmp_path, builtin_pager) -> None:
     app, _, _ = toolbar_app
+    app.use_builtin_pager = builtin_pager
     destination = tmp_path / "terminal.txt"
     running = []
     readers = []
@@ -774,7 +778,6 @@ def test_command_toolbar_recovers_from_stop_failure(toolbar_app) -> None:
 
 def test_command_toolbar_exit_after_result_is_set(toolbar_app) -> None:
     app, _, _ = toolbar_app
-    exited_twice = threading.Event()
     with app._command_toolbar_context():
         toolbar = app._command_toolbar
 
@@ -783,11 +786,108 @@ def test_command_toolbar_exit_after_result_is_set(toolbar_app) -> None:
             # The result is set before run_async() has finished its cleanup.
             assert toolbar.app.is_running
             toolbar._exit()
-            exited_twice.set()
 
-        toolbar.app.loop.call_soon_threadsafe(already_exiting)
-        assert exited_twice.wait(2)
+        toolbar._call_in_ui(already_exiting)
     assert app.main_session.app.layout is app.main_session.layout
+
+
+def test_command_toolbar_ui_call_propagates_failures(toolbar_app) -> None:
+    app, _, _ = toolbar_app
+
+    def fail(exception: BaseException) -> None:
+        raise exception
+
+    with app._command_toolbar_context():
+        toolbar = app._command_toolbar
+
+        # A UI callback runs on the display's loop, so its failure has to be carried
+        # back to the command thread rather than reaching the loop's error handler.
+        with pytest.raises(ValueError, match="broken ui call"):
+            toolbar._call_in_ui(lambda: fail(ValueError("broken ui call")))
+
+        # A TimeoutError raised by the callback is the same class the pending future
+        # reports itself with, and must not be mistaken for one.
+        with pytest.raises(TimeoutError, match="slow ui call"):
+            toolbar._call_in_ui(lambda: fail(TimeoutError("slow ui call")))
+
+        # A callback that outlives the poll interval keeps waiting instead of giving up.
+        assert toolbar._call_in_ui(lambda: time.sleep(0.2) or "finished") == "finished"
+
+
+def test_command_toolbar_ui_call_returns_a_result_that_lands_during_the_poll(toolbar_app, monkeypatch) -> None:
+    """A callback finishing while the poll expires must return its value, not a timeout.
+
+    `concurrent.futures.TimeoutError` is `TimeoutError` on Python 3.11+, so the poll
+    expiring and the callback raising a timeout of its own are indistinguishable by type.
+    Re-raising the caught exception once the future is done therefore reports a timeout for
+    a call that actually succeeded.
+    """
+    app, _, _ = toolbar_app
+
+    class RacyFuture(Future):
+        """Completes, and only then reports the poll as having expired."""
+
+        def __init__(self) -> None:
+            super().__init__()
+            self._polled = False
+
+        def result(self, timeout=None):  # type: ignore[no-untyped-def]
+            if timeout is not None and not self._polled:
+                self._polled = True
+                super().result(timeout=5)  # let the callback finish first
+                raise FutureTimeoutError  # then act as though the poll had expired
+            return super().result(timeout)
+
+    monkeypatch.setattr(command_toolbar, "Future", RacyFuture)
+    with app._command_toolbar_context():
+        toolbar = app._command_toolbar
+        assert toolbar._call_in_ui(lambda: "finished") == "finished"
+
+
+def test_command_toolbar_ui_call_after_display_stopped(toolbar_app) -> None:
+    app, pipe, _ = toolbar_app
+    with app._command_toolbar_context():
+        toolbar = app._command_toolbar
+        pipe.close()
+        toolbar._thread.join(timeout=2)
+        assert not toolbar._thread.is_alive()
+
+        # There is no loop left to run UI work on, so asking must fail rather than
+        # queue a callback onto a closed loop.
+        assert toolbar.app.loop is None
+        with pytest.raises(RuntimeError, match="Toolbar is not running"):
+            toolbar._call_in_ui(lambda: None)
+
+
+def test_command_toolbar_ui_call_reports_display_failure(toolbar_app, capsys) -> None:
+    app, _, _ = toolbar_app
+    with app._command_toolbar_context():
+        toolbar = app._command_toolbar
+        loop = toolbar.app.loop
+        schedule = loop.call_soon_threadsafe
+        failed = threading.Event()
+
+        def die(*args, **kwargs):
+            # The display dies instead of running the queued callback, so the future
+            # the command is waiting on never resolves. Only drop that one request,
+            # made here on the command thread. asyncio uses call_soon_threadsafe from
+            # its own threads, and on Windows the default executor's join is reported
+            # through it while asyncio.run() shuts the loop down. Swallowing that
+            # report strands the toolbar thread for 300 seconds, or forever before
+            # Python 3.12, where shutdown_default_executor() has no timeout.
+            if not failed.is_set() and threading.current_thread() is threading.main_thread():
+                failed.set()
+                schedule(lambda: toolbar.app.exit(exception=ValueError("broken display")))
+                return None
+            return schedule(*args, **kwargs)
+
+        with (
+            mock.patch.object(loop, "call_soon_threadsafe", side_effect=die),
+            pytest.raises(ValueError, match="broken display"),
+        ):
+            toolbar._call_in_ui(lambda: None)
+
+    assert "broken display" in capsys.readouterr().err
 
 
 def test_command_toolbar_failure_after_startup_is_reported(toolbar_app, capsys) -> None:
@@ -1060,8 +1160,125 @@ def test_command_toolbar_reuses_prompt_application(toolbar_app) -> None:
     assert app._read_raw_input("Next: ", session, pre_run=lambda: pipe.send_text("answer\n")) == "answer"
 
 
+@pytest.mark.parametrize("quit_key", ["q", "\x03"])
+def test_builtin_pager_keeps_toolbar_live(toolbar_app, monkeypatch, quit_key) -> None:
+    app, pipe, _ = toolbar_app
+    app.use_builtin_pager = True
+    monkeypatch.setattr(app, "stdin", Terminal())
+    monkeypatch.setenv("TERM", "xterm")
+    entered, refreshed, moved, found = (threading.Event() for _ in range(4))
+    state = ["BEFORE"]
+
+    def toolbar_text():
+        assert threading.current_thread() is not threading.main_thread()
+        if app.main_session.app.full_screen and state[0] == "AFTER":
+            refreshed.set()
+        return state[0]
+
+    app.main_session.bottom_toolbar = toolbar_text
+    prompt_layout = app.main_session.app.layout
+
+    def observe(ui):
+        if not ui.full_screen:
+            return
+        assert ui.layout.container.children[-1] is app._command_toolbar.toolbar
+        entered.set()
+        row = ui.layout.current_buffer.document.cursor_position_row
+        if row > 0:
+            moved.set()
+        if row == 80:
+            found.set()
+
+    def interact():
+        try:
+            assert entered.wait(2)
+            state[0] = "AFTER"
+            assert refreshed.wait(2)
+            pipe.send_text(" ")
+            assert moved.wait(2)
+            pipe.send_text("/row 080\n")
+            assert found.wait(2)
+        finally:
+            pipe.send_text(quit_key)
+
+    app.main_session.app.after_render += observe
+    with mock.patch("subprocess.Popen") as external, ThreadPoolExecutor() as executor:
+        interaction = executor.submit(interact)
+        with app._command_toolbar_context():
+            thread = app._command_toolbar._thread
+            app.ppaged("\n".join(f"row {i:03d}" for i in range(100)))
+            assert app._command_toolbar._thread is thread
+            assert app._command_toolbar.is_active
+            assert not app.main_session.app.full_screen
+            assert not app.main_session.app.renderer.full_screen
+        interaction.result(timeout=2)
+        external.assert_not_called()
+    assert app.main_session.app.layout is prompt_layout
+    assert refreshed.is_set()
+    assert get_typeahead(pipe) == []
+
+
+def test_builtin_pager_short_output(toolbar_app, monkeypatch) -> None:
+    app, _, output = toolbar_app
+    app.use_builtin_pager = True
+    monkeypatch.setattr(app, "stdin", Terminal())
+    monkeypatch.setenv("TERM", "xterm")
+    with mock.patch("subprocess.Popen") as external, app._command_toolbar_context():
+        app.ppaged("short output")
+        assert app._command_toolbar.is_active
+        external.assert_not_called()
+    assert "short output\n" in output.getvalue()
+
+
+def test_builtin_pager_short_output_builds_no_pager(toolbar_app, monkeypatch) -> None:
+    app, _, output = toolbar_app
+    app.use_builtin_pager = True
+    monkeypatch.setattr(app, "stdin", Terminal())
+    monkeypatch.setenv("TERM", "xterm")
+    # Output that fits is written directly, so none of the pager's widgets are needed.
+    with mock.patch("cmd2.command_toolbar.Pager") as pager, app._command_toolbar_context():
+        app.ppaged("short output")
+        pager.assert_not_called()
+    assert "short output\n" in output.getvalue()
+
+
+def test_builtin_pager_needs_an_already_running_toolbar(toolbar_app, monkeypatch) -> None:
+    app, _, _ = toolbar_app
+    app.use_builtin_pager = True
+    monkeypatch.setattr(app, "stdin", Terminal())
+    monkeypatch.setenv("TERM", "xterm")
+    # Outside the command loop there is no toolbar to page inside. Starting one here
+    # would wrap the terminal streams and enter raw mode where the docs promise not to.
+    with (
+        mock.patch.object(command_toolbar.CommandToolbar, "start") as start,
+        mock.patch("subprocess.Popen") as external,
+    ):
+        app.ppaged("row\n" * 200)
+    start.assert_not_called()
+    external.assert_called_once()
+
+
+def test_builtin_pager_is_used_after_the_external_pager_could_not_be_run(toolbar_app, monkeypatch) -> None:
+    app, _, _ = toolbar_app
+    app.use_builtin_pager = True
+    monkeypatch.setattr(app, "stdin", Terminal())
+    monkeypatch.setenv("TERM", "xterm")
+    # The external pager is what pages outside the command loop, and one the shell could not run there is not
+    # tried again. That says nothing about the built-in pager, which runs no program.
+    app._unrunnable_pagers.add(app.pager)
+    with (
+        mock.patch.object(command_toolbar.CommandToolbar, "page") as page,
+        mock.patch("subprocess.Popen") as external,
+        app._command_toolbar_context(),
+    ):
+        app.ppaged("row\n" * 200)
+    page.assert_called_once()
+    external.assert_not_called()
+
+
 def test_external_pager_suspends_shared_application(toolbar_app, monkeypatch) -> None:
     app, _, _ = toolbar_app
+    app.use_builtin_pager = False
     monkeypatch.setattr(app, "stdin", Terminal())
     monkeypatch.setenv("TERM", "xterm")
 
@@ -1073,3 +1290,97 @@ def test_external_pager_suspends_shared_application(toolbar_app, monkeypatch) ->
     with mock.patch("subprocess.Popen", side_effect=external), app._command_toolbar_context():
         app.ppaged("external pager")
         assert app._command_toolbar.is_active
+
+
+def test_builtin_pager_never_erases_its_screen_from_the_corner(monkeypatch) -> None:
+    """iTerm2 keeps a screen which is erased from its top-left corner, and so each page so erased.
+
+    A renderer erases its screen that way when it is reset, which it is when the pager closes
+    and each time the terminal is resized.
+    """
+    stream = Terminal()
+    entered, resized = threading.Event(), threading.Event()
+    with create_pipe_input() as pipe:
+        terminal = Vt100_Output(stream, lambda: Size(rows=24, columns=80), enable_cpr=False)
+        with create_app_session(input=pipe, output=terminal):
+            app = Cmd(allow_cli_args=False)
+            app.stdout = stream
+            app.use_builtin_pager = True
+            monkeypatch.setattr(app, "stdin", Terminal())
+            monkeypatch.setenv("TERM", "xterm")
+            app.main_session = PromptSession(input=pipe, output=terminal, bottom_toolbar="STATUS", refresh_interval=0.01)
+            ui = app.main_session.app
+
+            def resize() -> None:
+                ui._on_resize()
+                resized.set()
+
+            def interact() -> None:
+                try:
+                    assert entered.wait(2)
+                    ui.loop.call_soon_threadsafe(resize)
+                    assert resized.wait(2)
+                finally:
+                    pipe.send_text("q")
+
+            ui.after_render += lambda _: entered.set() if ui.full_screen else None
+            with ThreadPoolExecutor() as executor:
+                interaction = executor.submit(interact)
+                with app._command_toolbar_context():
+                    app.ppaged("\n".join(f"row {i:03d}" for i in range(100)))
+                    interaction.result(timeout=2)
+
+    written = stream.getvalue()
+    paged = written[written.index("\x1b[?1049h") : written.rindex("\x1b[?1049l")]
+    # Once for the pager's first frame, once for the resize, once for the frame after it, once to close.
+    assert paged.count("\x1b[J") >= 4
+    assert paged.count("\x1b[J") == paged.count(command_toolbar.ERASE_DOWN_FROM_FIRST_COLUMN)
+    # The terminal's own way of erasing is back once the pager has closed.
+    assert "erase_down" not in vars(terminal)
+
+
+@pytest.mark.parametrize("row", [0, 1, 11, 23])
+def test_erase_down_from_first_column_erases_what_erase_down_does(row) -> None:
+    """The longer way round leaves the same screen, and the cursor where it was."""
+    import pyte
+
+    def shown(erase: str) -> tuple[list[str], int, int]:
+        screen = pyte.Screen(20, 24)
+        stream = pyte.Stream(screen)
+        stream.feed("\r\n".join(f"row {number:02d} filled to the edge"[:20] for number in range(24)))
+        stream.feed(f"\x1b[{row + 1};1H{erase}")
+        return list(screen.display), screen.cursor.x, screen.cursor.y
+
+    kept = [f"row {number:02d} filled to the edge"[:20] for number in range(row)]
+    assert shown(command_toolbar.ERASE_DOWN_FROM_FIRST_COLUMN) == shown("\x1b[J")
+    assert shown(command_toolbar.ERASE_DOWN_FROM_FIRST_COLUMN) == (kept + [" " * 20] * (24 - row), 0, row)
+
+
+def test_builtin_pager_eof_restores_prompt(toolbar_app) -> None:
+    app, pipe, output = toolbar_app
+    layout = app.main_session.app.layout
+
+    def close_input(ui):
+        if ui.full_screen:
+            pipe.close()
+
+    app.main_session.app.after_render += close_input
+    with pytest.raises(EOFError), app._command_toolbar_context():
+        app._command_toolbar.page("line\n" * 100, chop=False)
+    assert app.main_session.app.layout is layout
+    assert not app.main_session.app.full_screen
+    assert not app.main_session.app.renderer.full_screen
+    assert app.stdout is output
+
+
+def test_builtin_pager_does_not_capture_redirected_output(toolbar_app, monkeypatch, tmp_path) -> None:
+    app, _, output = toolbar_app
+    app.use_builtin_pager = True
+    monkeypatch.setattr(app, "stdin", Terminal())
+    monkeypatch.setenv("TERM", "xterm")
+    target = tmp_path / "help.txt"
+    with mock.patch("cmd2.command_toolbar.Pager") as pager, app._command_toolbar_context():
+        app.onecmd_plus_hooks(f'help > "{target}"')
+        pager.assert_not_called()
+    assert "Cmd2 Commands" in target.read_text(encoding="utf-8")
+    assert "Cmd2 Commands" not in output.getvalue()

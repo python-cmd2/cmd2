@@ -12,17 +12,23 @@ import sys
 import threading
 import time
 from collections.abc import Callable, Generator
+from concurrent.futures import Future
+from concurrent.futures import TimeoutError as FutureTimeoutError
 from typing import TYPE_CHECKING, Any, TextIO, TypeVar, cast
 
 from prompt_toolkit.application import Application, create_app_session, run_in_terminal
+from prompt_toolkit.enums import EditingMode
 from prompt_toolkit.filters import Condition, to_filter
 from prompt_toolkit.input.typeahead import get_typeahead, store_typeahead
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.key_binding.key_processor import KeyPress, KeyPressEvent
 from prompt_toolkit.layout import HSplit, Layout, Window
 from prompt_toolkit.layout.containers import ConditionalContainer
+from prompt_toolkit.output.vt100 import Vt100_Output
 from prompt_toolkit.patch_stdout import StdoutProxy
 from prompt_toolkit.utils import get_cwidth, suspend_to_background_supported
+
+from .pager import Pager, output_fits
 
 if TYPE_CHECKING:
     from .cmd2 import Cmd
@@ -31,7 +37,13 @@ if TYPE_CHECKING:
 # no room on the screen.
 _ESCAPE_RE = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\)|[@-Z\\-_])")
 
+# Erases what "erase down" does when the cursor is in the first column of a row, without
+# erasing from the top-left corner of the screen: the row itself, then from its second column
+# to the end of the screen, and back.
+ERASE_DOWN_FROM_FIRST_COLUMN = "\x1b[K\x1b[C\x1b[J\x1b[D"
+
 _F = TypeVar("_F", bound=Callable[..., Any])
+_R = TypeVar("_R")
 
 
 def suspend_process_group(suspend_group: bool = True) -> None:
@@ -70,6 +82,32 @@ def suspend_toolbar(func: _F) -> _F:
             return func(self, *args, **kwargs)
 
     return cast(_F, wrapped)
+
+
+@contextlib.contextmanager
+def erasing_from_the_second_column(output: Any) -> Generator[None]:
+    """Have a terminal erase its screen without iTerm2 keeping what was on it.
+
+    iTerm2 saves a screen which is erased from its top-left corner to its scrollback, as a
+    shell's ``clear`` expects, and the alternate screen is no exception. A renderer erases its
+    screen from there when it is reset, which a full-screen one is when it closes, when the
+    terminal is resized and when it lends the terminal. Each would leave a page in the
+    scrollback of the screen the pager was started from.
+
+    The renderer always erases from the first column of a row, which is what lets the same
+    cells be erased starting from the second. Only an output which writes escape sequences
+    itself is changed, and it is put back afterwards.
+
+    :param output: the output the pager is drawn on
+    """
+    if not isinstance(output, Vt100_Output):
+        yield
+        return
+    vars(output)["erase_down"] = functools.partial(output.write_raw, ERASE_DOWN_FROM_FIRST_COLUMN)
+    try:
+        yield
+    finally:
+        vars(output).pop("erase_down", None)
 
 
 def pipe_target(stream: Any) -> Any:
@@ -341,6 +379,7 @@ class CommandToolbar:
             event.app.suspend_to_background()
 
         self._bindings = bindings
+        self._suspend_binding = suspend
 
     @staticmethod
     def _suspend_to_background(suspend_group: bool = True) -> None:
@@ -398,7 +437,7 @@ class CommandToolbar:
         # has not seen with other bindings. It caches the bindings it merges for each focused
         # window, application bindings included, and does not notice this attribute being
         # reassigned, so reusing a window with different bindings would keep the old ones.
-        # This layout and the main prompt's have windows of their own.
+        # This layout, the main prompt's, and each pager's all have windows of their own.
         for name, value in (("layout", self._layout), ("key_bindings", self._bindings), ("erase_when_done", True)):
             stack.callback(setattr, self.app, name, getattr(self.app, name))
             setattr(self.app, name, value)
@@ -552,6 +591,110 @@ class CommandToolbar:
     def is_active(self) -> bool:
         """Whether the display currently owns the terminal."""
         return self._proxy is not None and self.app.is_running
+
+    def _call_in_ui(self, func: Callable[[], _R]) -> _R:
+        """Change UI state on its event loop, propagating failures to the command."""
+        result: Future[_R] = Future()
+
+        def call() -> None:
+            try:
+                value = func()
+            except BaseException as exc:  # noqa: BLE001
+                result.set_exception(exc)
+            else:
+                result.set_result(value)
+
+        if self.app.loop is None:
+            raise RuntimeError("Toolbar is not running")
+        self.app.loop.call_soon_threadsafe(call)
+        while True:
+            try:
+                value = result.result(timeout=0.1)
+            except FutureTimeoutError:
+                if result.done():
+                    # The callback finished while this poll was expiring, or raised a
+                    # TimeoutError of its own -- indistinguishable here, because
+                    # concurrent.futures.TimeoutError is TimeoutError on Python 3.11+.
+                    # Ask the future for its outcome rather than re-raising this poll's
+                    # timeout, which would report a failure for a call that succeeded.
+                    return result.result()
+                self._check_running()
+            else:
+                return value
+
+    def _check_running(self) -> None:
+        if self._thread is None or not self._thread.is_alive():
+            if self._error is not None:
+                raise self._error
+            raise EOFError
+
+    def page(self, text: str, *, chop: bool) -> None:
+        """Show a pager above the same toolbar without starting another input reader."""
+        size = self.app.output.get_size()
+        # Measuring the toolbar can invoke its callback; keep that work on the
+        # UI thread along with rendering and layout changes.
+        toolbar_height = self._call_in_ui(lambda: self.toolbar.preferred_height(size.columns, size.rows).preferred)
+        if output_fits(text, size.columns, max(0, size.rows - toolbar_height), chop=chop):
+            self.cmd.stdout.write(text)
+            self.cmd.stdout.flush()
+            return
+
+        pager = Pager(text, chop=chop)
+        pager.bindings.add(
+            "c-z",
+            filter=Condition(lambda: suspend_to_background_supported() and to_filter(self.cmd.main_session.enable_suspend)()),
+        )(self._suspend_binding)
+        layout = Layout(HSplit([pager.container, self.toolbar]), focused_element=pager.text)
+        previous = (self.app.layout, self.app.key_bindings, self.app.editing_mode, self.app.full_screen)
+        entered = False
+        # Open for as long as the pager has a screen of its own to erase.
+        own_screen = contextlib.ExitStack()
+
+        def enter() -> None:
+            nonlocal entered
+            entered = True
+            self.app.renderer.erase()
+            own_screen.enter_context(erasing_from_the_second_column(self.app.output))
+            self.app.layout = layout
+            self.app.key_bindings = pager.bindings
+            self.app.editing_mode = EditingMode.EMACS
+            self.app.full_screen = self.app.renderer.full_screen = True
+            self.app.invalidate()
+
+        def leave() -> None:
+            nonlocal entered
+            if not entered:
+                return
+            entered = False
+            try:
+                self.app.renderer.erase()
+            finally:
+                own_screen.close()
+            self.app.layout, self.app.key_bindings, self.app.editing_mode, self.app.full_screen = previous
+            self.app.renderer.full_screen = self.app.full_screen
+            self.app.renderer.request_absolute_cursor_position()
+            self.app.invalidate()
+
+        def close() -> None:
+            # Switch bindings before the next key is processed, preserving
+            # typeahead sent in the same terminal read as the pager's quit key.
+            leave()
+            pager.closed.set()
+
+        pager.on_close = close
+
+        try:
+            self._call_in_ui(enter)
+            while not pager.closed.wait(0.1):
+                self._check_running()
+        finally:
+            if self._thread is not None and self._thread.is_alive():
+                self._call_in_ui(leave)
+            else:
+                # The application's shutdown already reset the renderer.
+                own_screen.close()
+                self.app.layout, self.app.key_bindings, self.app.editing_mode, self.app.full_screen = previous
+                self.app.renderer.full_screen = self.app.full_screen
 
     @contextlib.contextmanager
     def suspend(self) -> Generator[None]:
