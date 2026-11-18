@@ -519,7 +519,8 @@ def test_pipeline_writer_relay_lends_only_while_a_producer_waits(pauses) -> None
         while len(received) < first_read:
             chunk = os.read(read_fd, min(65536, first_read - len(received)))
             if not chunk:
-                # The relay closed the pipe early. Stop here, so the test fails on what is missing instead of spinning.
+                # End of file arrives only once the test's cleanup closes the writer. Reaching it here means the output fell
+                # short, so stop instead of spinning on empty reads.
                 return
             received.extend(chunk)
         paused.set()
@@ -552,6 +553,8 @@ def test_pipeline_writer_relay_lends_only_while_a_producer_waits(pauses) -> None
         threading.Timer(0.3, resume.set).start()
         assert writer.write(b"end") == 3
     finally:
+        # Release the consumer wherever it waits, so a test that fails before a lend does not hold up the join.
+        lent.set()
         resume.set()
         writer.close()
         consumer.join(10)
