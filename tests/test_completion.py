@@ -431,6 +431,26 @@ def test_shell_command_completion_literal_brackets_in_given_path(cmd_app, tmp_pa
     assert completions.to_strings() == (str(bin_dir / "[ab]-tool"),)
 
 
+@pytest.mark.parametrize("absolute", [False, True], ids=["relative", "absolute"])
+def test_shell_command_completion_windows_forward_slashes(cmd_app, tmp_path, monkeypatch, absolute) -> None:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    make_exes(bin_dir, ("my-other.exe",))
+    make_exes(tmp_path, ("my-local.exe",))
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("PATH", str(bin_dir))
+
+    text = (tmp_path / "my").as_posix() if absolute else "./my"
+    expected = os.path.join(os.path.dirname(text), "my-local.exe")
+    line = f"shell {text}"
+    monkeypatch.setattr(os.path, "sep", "\\")
+    monkeypatch.setattr(os.path, "altsep", "/")
+
+    completions = cmd_app.shell_cmd_complete(text, line, len(line) - len(text), len(line))
+
+    assert completions.to_strings() == (expected,)
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="'*' and '?' are not legal in Windows file names")
 @pytest.mark.parametrize("prefix", ["my*", "my?"])
 def test_shell_command_completion_literal_wildcards_in_name(cmd_app, tmp_path, monkeypatch, prefix) -> None:
