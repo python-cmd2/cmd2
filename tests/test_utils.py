@@ -514,8 +514,9 @@ def test_pipeline_writer_relay_lends_only_while_a_producer_waits(pauses) -> None
 
     def drain() -> None:
         # Like a pager waiting for a key, drain nothing until lent the terminal. Then read a page, or all of it, and wait for
-        # the next key.
-        lent.wait(10)
+        # the next key. Neither wait has a timeout, which would let a slow test read ahead unnoticed: the test's cleanup
+        # releases both.
+        lent.wait()
         while len(received) < first_read:
             chunk = os.read(read_fd, min(65536, first_read - len(received)))
             if not chunk:
@@ -524,7 +525,7 @@ def test_pipeline_writer_relay_lends_only_while_a_producer_waits(pauses) -> None
                 return
             received.extend(chunk)
         paused.set()
-        resume.wait(10)
+        resume.wait()
         while chunk := os.read(read_fd, 65536):
             received.extend(chunk)
 
