@@ -548,6 +548,42 @@ class CommandToolbar:
         if getattr(obj, name) is stream:
             setattr(obj, name, stream.original)
 
+    def _watch_for_resizes(self, stack: contextlib.ExitStack) -> None:
+        """Have the display hear of a resize at once, for as long as it holds a reservation.
+
+        A terminal sets its scroll region back to the whole screen when it is resized. From
+        then until the region is installed again, a line of command output written on the last
+        row above the toolbar moves on to the toolbar's row, and the next is written over it.
+        prompt-toolkit only looks at the size of the terminal twice a second from a thread
+        other than the main one, which is where the display runs. The signal comes to the
+        main thread, where the command is, and is passed on from there.
+
+        :param stack: what is undone when the display stops
+        """
+        sigwinch = getattr(signal, "SIGWINCH", None)
+        if sigwinch is None or threading.current_thread() is not threading.main_thread():
+            return
+        previous = signal.getsignal(sigwinch)
+        if previous is None:
+            # Installed by something other than Python, which could not be put back.
+            return
+
+        def resized(signum: int, frame: Any) -> None:
+            # Rendering is where the bridge looks at the size, and asking for it is safe from
+            # a signal handler. This runs in the middle of whatever the command is doing, so
+            # a loop which has just closed must not become the command's exception.
+            with contextlib.suppress(RuntimeError):
+                self.app.invalidate()
+            if callable(previous):
+                previous(signum, frame)
+
+        def restore() -> None:
+            if threading.current_thread() is threading.main_thread() and signal.getsignal(sigwinch) is resized:
+                signal.signal(sigwinch, previous)
+
+        signal.signal(sigwinch, resized)
+        stack.callback(restore)
+
     def _resume(self) -> None:
         if self._failed:
             return
@@ -582,6 +618,7 @@ class CommandToolbar:
             # question -- the display is up either way -- so it hangs on the attempt instead.
             bridge.set_render_attempted_handler(self._display_started_without_app)
             stack.callback(bridge.set_render_attempted_handler, None)
+            self._watch_for_resizes(stack)
         context = contextvars.copy_context()
 
         def run() -> None:

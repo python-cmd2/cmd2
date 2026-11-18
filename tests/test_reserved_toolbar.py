@@ -382,6 +382,41 @@ class TestFirstPaint:
         finally:
             harness.close()
 
+    def test_the_band_is_drawn_as_a_bar_as_the_native_toolbar_is(self) -> None:
+        """prompt-toolkit draws its toolbar in reverse video, by its default style for an application.
+
+        Text and the padding after it are both part of the bar.
+        """
+        harness = Harness()
+        try:
+            harness.toolbar.start()
+            reverse = "\x1b[0;7m"
+            assert f"{reverse}STATUS{reverse}{' ' * 74}" in harness.written()
+        finally:
+            harness.close()
+
+    def test_the_band_is_styled_as_the_application_styles_its_own_toolbar(self) -> None:
+        """A theme's rule for the toolbar, or for its text, reaches the band as it does the window."""
+        harness = Harness()
+        try:
+            harness.toolbar.start()
+            painter = harness.toolbar.painter
+            assert painter is not None
+            assert painter.last_frame is not None
+            styles = {cell.style for cell in painter.last_frame.rows[0]}
+            native = harness.app._merged_style
+            text = native.get_attrs_for_style_str("class:bottom-toolbar class:bottom-toolbar.text")
+            padding = native.get_attrs_for_style_str("class:bottom-toolbar")
+            assert {painter._style.get_attrs_for_style_str(style) for style in styles} == {text, padding}
+            assert text.reverse
+            assert padding.reverse
+            assert {tuple(style.split()) for style in styles} == {
+                ("class:bottom-toolbar", "class:bottom-toolbar.text"),
+                ("class:bottom-toolbar",),
+            }
+        finally:
+            harness.close()
+
     def test_refreshing_repaints_changed_content(self) -> None:
         harness = Harness()
         try:

@@ -44,9 +44,8 @@ if TYPE_CHECKING:  # pragma: no cover
     from .terminal_display import TerminalDisplay
 
 
-#: How many frames in a row may fail to prepare and still be retried at once. One is
-#: expected: a full-screen layout's first frame enters the alternate screen, which cannot be
-#: recorded in a frame.
+#: How many frames in a row may fail to prepare and still be retried at once. A layout
+#: callback which raises once is given another chance; one which always raises is not.
 _MAX_PREPARATION_RETRIES = 2
 
 #: Trailing control that moves nothing the user can see: carriage returns, CSI sequences such
@@ -96,6 +95,16 @@ class PreparedRender:
 
     #: What the frame was prepared against.
     generations: Generations
+
+    #: Whether the renderer was on the alternate screen before it prepared this frame. A
+    #: full-screen frame enters it, and one which is not emitted has to leave the renderer
+    #: believing what it did before.
+    in_alternate_screen: bool = False
+
+    #: Where the renderer had the cursor before it prepared this frame. It takes the frame's
+    #: cursor as the terminal's while the frame is only prepared, and one which is not emitted
+    #: has moved nothing.
+    cursor_before: Point | None = None
 
 
 @dataclass(frozen=True)
@@ -168,6 +177,10 @@ class PromptToolkitBridge:
         self._after_render_installed: Any = None
         self._render_suppressed = False
         self._unfinished_command_output = False
+        # Whether the last thing to move the cursor was command output ending a line, which
+        # leaves it at the start of a row holding none of that output. Not the opposite of the
+        # flag above: after a guest program or an erase, neither is known.
+        self._command_output_ended_a_line = False
 
     # -- what is known ---------------------------------------------------------------------
 
@@ -282,14 +295,19 @@ class PromptToolkitBridge:
             visible = _TRAILING_CONTROL.sub("", data)
             if visible:
                 self._unfinished_command_output = not visible.endswith("\n")
+                self._command_output_ended_a_line = visible.endswith("\n")
         self._prompt_anchor = prompt_anchor
         # Only the frame in flight goes; it was prepared against the cursor and content this
         # write moved, so committing it would emit a stale frame. The renderer's baseline is
         # reset to the last committed screen -- not left as the advance a pending preparation
         # made, which the terminal never received, and not cleared, which would force the next
         # frame to erase down over the output just written.
-        self._in_flight = None
+        dropped, self._in_flight = self._in_flight, None
         self._renderer._last_screen = self._committed_screen
+        if dropped is not None and dropped.cursor_before is not None:
+            # The renderer's cursor is likewise where the dropped frame would have left it.
+            # The next frame moves from there, so it goes back to where it was before.
+            self._renderer._cursor_pos = dropped.cursor_before
         self._request_redraw()
 
     @property
@@ -307,6 +325,7 @@ class PromptToolkitBridge:
         the guest's to finish, as it was before the reservation existed.
         """
         self._unfinished_command_output = False
+        self._command_output_ended_a_line = False
 
     def before_managed_write(self) -> None:
         """Remove retained pager-startup cells before output can scroll them into history.
@@ -443,10 +462,9 @@ class PromptToolkitBridge:
         Not through ``_request_redraw()``. A request made before this frame began is still
         marked pending, because only a committed frame clears it and the command display's
         suppressed frames never commit. The scheduling which went with that request is what
-        ran this frame, so a retry coalesced into it would never be scheduled at all: the
-        built-in pager's first frame, which cannot be prepared because it enters the
-        alternate screen, would not be followed by a second until a key or a refresh timer
-        caused one.
+        ran this frame, so a retry coalesced into it would never be scheduled at all: a
+        frame of the built-in pager's which could not be prepared would not be followed by
+        another until a key or a refresh timer caused one.
 
         A frame whose preparation keeps raising is retried only a few times. Its layout is
         broken until something changes, and whatever changes it causes a frame of its own.
@@ -644,7 +662,9 @@ class PromptToolkitBridge:
             elif self._display.terminal.physical_size() == geometry.physical_size:
                 return
             else:
-                self._display.reconfigure()
+                # While a command has the terminal, the row output has just moved on to may be
+                # the old band's: the terminal dropped the scroll region when it was resized.
+                self._display.reconfigure(cursor_row_is_fresh=self._render_suppressed and self._command_output_ended_a_line)
         self.forget_prompt_anchor()
         # A prompt owes recovery: its origin has to be re-established from the terminal, and
         # its frame repainted. A command does not -- it owns the cursor and is still writing
@@ -796,11 +816,18 @@ class PromptToolkitBridge:
         # them would consume a screen that does not exist.
         self._preparing = True
         render = self._originals.get("render", self._renderer.render)
+        # A full-screen frame begins by entering the alternate screen, and the renderer marks
+        # itself as there before anything is emitted.
+        in_alternate_screen = self._renderer._in_alternate_screen
+        # What the terminal was last sent, and where that left the cursor. The renderer takes
+        # the frame it is about to prepare as both, whether or not the frame is emitted.
+        baseline = (self._renderer._last_screen, self._renderer._cursor_pos)
         try:
             render(app, app.layout if layout is None else layout, is_done)
         except Exception as error:  # noqa: BLE001 - a layout callback must not end a command
             self._pending_error = error
             self._failed_preparations += 1
+            self._forget_screen_switch(in_alternate_screen)
             self.require_resynchronization("preparing the frame raised")
             return None
         finally:
@@ -819,6 +846,7 @@ class PromptToolkitBridge:
                 # reservation outright. Either way the operations are recorded against a
                 # terminal that has moved on.
                 self._retire()
+                self._forget_screen_switch(in_alternate_screen)
                 return None
 
             if self.generations() != generations:
@@ -826,10 +854,23 @@ class PromptToolkitBridge:
                 # recovery of its own -- command output leaves the empty command display's
                 # baseline correct -- but the frame was recorded against the cursor and content
                 # that write moved, so it must not be published as current.
+                #
+                # Nor may it stay the renderer's baseline. The write put back the last
+                # committed screen, but the renderer was still preparing and has since taken
+                # this frame in its place. Diffed against a frame the terminal never received,
+                # the next one would find nothing to draw where the two agree, and what is on
+                # the terminal would stay as it was.
                 self._in_flight = None
+                self._renderer._last_screen, self._renderer._cursor_pos = baseline
+                self._forget_screen_switch(in_alternate_screen)
                 return None
 
-            prepared = PreparedRender(batch=recorder.batch(), generations=generations)
+            prepared = PreparedRender(
+                batch=recorder.batch(),
+                generations=generations,
+                in_alternate_screen=in_alternate_screen,
+                cursor_before=baseline[1],
+            )
             self._in_flight = prepared
             return prepared
 
@@ -841,31 +882,8 @@ class PromptToolkitBridge:
         """
         assert_no_terminal_transaction("committing a prepared frame")
         with self._lock.transaction("commit", generation=prepared.generations.geometry):
-            if prepared is not self._in_flight:
-                # Already retired, or from a previous attempt. Replaying it would emit a frame
-                # nothing has validated, and possibly emit it twice.
-                #
-                # Read here, after the terminal has been acquired: read before the wait, it
-                # answers a question about a terminal somebody else still held, since a writer
-                # can retire the batch while this call queues, changing neither the
-                # generations nor the size.
-                return False
-            if self._needs_resynchronization or self._reserved_emission_stopped:
-                # Not covered by the identity test above. Retirement clears the frame in
-                # flight, but a preparation completing concurrently can publish a new one over
-                # that retirement, and the frame it publishes matches on identity and on every
-                # generation. What makes it uncommittable is the state of the terminal, so
-                # that is what is asked.
-                return False
-            if self.generations() != prepared.generations:
-                self.require_resynchronization("the terminal changed between preparing and committing")
-                return False
-            if prepared.batch.facts.size != self._display.output.get_size():
-                # The generations can agree while the frame was laid out for a different
-                # terminal -- the geometry is read once per snapshot, and the batch carries
-                # what the renderer actually branched on. The frame's own facts are the last
-                # word on whether it still fits.
-                self.require_resynchronization("the frame was laid out for a different size")
+            if not self._still_current(prepared):
+                self._forget_screen_switch(prepared.in_alternate_screen)
                 return False
             try:
                 # Preparation may be expensive for a large pager. Its main-screen bar is
@@ -877,6 +895,10 @@ class PromptToolkitBridge:
                 # Some of the batch reached the terminal and some did not, and nothing here
                 # knows where the boundary was. The frame is never replayed: a retry would
                 # duplicate whatever already landed.
+                #
+                # The renderer keeps what the frame told it about the alternate screen. The
+                # switch is the first thing in a frame, so it has probably happened, and a
+                # renderer which wrongly believes it is there only leaves once too often.
                 self._pending_error = error
                 self.require_resynchronization("a frame was only partly emitted")
                 self._attempt_cleanup()
@@ -888,6 +910,57 @@ class PromptToolkitBridge:
         # restores this rather than the advance a later, uncommitted preparation would make.
         self._committed_screen = self._renderer._last_screen
         self._redraw_pending = False
+        return True
+
+    def _forget_screen_switch(self, in_alternate_screen: bool) -> None:
+        """Undo what preparing a frame told the renderer about the alternate screen.
+
+        A full-screen frame begins by entering the alternate screen, and the renderer marks
+        itself as there while the frame is only being prepared. A frame which is then not
+        emitted did not switch screens. Left believing otherwise, the renderer would prepare
+        the next frame without the switch, and draw it over the main screen.
+
+        :param in_alternate_screen: whether the renderer was there before preparing the frame
+        """
+        renderer = self._renderer
+        if renderer._in_alternate_screen and not in_alternate_screen:
+            renderer._in_alternate_screen = False
+            # What the frame drew was laid out for a screen the terminal never showed, so it
+            # is no baseline for the frame which does switch.
+            renderer._last_screen = None
+            renderer._cursor_pos = Point(x=0, y=0)
+
+    def _still_current(self, prepared: PreparedRender) -> bool:
+        """Return whether a prepared frame still describes the terminal, inside the transaction.
+
+        :param prepared: the frame about to be emitted
+        """
+        if prepared is not self._in_flight:
+            # Already retired, or from a previous attempt. Replaying it would emit a frame
+            # nothing has validated, and possibly emit it twice.
+            #
+            # Read here, after the terminal has been acquired: read before the wait, it
+            # answers a question about a terminal somebody else still held, since a writer
+            # can retire the batch while this call queues, changing neither the
+            # generations nor the size.
+            return False
+        if self._needs_resynchronization or self._reserved_emission_stopped:
+            # Not covered by the identity test above. Retirement clears the frame in
+            # flight, but a preparation completing concurrently can publish a new one over
+            # that retirement, and the frame it publishes matches on identity and on every
+            # generation. What makes it uncommittable is the state of the terminal, so
+            # that is what is asked.
+            return False
+        if self.generations() != prepared.generations:
+            self.require_resynchronization("the terminal changed between preparing and committing")
+            return False
+        if prepared.batch.facts.size != self._display.output.get_size():
+            # The generations can agree while the frame was laid out for a different
+            # terminal -- the geometry is read once per snapshot, and the batch carries
+            # what the renderer actually branched on. The frame's own facts are the last
+            # word on whether it still fits.
+            self.require_resynchronization("the frame was laid out for a different size")
+            return False
         return True
 
     def _attempt_cleanup(self) -> bool:

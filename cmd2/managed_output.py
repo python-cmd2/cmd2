@@ -49,6 +49,12 @@ class SerializedTerminalWriter:
         self._lock = lock
         self.bridge = bridge
         self._output = output
+        # prompt-toolkit's Windows backend sets the console mode around every flush, and the
+        # mode it sets does not wrap at the end of a row: what is written past the last column
+        # is written over it. Upstream's stdout proxy turns autowrap on before each write for
+        # that reason, and this writer takes that proxy's place. That backend is the one which
+        # holds a VT writer of its own; any other is sent exactly what it was given.
+        self._flush_resets_autowrap = hasattr(output, "vt100_output")
 
     @property
     def stream(self) -> "TextIO":
@@ -69,6 +75,8 @@ class SerializedTerminalWriter:
                 if self._output is None:
                     written = self._stream.write(data)
                 else:
+                    if self._flush_resets_autowrap:
+                        self._output.enable_autowrap()
                     self._output.write_raw(data)
                     written = len(data)
                 # Flushed before the lock is given up. Left buffered, this output would reach

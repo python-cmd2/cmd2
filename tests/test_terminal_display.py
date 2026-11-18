@@ -300,6 +300,51 @@ class TestTwoRowFloor:
         assert stream.getvalue() == ""
 
 
+def test_a_resize_erases_the_old_band_when_output_has_moved_on_to_its_row() -> None:
+    """A terminal drops the scroll region when it is resized, and the next line to end moves on to the band.
+
+    The cursor is then at the start of the old band's row. Kept as the row output goes on from,
+    the next line would be written over the old toolbar and leave the rest of it in the output.
+    """
+    import pyte
+
+    output, stream, size = make_resizable_output(rows=24, columns=80)
+    display = TerminalDisplay(output)
+    display.acquire()
+    size.rows = 32
+    stream.truncate(0), stream.seek(0)
+    assert display.reconfigure(cursor_row_is_fresh=True)
+
+    # Eight rows came back from the scrollback, and a line was written before the news of it.
+    screen = pyte.Screen(80, 32)
+    terminal = pyte.Stream(screen)
+    for number, text in enumerate([*SCROLLBACK, *OUTPUT, BAND], 1):
+        terminal.feed(f"\x1b[{number};1H{text}")
+    terminal.feed("\x1b[32;1H")
+    terminal.feed(stream.getvalue())
+    terminal.feed("next line")
+
+    # Making room took the top row, and the band's row is where output goes on.
+    shown = [line.rstrip() for line in screen.display]
+    assert shown == [*SCROLLBACK[1:], *OUTPUT, "next line", ""]
+    assert screen.margins == pyte.screens.Margins(0, 30)
+
+
+def test_erasing_a_fresh_row_does_not_start_in_the_corner() -> None:
+    """iTerm2 would save the screen, and the old band with it, to its scrollback."""
+    output, stream = make_output()
+    PhysicalTerminal(output).erase_below_cursor(cursor_row_is_fresh=True)
+    assert "\x1b[J" in stream.getvalue()
+    assert stream.getvalue() == "\x1b[K\x1b[C\x1b[J\x1b[D"
+
+
+#: A screen of 24 rows which command output has filled, and the toolbar on its last row.
+OUTPUT = [f"line {number:02d}" for number in range(23)]
+BAND = "TOOLBAR n=75".ljust(80, ".")
+#: Rows which had scrolled off the top, and which some terminals bring back when they grow.
+SCROLLBACK = [f"earlier {number}" for number in range(8)]
+
+
 class TestResize:
     def test_reconfigure_installs_the_region_for_the_new_height(self) -> None:
         output, stream, screen = make_resizable_output(rows=24, columns=80)
@@ -309,10 +354,50 @@ class TestResize:
         screen.rows = 40
         stream.truncate(0), stream.seek(0)
         assert display.reconfigure()
-        # A resize starts from full-screen margins, erases the old band's row -- growing has
-        # brought it back inside the screen with its stale toolbar -- makes room for the new
-        # band, and installs the new region.
-        assert stream.getvalue() == "\x1b7\x1b[r\x1b8\x1b7\x1b[24;1H\x1b[2K\x1b8\x1bD\x1b[1A\x1b7\x1b[1;39r\x1b8"
+        # A resize starts from full-screen margins, makes room for the new band, erases what
+        # is below the cursor's row -- the old band's stale toolbar, wherever the terminal has
+        # put it -- and installs the new region.
+        assert stream.getvalue() == "\x1b7\x1b[r\x1b8\x1bD\x1b[1A\x1b7\x1b[B\r\x1b[J\x1b8\x1b7\x1b[1;39r\x1b8"
+
+    @pytest.mark.parametrize(
+        ("moved", "rows", "columns", "before", "cursor_row"),
+        [
+            # Rows were added at the bottom: output and the old band are where they were.
+            pytest.param("nothing", 32, 80, [*OUTPUT, BAND], 23, id="rows added at the bottom"),
+            # Rows came back from the scrollback at the top: everything moved down with them,
+            # and the row the old band was on now holds a line of output.
+            pytest.param("down", 32, 80, [*SCROLLBACK, *OUTPUT, BAND], 31, id="rows brought back from the scrollback"),
+            # The window was made narrower and its rows rewrapped: the old band, which filled
+            # its row, is two rows now, and a row of output has gone to the scrollback for it.
+            pytest.param("up", 24, 60, [*OUTPUT[1:], BAND[:60], BAND[60:]], 22, id="rows rewrapped"),
+            # Rows were taken from the top: the old band is still the last row.
+            pytest.param("up", 16, 80, [*OUTPUT[8:], BAND], 15, id="rows taken from the top"),
+        ],
+    )
+    def test_a_resize_erases_the_old_band_wherever_the_terminal_put_it(self, moved, rows, columns, before, cursor_row) -> None:
+        """And erases nothing else: where the old band's rows are afterwards is up to the terminal."""
+        import pyte
+
+        output, stream, size = make_resizable_output(rows=24, columns=80)
+        display = TerminalDisplay(output)
+        display.acquire()
+        size.rows, size.columns = rows, columns
+        stream.truncate(0), stream.seek(0)
+        assert display.reconfigure()
+
+        # The screen as the terminal left it, with the cursor after the last line of output.
+        screen = pyte.Screen(columns, rows)
+        terminal = pyte.Stream(screen)
+        for number, text in enumerate(before, 1):
+            terminal.feed(f"\x1b[{number};1H{text}")
+        terminal.feed(f"\x1b[{cursor_row};8H")
+        terminal.feed(stream.getvalue())
+
+        output_rows = [text for text in before if not text.startswith("TOOLBAR") and text.strip(".")]
+        shown = [line.rstrip() for line in screen.display]
+        assert shown == output_rows + [""] * (rows - len(output_rows)), moved
+        assert (screen.cursor.y + 1, screen.cursor.x + 1) == (cursor_row, 8)
+        assert screen.margins == pyte.screens.Margins(0, rows - 2)
 
     def test_a_width_change_alone_is_still_a_new_generation(self) -> None:
         """Toolbar height is measured against the width, so a rewrap can change the reservation."""

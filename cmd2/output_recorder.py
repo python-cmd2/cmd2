@@ -42,10 +42,14 @@ if TYPE_CHECKING:  # pragma: no cover
 class UnrecordableOperationError(RuntimeError):
     """Raised for an operation that cannot be deferred to commit time.
 
-    Screen-buffer transitions and viewport moves change what every later coordinate means.
-    They are ownership boundaries, taken explicitly before a frame is prepared for the new
-    screen, so meeting one during preparation means a frame is being prepared against a
+    Leaving the alternate screen and moving the viewport change what every later coordinate
+    means. They are ownership boundaries, taken explicitly before a frame is prepared for the
+    new screen, so meeting one during preparation means a frame is being prepared against a
     terminal that is no longer the one it was measured on.
+
+    Entering the alternate screen is the exception, and is recorded. A renderer does it as
+    the first thing in a full-screen frame, having laid that frame out for the whole
+    terminal, so the switch and the frame belong together: both are emitted or neither is.
     """
 
 
@@ -239,13 +243,13 @@ class RecordingOutput(Output):
     # -- ownership boundaries, which cannot be deferred ------------------------------------
 
     def enter_alternate_screen(self) -> None:
-        """Refuse to record a switch to the alternate screen.
+        """Record a switch to the alternate screen, which the rest of the frame is drawn on.
 
-        :raises UnrecordableOperationError: always
+        A renderer marks itself as switched before it calls this. Whoever drops the frame
+        instead of replaying it has to undo that mark, or the next frame is prepared for a
+        screen the terminal is not showing.
         """
-        raise UnrecordableOperationError(
-            "entering the alternate screen is an ownership transition and cannot be recorded in a frame"
-        )
+        self._record("enter_alternate_screen")
 
     def quit_alternate_screen(self) -> None:
         """Refuse to record a return to the main screen.

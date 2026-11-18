@@ -129,6 +129,9 @@ class TestBackendWriting:
             def write_raw(self, data: str) -> None:
                 self.vt100_output.write_raw(data)
 
+            def enable_autowrap(self) -> None:
+                self.vt100_output.enable_autowrap()
+
             def flush(self) -> None:
                 nonlocal mode
                 original_mode = mode
@@ -147,12 +150,46 @@ class TestBackendWriting:
         else:
             assert writer.write(data) == len(data)
             writer.flush()
-        assert console.getvalue() == data
+        assert console.getvalue() == "\x1b[?7h" + data
         assert mode == 0
         assert observed
         assert all(enabled == 4 and transaction is not None for enabled, transaction in observed)
         assert len(bridge.notes) == 1
         assert bridge.notes[0] is not None
+
+    def test_autowrap_is_turned_on_before_each_write_to_a_backend_whose_flush_resets_it(self) -> None:
+        """Windows' backend sets a console mode at each flush in which a row does not wrap.
+
+        Written without autowrap, a line wider than the terminal loses everything past the
+        last column: each character there is written over the one before it.
+        """
+        stream = RecordingStream()
+
+        class WindowsLikeOutput(DummyOutput):
+            def __init__(self) -> None:
+                self.vt100_output = Vt100_Output(stream, lambda: Size(24, 80))
+
+            def write_raw(self, data: str) -> None:
+                self.vt100_output.write_raw(data)
+
+            def enable_autowrap(self) -> None:
+                self.vt100_output.enable_autowrap()
+
+            def flush(self) -> None:
+                self.vt100_output.flush()
+
+        writer = SerializedTerminalWriter(stream, TerminalLock(), output=WindowsLikeOutput())
+        writer.write("first\n")
+        writer.write("second\n")
+        assert stream.getvalue() == "\x1b[?7hfirst\n\x1b[?7hsecond\n"
+
+    def test_a_backend_which_keeps_its_modes_is_sent_only_the_output(self) -> None:
+        """A VT terminal keeps autowrap as it was left, so nothing is added to what it is sent."""
+        stream = RecordingStream()
+        writer = SerializedTerminalWriter(stream, TerminalLock(), output=Vt100_Output(stream, lambda: Size(24, 80)))
+        writer.write("first\n")
+        writer.write("second\n")
+        assert stream.getvalue() == "first\nsecond\n"
 
 
 class TestInvalidationContract:

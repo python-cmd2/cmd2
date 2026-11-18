@@ -265,18 +265,33 @@ class PhysicalTerminal:
         self._output.write_raw("\x1bD" * rows + f"\x1b[{rows}A")
         self._output.flush()
 
-    def erase_rows(self, first: int, last: int) -> None:
-        """Clear whole physical rows, preserving the cursor.
+    def erase_below_cursor(self, *, cursor_row_is_fresh: bool = False) -> None:
+        """Clear every row below the one the cursor is on, preserving the cursor.
 
-        Used to wipe the old toolbar's rows when a resize leaves them inside the screen. The
-        erase is by line, so it does not depend on the scroll margins, and the cursor is saved
-        and restored around it so the caller's position survives.
+        Used to wipe the old toolbar after a resize. Where its rows are by then depends on the
+        terminal: one which adds rows at the bottom leaves them where they were, one which
+        brings rows back from its scrollback moves them down with everything else, and one
+        which rewraps a narrower window can turn each into two. In every case they are still
+        below the row the cursor is on, which the rows of the old band always were.
 
-        :param first: the one-based first row to clear
-        :param last: the one-based last row to clear, inclusive
+        Unless output has moved on to them. A terminal sets its scroll region back to the
+        whole screen when it is resized, and the next line of output to end then leaves the
+        cursor at the start of the old band's first row instead of scrolling the region. A row
+        which output has only just moved on to holds nothing of that output's, so it is
+        cleared with the rows below it.
+
+        The cursor must not be on the last row, where moving down would not move it and the
+        erase would take the row it is on. Making room for the new band sees to that.
+
+        :param cursor_row_is_fresh: whether the cursor is at the start of a row which command
+            output has just moved on to, and has written nothing on
         """
-        moves = "".join(f"\x1b[{row};1H\x1b[2K" for row in range(first, last + 1))
-        self._output.write_raw(f"{cursor_save_sequence()}{moves}{cursor_restore_sequence()}")
+        if cursor_row_is_fresh:
+            # From the second column, with the first cleared separately: iTerm2 saves a screen
+            # which is erased from its top-left corner to its scrollback, band and all.
+            self._output.write_raw("\x1b[K\x1b[C\x1b[J\x1b[D")
+        else:
+            self._output.write_raw(f"{cursor_save_sequence()}\x1b[B\r\x1b[J{cursor_restore_sequence()}")
         self._output.flush()
 
     def install_region(self, geometry: Geometry) -> None:
@@ -442,7 +457,7 @@ class TerminalDisplay:
         geometry, self._geometry = self._geometry, None
         self._terminal.release_region(geometry)
 
-    def reconfigure(self) -> bool:
+    def reconfigure(self, *, cursor_row_is_fresh: bool = False) -> bool:
         """Resample the terminal and re-establish the reservation for the new geometry.
 
         Used after a resize, and on the way back from a handoff. A terminal that has shrunk
@@ -450,6 +465,8 @@ class TerminalDisplay:
         reacquires. An unqualified backend never installs anything: a refused acquisition
         still holds a lease, so capability is re-checked here rather than assumed settled.
 
+        :param cursor_row_is_fresh: whether the cursor is at the start of a row which command
+            output has just moved on to, so that the row holds none of it
         :return: whether a reservation is installed after this call
         """
         if self._depth == 0:
@@ -478,17 +495,16 @@ class TerminalDisplay:
             # margins -- which is also what making room needs, so that an index at the bottom
             # scrolls the whole screen rather than an obsolete region.
             self._terminal.release_region()
-            if geometry.physical_rows > previous.physical_rows:
-                # The terminal grew, so the rows the old band occupied are now inside the
-                # screen and still hold its stale text. They never scrolled -- the band sits
-                # outside the scroll region -- so they hold nothing but the old toolbar and
-                # are safe to clear before the new region is installed.
-                self._terminal.erase_rows(previous.usable_rows + 1, previous.physical_rows)
             # A terminal that shrank may have left the cursor, and the output on its row, in
             # the rows the new band will take. Making room scrolls that output up into the
             # usable region and moves the cursor with it, column intact, before the band is
             # installed over those rows and painted.
             self._terminal.make_room_for_region(geometry)
+            # The old band's text is still on the screen, and not necessarily on the rows it
+            # was painted on: see erase_below_cursor(). It is below the cursor's row wherever
+            # the terminal has put it, and so is nothing else: output goes on from the cursor,
+            # and a prompt redraws itself after a resize.
+            self._terminal.erase_below_cursor(cursor_row_is_fresh=cursor_row_is_fresh)
         self._terminal.install_region(geometry)
         self._geometry = geometry
         if self._adapter is None:

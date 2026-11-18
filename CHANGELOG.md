@@ -6,6 +6,27 @@
       appear until a key was pressed.
     - A line of command output left unfinished before `Cmd.ppaged()` opens the built-in pager is no
       longer deleted in reserved toolbar mode.
+    - The built-in pager now uses the terminal's alternate screen in reserved toolbar mode, as it
+      does in legacy mode. It was drawn over the main screen, and left a page of paged rows, its key
+      summary and a second toolbar row in the scrollback.
+    - Command output wider than the terminal wraps in reserved toolbar mode on Windows, as it does
+      in legacy mode. Everything past the last column of such a line was lost.
+    - In reserved toolbar mode, output written while a frame of the built-in pager or a prompt is
+      being prepared no longer leaves that frame, which is never shown, as the one the next frame is
+      compared with. The next frame could draw nothing and leave the screen as it was.
+    - In reserved toolbar mode, output written after such a frame is prepared and before it is shown
+      no longer leaves the cursor recorded where that frame would have put it. The next frame could
+      be drawn in the wrong rows.
+    - The reserved bottom toolbar is drawn as a reverse-video bar, as the toolbar is in legacy mode.
+      It was drawn as plain text. Theme rules for `bottom-toolbar` and `bottom-toolbar.text` now
+      apply to its text as well as to the rest of the row.
+    - Resizing the terminal while a command is printing damages its output far less often in
+      reserved toolbar mode. In iTerm2, a line was printed over the old toolbar and the rest of the
+      toolbar left in the output, and growing the window erased a line of output. A resize during a
+      command is now acted on at once where there is a window-change signal, instead of within half
+      a second, and the old toolbar is cleared from wherever the terminal has moved it. A line can
+      still be printed over the old toolbar when a command is printing hundreds of lines a second as
+      the window is resized.
     - Background output printed above an active reserved prompt through `run_in_terminal()` or
       `patch_stdout()` is preserved when the prompt redraws.
     - Reserved rendering preserves unfinished command output when the main prompt returns by
