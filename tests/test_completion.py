@@ -14,6 +14,8 @@ from typing import NoReturn
 from unittest import mock
 
 import pytest
+from prompt_toolkit.completion import get_common_complete_suffix
+from prompt_toolkit.document import Document
 
 import cmd2
 from cmd2 import (
@@ -22,6 +24,7 @@ from cmd2 import (
     Completions,
     utils,
 )
+from cmd2.pt_utils import Cmd2Completer
 
 from .conftest import (
     make_exes,
@@ -431,24 +434,26 @@ def test_shell_command_completion_literal_brackets_in_given_path(cmd_app, tmp_pa
     assert completions.to_strings() == (str(bin_dir / "[ab]-tool"),)
 
 
-@pytest.mark.parametrize("absolute", [False, True], ids=["relative", "absolute"])
-def test_shell_command_completion_windows_forward_slashes(cmd_app, tmp_path, monkeypatch, absolute) -> None:
+@pytest.mark.parametrize("directory", ["./", ".//", None], ids=["relative", "repeated-separator", "absolute"])
+def test_shell_command_completion_windows_forward_slashes(cmd_app, tmp_path, monkeypatch, directory) -> None:
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     make_exes(bin_dir, ("my-other.exe",))
-    make_exes(tmp_path, ("my-local.exe",))
+    make_exes(tmp_path, ("mytool-one.exe", "mytool-two.exe"))
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("PATH", str(bin_dir))
 
-    text = (tmp_path / "my").as_posix() if absolute else "./my"
-    expected = os.path.join(os.path.dirname(text), "my-local.exe")
-    line = f"shell {text}"
+    if directory is None:
+        directory = tmp_path.as_posix() + "/"
+    document = Document(f'shell "{directory}my')
     monkeypatch.setattr(os.path, "sep", "\\")
     monkeypatch.setattr(os.path, "altsep", "/")
 
-    completions = cmd_app.shell_cmd_complete(text, line, len(line) - len(text), len(line))
+    matches = list(Cmd2Completer(cmd_app).get_completions(document, None))
 
-    assert completions.to_strings() == (expected,)
+    assert get_common_complete_suffix(document, matches) == "tool-"
+    completed_lines = {document.text_before_cursor[: match.start_position] + match.text for match in matches}
+    assert completed_lines == {f'shell "{directory}mytool-one.exe', f'shell "{directory}mytool-two.exe'}
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="'*' and '?' are not legal in Windows file names")
@@ -543,6 +548,20 @@ def test_path_completion_files_and_directories(cmd_app, request) -> None:
     expected = [text + "cript.py", text + "cript.txt", text + "cripts" + os.path.sep]
     completions = cmd_app.path_complete(text, line, begidx, endidx)
     assert completions.to_strings() == Completions.from_values(expected).to_strings()
+
+
+@pytest.mark.parametrize(("after_cursor", "expected"), [("", "~/tools/"), ("/file", "~/tools")])
+def test_path_completion_forward_slashes_in_home_directory(cmd_app, tmp_path, monkeypatch, after_cursor, expected) -> None:
+    (tmp_path / "tools").mkdir()
+    monkeypatch.setenv("USERPROFILE" if sys.platform == "win32" else "HOME", str(tmp_path))
+    monkeypatch.setattr(os.path, "sep", "\\")
+    monkeypatch.setattr(os.path, "altsep", "/")
+    text = "~/to"
+    line = f"shell cat {text}{after_cursor}"
+
+    completions = cmd_app.path_complete(text, line, len("shell cat "), len("shell cat ") + len(text))
+
+    assert completions.to_strings() == (expected,)
 
 
 def test_path_completion_nomatch(cmd_app, request) -> None:

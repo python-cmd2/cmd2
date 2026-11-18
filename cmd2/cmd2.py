@@ -2437,46 +2437,15 @@ class Cmd:
                             be kept in the results
         :return: a Completions object
         """
-        # Determine if a trailing separator should be appended to directory completions
-        add_trailing_sep_if_dir = False
-        if endidx == len(line) or (endidx < len(line) and line[endidx] != os.path.sep):
-            add_trailing_sep_if_dir = True
+        add_trailing_sep_if_dir = line[endidx : endidx + 1] not in (os.path.sep, os.path.altsep)
 
-        # Used to replace CWD in the final results
-        cwd = os.getcwd()
-        cwd_added = False
+        # glob can change the separators in its results. Keep the typed directory so prompt-toolkit
+        # can extend the common prefix without replacing any text before the cursor.
+        typed_directory = text.removesuffix(os.path.basename(text))
+        if text.startswith("~") and not typed_directory:
+            return self._complete_users(text, add_trailing_sep_if_dir)
 
-        # Used to replace expanded user path in final result
-        orig_tilde_path = ""
-        expanded_tilde_path = ""
-
-        # If the search text is blank, then complete all entries in the CWD
-        if not text:
-            search_str = os.path.join(os.getcwd(), "")
-            cwd_added = True
-        else:
-            # Start the search string
-            search_str = text
-
-            # Handle tilde expansion and completion
-            if text.startswith("~"):
-                sep_index = text.find(os.path.sep, 1)
-
-                # If there is no slash, then the user is still completing the user after the tilde
-                if sep_index == -1:
-                    return self._complete_users(text, add_trailing_sep_if_dir)
-
-                # Otherwise expand the user dir
-                search_str = os.path.expanduser(search_str)
-
-                # Get what we need to restore the original tilde path later
-                orig_tilde_path = text[:sep_index]
-                expanded_tilde_path = os.path.expanduser(orig_tilde_path)
-
-            # If the search text does not have a directory, then use the CWD
-            elif not os.path.dirname(text):
-                search_str = os.path.join(os.getcwd(), search_str)
-                cwd_added = True
+        search_str = os.path.expanduser(text) if typed_directory else os.path.join(os.getcwd(), text)
 
         # Find all matching path completions
         matches = glob.glob(glob.escape(search_str) + "*")
@@ -2491,33 +2460,13 @@ class Cmd:
         # If we have a single match and it's a directory, then don't append a space or closing quote
         allow_finalization = not (len(matches) == 1 and os.path.isdir(matches[0]))
 
-        # Build display_matches and add a slash to directories
-        display_matches: list[str] = []
-        for index, cur_match in enumerate(matches):
-            # Display only the basename of this path in the completion suggestions
-            display_matches.append(os.path.basename(cur_match))
-
-            # Add a separator after directories if the next character isn't already a separator
-            if os.path.isdir(cur_match) and add_trailing_sep_if_dir:
-                matches[index] += os.path.sep
-                display_matches[index] += os.path.sep
-
-        # Remove CWD if it was added to match the text prompt-toolkit expects
-        if cwd_added:
-            to_replace = cwd if cwd == os.path.sep else cwd + os.path.sep
-            matches = [cur_path.replace(to_replace, "", 1) for cur_path in matches]
-
-        # Restore the tilde string if we expanded one to match the text prompt-toolkit expects
-        if expanded_tilde_path:
-            matches = [cur_path.replace(expanded_tilde_path, orig_tilde_path, 1) for cur_path in matches]
-
-        items = [
-            CompletionItem(
-                value=match,
-                display=display,
-            )
-            for match, display in zip(matches, display_matches, strict=True)
-        ]
+        trailing_sep = os.path.altsep if os.path.altsep and typed_directory.endswith(os.path.altsep) else os.path.sep
+        items = []
+        for match in matches:
+            name = os.path.basename(match)
+            if add_trailing_sep_if_dir and os.path.isdir(match):
+                name += trailing_sep
+            items.append(CompletionItem(value=typed_directory + name, display=name))
 
         return Completions(items=items, allow_finalization=allow_finalization)
 

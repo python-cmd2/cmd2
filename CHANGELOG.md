@@ -1,3 +1,10 @@
+## 4.4.4 (TBD)
+
+- Bug Fixes
+    - On Windows, shell command completion now recognizes paths typed with forward slashes, such as
+      `./my` and `C:/tools/my`. Path completion preserves the typed separators so the first Tab
+      extends the shared prefix when several names match.
+
 ## 4.4.3 (2026-11-16)
 
 - Bug Fixes
