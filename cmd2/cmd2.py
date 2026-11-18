@@ -2539,7 +2539,7 @@ class Cmd:
             return Completions()
 
         # If the search text is a bare command name (no '~' or path separator), complete executables from PATH
-        if not text.startswith("~") and os.path.sep not in text:
+        if not text.startswith("~") and os.path.sep not in text and (os.path.altsep is None or os.path.altsep not in text):
             items = [CompletionItem(exe) for exe in utils.get_exes_in_path(text)]
             return Completions(items=items)
 
