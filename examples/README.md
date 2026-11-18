@@ -95,6 +95,9 @@ each:
     - Example of using Rich Tables within a cmd2 application for displaying tabular data
 - [rich_theme.py](https://github.com/python-cmd2/cmd2/blob/main/examples/rich_theme.py)
     - Demonstrates how to create a custom theme for a cmd2 application
+- [textual_toolbar.py](https://github.com/python-cmd2/cmd2/blob/main/examples/textual_toolbar.py)
+    - PROTOTYPE: a bottom toolbar which stays on the screen while commands run, drawn by a small
+      Textual application which runs the cmd2 application inside a terminal emulator widget
 - [textual_tty_embed.py](https://github.com/python-cmd2/cmd2/blob/main/examples/textual_tty_embed.py)
     - Shows how to embed a `cmd2` application in a [Textual](https://textual.textualize.io/)
       application using [textual-tty](https://github.com/ttygroup/textual-tty), with a realtime
