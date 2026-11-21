@@ -1,5 +1,6 @@
 """Utilities for integrating prompt_toolkit with cmd2."""
 
+import asyncio
 import dataclasses
 import os
 import re
@@ -17,6 +18,7 @@ from prompt_toolkit import print_formatted_text
 from prompt_toolkit.application import get_app
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.completion import (
+    CompleteEvent,
     Completer,
     Completion,
 )
@@ -139,6 +141,25 @@ def rich_to_pt_style(rich_style: StyleType) -> str:
     return " ".join(parts)
 
 
+class _QuoteInsertedEvent(CompleteEvent):
+    """Requests the completion which Cmd2Completer starts after it has inserted an opening quote.
+
+    It carries the matches which were found before the quote was inserted, so cmd2's completion
+    logic doesn't run a second time. Since the matches travel with the request they were found for,
+    no other request can be given them.
+    """
+
+    def __init__(self, document: Document, completions: "Completions") -> None:
+        """Initialize the instance.
+
+        :param document: the input, with the quote in it, which the matches are for
+        :param completions: the matches, changed to what they are once the quote is present
+        """
+        super().__init__(completion_requested=True)
+        self.document = document
+        self.completions = completions
+
+
 class Cmd2Completer(Completer):
     """Completer that delegates to cmd2's completion logic."""
 
@@ -150,9 +171,8 @@ class Cmd2Completer(Completer):
         """Initialize prompt_toolkit based completer class."""
         self._cmd_app = cmd_app
         self.custom_settings = custom_settings
-        self._pending_completions: tuple[Document, Completions] | None = None
 
-    def get_completions(self, document: Document, complete_event: object) -> Iterable[Completion]:  # noqa: ARG002
+    def get_completions(self, document: Document, complete_event: object) -> Iterable[Completion]:
         """Get completions for the current input."""
         # Find the beginning of the current word based on delimiters
         line = document.text
@@ -173,10 +193,8 @@ class Cmd2Completer(Completer):
         text = line[begidx:endidx]
 
         # Reuse cached completions if this cycle was triggered right after inserting an opening quote
-        pending = self._pending_completions
-        self._pending_completions = None
-        if pending is not None and pending[0] == document:
-            completions = pending[1]
+        if isinstance(complete_event, _QuoteInsertedEvent) and complete_event.document == document:
+            completions = complete_event.completions
         else:
             completions = self._cmd_app.complete(
                 text, line=line, begidx=begidx, endidx=endidx, custom_settings=self.custom_settings
@@ -199,6 +217,21 @@ class Cmd2Completer(Completer):
             app = get_app()
             buffer = app.current_buffer
             quote_char = completions._quote_char
+
+            if app.loop is None or app.loop.is_closed():
+                buffer.cursor_left(search_text_length)
+                buffer.insert_text(quote_char)
+                buffer.cursor_right(search_text_length)
+                return
+
+            # The request which prompt-toolkit's async_completer is running for this call. It can't
+            # have finished the request yet, since it is waiting for this method to return. So if
+            # the state is already cleared, the request was cancelled or the line was edited while
+            # cmd2 was completing, and there is nothing to insert or complete. This is also the case
+            # when this method wasn't called to complete the buffer.
+            request_state = buffer.complete_state
+            if request_state is None:
+                return
 
             # The matches for the document which has the quote in it, so the re-triggered cycle
             # doesn't invoke cmd2.complete() a second time.
@@ -223,33 +256,47 @@ class Cmd2Completer(Completer):
                 buffer.insert_text(quote_char)
                 buffer.cursor_right(search_text_length)
 
-                # Only cache the matches now that the re-triggered cycle is certain to start. If they
-                # were cached for a request which gets abandoned, a later request could reuse them.
-                self._pending_completions = (buffer.document, cached_completions)
-                buffer.start_completion(insert_common_part=True)
+                # The matches go with the request for the re-triggered cycle. If prompt-toolkit
+                # doesn't run that request, they are dropped along with it.
+                complete_event = _QuoteInsertedEvent(buffer.document, cached_completions)
+                buffer.start_completion(insert_common_part=True, complete_event=complete_event)
+
+            def _on_completions_changed(_: Buffer) -> None:
+                # async_completer is still running the request
+                if buffer.complete_state is request_state:
+                    return
+
+                buffer.on_completions_changed -= _on_completions_changed
+
+                # async_completer clears complete_state when it finishes a request which returned no
+                # completions. Run on the next loop tick, after _only_one_at_a_time resets its running flag.
+                if buffer.complete_state is None and app.loop is not None and not app.loop.is_closed():
+                    app.loop.call_soon(_insert_quote_and_recomplete)
 
             def _schedule_recomplete() -> None:
-                if buffer.complete_state is None:
-                    # async_completer already finished (e.g. complete_in_thread=False)
-                    _insert_quote_and_recomplete()
-                else:
-                    # async_completer is still finishing (e.g. complete_in_thread=True);
-                    # wait until it clears complete_state, then run on the next loop tick
-                    # after _only_one_at_a_time resets its running flag.
-                    def _on_completions_changed(_: Buffer) -> None:
-                        if buffer.complete_state is None:
-                            buffer.on_completions_changed -= _on_completions_changed
-                            if app.loop is not None and not app.loop.is_closed():
-                                app.loop.call_soon(_insert_quote_and_recomplete)
-
+                if buffer.complete_state is request_state:
+                    # async_completer is still running the request. Wait until it has finished,
+                    # because it ignores a completion which is started before then.
                     buffer.on_completions_changed += _on_completions_changed
+                elif buffer.complete_state is None:
+                    # async_completer already finished the request, which it can do before this
+                    # runs when this method returned quickly in a thread. A request which is
+                    # cancelled in the instant after the check above looks the same. In that case
+                    # prompt-toolkit may ignore the completion started here, and the matches are
+                    # dropped along with it.
+                    _insert_quote_and_recomplete()
 
-            if app.loop is not None and not app.loop.is_closed():
-                app.loop.call_soon_threadsafe(_schedule_recomplete)
+            try:
+                in_event_loop = asyncio.get_running_loop() is app.loop
+            except RuntimeError:
+                in_event_loop = False
+
+            if in_event_loop:
+                # async_completer is running this method itself (e.g. complete_in_thread=False)
+                _schedule_recomplete()
             else:
-                buffer.cursor_left(search_text_length)
-                buffer.insert_text(quote_char)
-                buffer.cursor_right(search_text_length)
+                # This method is running in a thread (e.g. complete_in_thread=True)
+                app.loop.call_soon_threadsafe(_schedule_recomplete)
             return
 
         # Print completion table if present
@@ -265,10 +312,12 @@ class Cmd2Completer(Completer):
                 print_formatted_text(pt_filter_style(completions.hint))
             return
 
-        # A completion only replaces text before the cursor. If the quote is already closed
-        # right after the cursor, then adding a closing quote would leave two of them.
+        # A completion only replaces text before the cursor, so the text after it may already close
+        # the quote. That is the case when an odd number of the quote character follows the cursor:
+        # the first one closes this quote and the rest are in pairs. Adding another would end the
+        # argument at the cursor and leave the rest of it outside the quotes.
         closing_quote = completions._quote_char
-        if closing_quote and line.startswith(closing_quote, endidx):
+        if closing_quote and line.count(closing_quote, endidx) % 2 == 1:
             closing_quote = ""
 
         # Return the completions

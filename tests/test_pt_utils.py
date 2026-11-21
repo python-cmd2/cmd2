@@ -1,8 +1,11 @@
 """Unit tests for cmd2/pt_utils.py"""
 
 import asyncio
+import contextvars
 import io
 import re
+import threading
+from collections.abc import AsyncGenerator, Iterable
 from typing import Any, cast
 from unittest.mock import Mock
 
@@ -10,7 +13,7 @@ import pytest
 from prompt_toolkit.application import Application
 from prompt_toolkit.application.current import set_app
 from prompt_toolkit.buffer import Buffer
-from prompt_toolkit.completion import Completer, ThreadedCompleter
+from prompt_toolkit.completion import CompleteEvent, Completer, Completion, ThreadedCompleter
 from prompt_toolkit.document import Document
 from prompt_toolkit.formatted_text import (
     ANSI,
@@ -535,8 +538,168 @@ class TestCmd2Completer:
         assert mock_cmd_app.complete.call_count == 1
         assert mock_print.call_count == 1
 
+    @staticmethod
+    async def _wait_for_completion(app: Application[None]) -> None:
+        """Wait for a completion, and any completion which it restarts, to finish."""
+        for _ in range(10):
+            tasks = list(app._background_tasks)
+            if tasks:
+                await asyncio.gather(*tasks)
+            await asyncio.sleep(0.005)
+
+    @pytest.mark.parametrize(
+        ("interruption", "expected_text", "expected_calls"),
+        [
+            ("cancel", "edit has", 2),
+            # prompt-toolkit completes the edited line itself, which is one more call
+            ("edit", "edit hasx", 3),
+        ],
+    )
+    def test_get_completions_add_opening_quote_abandoned_request(
+        self, interruption: str, expected_text: str, expected_calls: int, mock_cmd_app: MockCmd
+    ) -> None:
+        """Verify nothing is inserted or kept for a request which is cancelled or outdated while cmd2 is completing."""
+        line = "edit has"
+        completer = ThreadedCompleter(pt_utils.Cmd2Completer(cast(Any, mock_cmd_app)))
+
+        async def run_test() -> tuple[str, str]:
+            loop = asyncio.get_running_loop()
+            completing = asyncio.Event()
+            interrupted = threading.Event()
+
+            def slow_complete(text: str, *_args: Any, **_kwargs: Any) -> cmd2.Completions:
+                # Keep the request busy in its thread until it has been interrupted
+                loop.call_soon_threadsafe(completing.set)
+                interrupted.wait(timeout=5)
+                if text != "has":
+                    return cmd2.Completions()
+                return cmd2.Completions([cmd2.CompletionItem("has space")], _add_opening_quote=True, _quote_char='"')
+
+            mock_cmd_app.complete.side_effect = slow_complete
+
+            buf = Buffer(document=Document(line, cursor_position=len(line)), completer=completer)
+            app: Application[None] = Application(
+                layout=Layout(Window(BufferControl(buffer=buf))),
+                input=DummyInput(),
+                output=DummyOutput(),
+            )
+            app.loop = loop
+
+            with set_app(app):
+                buf.start_completion(insert_common_part=True)
+                await completing.wait()
+                if interruption == "cancel":
+                    buf.cancel_completion()
+                else:
+                    buf.insert_text("x")
+                interrupted.set()
+                await self._wait_for_completion(app)
+                text_after_interruption = buf.text
+
+                # The next request for the original line has to ask cmd2 again
+                buf.set_document(Document(line, cursor_position=len(line)))
+                mock_cmd_app.complete.side_effect = None
+                mock_cmd_app.complete.return_value = cmd2.Completions(
+                    [cmd2.CompletionItem("has changed")], _add_opening_quote=True, _quote_char='"'
+                )
+                buf.start_completion(insert_common_part=True)
+                await self._wait_for_completion(app)
+                return text_after_interruption, buf.text
+
+        text_after_interruption, final_text = asyncio.run(run_test())
+        assert text_after_interruption == expected_text
+        assert final_text == 'edit "has changed" '
+        assert mock_cmd_app.complete.call_count == expected_calls
+
+    def test_get_completions_add_opening_quote_waits_for_running_request(self, mock_cmd_app: MockCmd) -> None:
+        """Verify the quote is inserted once prompt-toolkit has finished a request it was still waiting on.
+
+        This is what happens when a completion which runs in a thread takes a while. prompt-toolkit
+        ignores a completion which is started before it has finished the request.
+        """
+        line = "edit has"
+        completer = ThreadedCompleter(pt_utils.Cmd2Completer(cast(Any, mock_cmd_app)))
+
+        async def run_test() -> str:
+            loop = asyncio.get_running_loop()
+            completing = asyncio.Event()
+            waited_on = threading.Event()
+
+            def slow_complete(*_args: Any, **_kwargs: Any) -> cmd2.Completions:
+                # Don't return until prompt-toolkit is waiting for the results
+                loop.call_soon_threadsafe(completing.set)
+                waited_on.wait(timeout=5)
+                return cmd2.Completions([cmd2.CompletionItem("has space")], _add_opening_quote=True, _quote_char='"')
+
+            mock_cmd_app.complete.side_effect = slow_complete
+
+            buf = Buffer(document=Document(line, cursor_position=len(line)), completer=completer)
+            app: Application[None] = Application(
+                layout=Layout(Window(BufferControl(buffer=buf))),
+                input=DummyInput(),
+                output=DummyOutput(),
+            )
+            app.loop = loop
+
+            with set_app(app):
+                buf.start_completion(insert_common_part=True)
+                await completing.wait()
+                waited_on.set()
+                await self._wait_for_completion(app)
+            return buf.text
+
+        assert asyncio.run(run_test()) == 'edit "has space" '
+        assert mock_cmd_app.complete.call_count == 1
+
+    def test_get_completions_add_opening_quote_request_finished_first(self, mock_cmd_app: MockCmd) -> None:
+        """Verify the quote is inserted when prompt-toolkit finishes the request before cmd2 gets back to the event loop.
+
+        This happens when a completion which runs in a thread returns before prompt-toolkit starts waiting for it.
+        """
+        line = "edit has"
+        mock_cmd_app.complete.return_value = cmd2.Completions(
+            [cmd2.CompletionItem("has space")], _add_opening_quote=True, _quote_char='"'
+        )
+        cmd2_completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+
+        class FinishedBeforeWaiting(Completer):
+            """Runs the completer in a thread and has all of its results before the event loop runs anything else."""
+
+            def get_completions(self, document: Document, complete_event: CompleteEvent) -> Iterable[Completion]:
+                return cmd2_completer.get_completions(document, complete_event)
+
+            async def get_completions_async(
+                self, document: Document, complete_event: CompleteEvent
+            ) -> AsyncGenerator[Completion, None]:
+                results: list[Completion] = []
+                context = contextvars.copy_context()
+                thread = threading.Thread(
+                    target=context.run, args=(lambda: results.extend(self.get_completions(document, complete_event)),)
+                )
+                thread.start()
+                thread.join()
+                for completion in results:
+                    yield completion
+
+        async def run_test() -> str:
+            buf = Buffer(document=Document(line, cursor_position=len(line)), completer=FinishedBeforeWaiting())
+            app: Application[None] = Application(
+                layout=Layout(Window(BufferControl(buffer=buf))),
+                input=DummyInput(),
+                output=DummyOutput(),
+            )
+            app.loop = asyncio.get_running_loop()
+
+            with set_app(app):
+                buf.start_completion(insert_common_part=True)
+                await self._wait_for_completion(app)
+            return buf.text
+
+        assert asyncio.run(run_test()) == 'edit "has space" '
+        assert mock_cmd_app.complete.call_count == 1
+
     def test_get_completions_add_opening_quote_skips_if_document_changed(self, mock_cmd_app: MockCmd) -> None:
-        """Verify deferred quote insertion bails out if the user edits the buffer first."""
+        """Verify deferred quote insertion bails out if the user edits the buffer just as the request finishes."""
         line = "edit has"
         mock_cmd_app.complete.return_value = cmd2.Completions(
             [cmd2.CompletionItem("has space")],
@@ -555,54 +718,21 @@ class TestCmd2Completer:
             )
             app.loop = asyncio.get_running_loop()
 
+            def edit_when_request_finishes(_: Buffer) -> None:
+                # prompt-toolkit clears the completion state once the request has returned no matches.
+                # The quote has not been inserted yet at that point.
+                if buf.complete_state is None and buf.text == line:
+                    buf.insert_text("x")
+
+            buf.on_completions_changed += edit_when_request_finishes
+
             with set_app(app):
-                # Trigger get_completions directly, then mutate buffer before the scheduled callback runs
-                list(completer.get_completions(buf.document, None))
-                buf.insert_text("x")
-                await asyncio.sleep(0)
-                if app._background_tasks:
-                    await asyncio.gather(*app._background_tasks)
+                buf.start_completion(insert_common_part=True)
+                await self._wait_for_completion(app)
             return buf.text
 
         assert asyncio.run(run_test()) == "edit hasx"
         assert mock_cmd_app.complete.call_count == 1
-
-    def test_get_completions_add_opening_quote_drops_matches_if_document_changed(self, mock_cmd_app: MockCmd) -> None:
-        """Verify matches found for a request which was abandoned are not reused by a later request."""
-        line = "edit has"
-        mock_cmd_app.complete.return_value = cmd2.Completions(
-            [cmd2.CompletionItem("has space")],
-            _add_opening_quote=True,
-            _search_text_offset=0,
-            _quote_char='"',
-        )
-        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
-
-        async def run_test() -> None:
-            buf = Buffer(document=Document(line, cursor_position=len(line)), completer=completer)
-            app: Application[None] = Application(
-                layout=Layout(Window(BufferControl(buffer=buf))),
-                input=DummyInput(),
-                output=DummyOutput(),
-            )
-            app.loop = asyncio.get_running_loop()
-
-            with set_app(app):
-                # The user edits the line before the quote can be inserted, so the request is abandoned
-                list(completer.get_completions(buf.document, None))
-                buf.insert_text("x")
-                await asyncio.sleep(0)
-
-        asyncio.run(run_test())
-        assert mock_cmd_app.complete.call_count == 1
-
-        # Later the user asks for the completions of the line which that request would have produced
-        quoted_line = 'edit "has'
-        mock_cmd_app.complete.return_value = cmd2.Completions([cmd2.CompletionItem("has changed")], _quote_char='"')
-        completions = list(completer.get_completions(Document(quoted_line, cursor_position=len(quoted_line)), None))
-
-        assert mock_cmd_app.complete.call_count == 2
-        assert [c.text for c in completions] == ['has changed" ']
 
     @pytest.mark.parametrize(
         # search_text_offset is the starting index of the user-provided search text within a full match.
@@ -775,16 +905,21 @@ class TestCmd2Completer:
             ("'ma' more", ["match one", "match two"], "'", ["match one", "match two"]),
             # A single match
             ('"ma"', ["match"], '"', ["match"]),
+            # The closing quote can be further along the word being completed
+            ('"ma.txt"', ["match one", "match two"], '"', ["match one", "match two"]),
+            ('"ma.txt"', ["match"], '"', ["match"]),
+            ('"ma" "next"', ["match one", "match two"], '"', ["match one", "match two"]),
             # A different quote character after the cursor is not the closing quote
             ("\"ma'", ["match one", "match two"], '"', ['match one"', 'match two"']),
-            # Neither is the same quote character further along the line
+            # An even number of quotes after the cursor belong to other words, so this one still needs closing
             ('"ma "next"', ["match one", "match two"], '"', ['match one"', 'match two"']),
+            ('"ma "next"', ["match"], '"', ['match"']),
         ],
     )
     def test_get_completions_closing_quote_already_after_cursor(
         self, line, matches, quote_char, expected, mock_cmd_app: MockCmd
     ) -> None:
-        """Test that a closing quote is not added in front of one which is already there."""
+        """Test that a closing quote is not added when text after the cursor already closes the quote."""
         completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
 
         # The cursor is right after the search text
@@ -797,6 +932,25 @@ class TestCmd2Completer:
 
         completions = list(completer.get_completions(document, None))
         assert [c.text for c in completions] == expected
+
+    def test_get_completions_ignores_matches_found_for_another_document(self, mock_cmd_app: MockCmd) -> None:
+        """Verify matches which were found before a quote was inserted are only used for the line they are for."""
+        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+        quoted_document = Document('edit "has', cursor_position=9)
+        found = cmd2.Completions([cmd2.CompletionItem("has space")], _quote_char='"')
+        complete_event = pt_utils._QuoteInsertedEvent(quoted_document, found)
+
+        # They are used for the line which the quote was inserted in
+        completions = list(completer.get_completions(quoted_document, complete_event))
+        assert [c.text for c in completions] == ['has space" ']
+        assert mock_cmd_app.complete.call_count == 0
+
+        # The user typed another character before the completion started
+        mock_cmd_app.complete.return_value = cmd2.Completions([cmd2.CompletionItem("hash value")], _quote_char='"')
+        edited_document = Document('edit "hash', cursor_position=10)
+        completions = list(completer.get_completions(edited_document, complete_event))
+        assert [c.text for c in completions] == ['hash value" ']
+        assert mock_cmd_app.complete.call_count == 1
 
     def test_init_with_custom_settings(self, mock_cmd_app: MockCmd) -> None:
         """Test initializing with custom settings."""

@@ -247,6 +247,35 @@ def test_match_chosen_from_the_menu_keeps_a_closing_quote_which_follows_the_curs
     assert shlex.split(line) == ["edit", "sp ace.txt"]
 
 
+def test_match_chosen_inside_a_quoted_word_stays_inside_its_quotes(app) -> None:
+    rest_of_word = '.bak"'
+    line = press_keys(
+        app,
+        [
+            ('edit "sp' + rest_of_word + LEFT * len(rest_of_word) + TAB, menu('edit "sp.bak"', 2)),
+            (TAB, shows('edit "sp ace.txt.bak"')),
+            (ENTER, no_menu),
+            (ENTER, None),
+        ],
+    )
+    assert line == 'edit "sp ace.txt.bak"'
+    assert shlex.split(line) == ["edit", "sp ace.txt.bak"]
+
+
+def test_match_chosen_in_front_of_another_quoted_word_closes_its_quote(app) -> None:
+    rest_of_line = ' "spare.txt"'
+    line = press_keys(
+        app,
+        [
+            ('edit "sp' + rest_of_line + LEFT * len(rest_of_line) + TAB, menu('edit "sp "spare.txt"', 2)),
+            (TAB, shows('edit "sp ace.txt" "spare.txt"')),
+            (ENTER, no_menu),
+            (ENTER, None),
+        ],
+    )
+    assert shlex.split(line) == ["edit", "sp ace.txt", "spare.txt"]
+
+
 def test_only_match_keeps_a_closing_quote_which_follows_the_cursor(app) -> None:
     line = press_keys(
         app,
