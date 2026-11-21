@@ -372,11 +372,20 @@ class TestCmd2Lexer:
         (' 5" nail', '"', True, False),
         (""" 'a"b'""", '"', True, False),
         ("", '"', True, False),
+        # A redirection or a terminator ends a word as whitespace does
+        ('.bak">out', '"', False, True),
+        ('.bak"|grep x', '"', False, True),
+        ('.bak";', '"', False, True),
+        (' file.bak">out', '"', False, True),
+        ('">out', '"', True, True),
+        (">out", '"', True, False),
+        (' >"out file"', '"', False, False),
     ],
 )
 def test_quote_is_closed(text_after_cursor: str, quote: str, opened_by_cmd2: bool, expected: bool) -> None:
     """Test whether the text after the cursor is taken to close a quote which is open at the cursor."""
-    assert pt_utils._quote_is_closed(text_after_cursor, quote, opened_by_cmd2=opened_by_cmd2) is expected
+    closed = pt_utils._quote_is_closed(text_after_cursor, quote, opened_by_cmd2=opened_by_cmd2, punctuation="|<>;")
+    assert closed is expected
 
 
 class TestCmd2Completer:
@@ -516,16 +525,29 @@ class TestCmd2Completer:
         # The completion replaces everything which was typed
         assert [(c.text, c.start_position) for c in completions] == [(expected, -len(line))]
 
-    def test_get_completions_add_opening_quote_for_synchronous_request(self, mock_cmd_app: MockCmd) -> None:
-        """Verify a request made directly, as some prompt-toolkit key bindings do, gets matches and no restart."""
-        line = "edit has"
+    @pytest.mark.parametrize(
+        ("buffer_line", "requested_line", "cursor_position", "expected_matches", "expected_buffer_line"),
+        [
+            # The quote is put in the buffer, where these bindings read the line from again,
+            # so the match doesn't have to change text which is in front of the cursor
+            ("edit has", "edit has", 8, ['has space" '], 'edit "has'),
+            # The quote was added by cmd2, so a quote character in a later word doesn't close it
+            ('edit has 5" nail', 'edit has 5" nail', 8, ['has space"'], 'edit "has 5" nail'),
+            # The request is not for what the buffer holds, so the buffer is left alone
+            ("edit other", "edit has", 8, ['"has space" '], "edit other"),
+        ],
+    )
+    def test_get_completions_add_opening_quote_for_synchronous_request(
+        self, buffer_line, requested_line, cursor_position, expected_matches, expected_buffer_line, mock_cmd_app: MockCmd
+    ) -> None:
+        """Verify a request made directly, as some prompt-toolkit key bindings do, gets the quote and the matches at once."""
         mock_cmd_app.complete.return_value = cmd2.Completions(
             [cmd2.CompletionItem("has space")], _add_opening_quote=True, _quote_char='"'
         )
         completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
 
         async def run_test() -> tuple[list[str], str]:
-            buf = Buffer(document=Document(line, cursor_position=len(line)), completer=completer)
+            buf = Buffer(document=Document(buffer_line, cursor_position=cursor_position), completer=completer)
             app: Application[None] = Application(
                 layout=Layout(Window(BufferControl(buffer=buf))),
                 input=DummyInput(),
@@ -536,11 +558,12 @@ class TestCmd2Completer:
             with set_app(app):
                 # This is how display_completions_like_readline() and the Emacs Meta-* binding ask for completions
                 complete_event = CompleteEvent(completion_requested=True)
-                completions = list(completer.get_completions(buf.document, complete_event))
+                document = Document(requested_line, cursor_position=cursor_position)
+                completions = list(completer.get_completions(document, complete_event))
                 await self._wait_for_completion(app)
             return [c.text for c in completions], buf.text
 
-        assert asyncio.run(run_test()) == (['"has space" '], line)
+        assert asyncio.run(run_test()) == (expected_matches, expected_buffer_line)
 
     @pytest.mark.parametrize("complete_in_thread", [False, True])
     @pytest.mark.parametrize(

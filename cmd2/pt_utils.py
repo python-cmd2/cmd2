@@ -39,7 +39,6 @@ from . import (
 )
 from . import rich_utils as ru
 from . import string_utils as su
-from .parsing import shlex_split
 from .styles import Cmd2Style
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -182,7 +181,7 @@ class _QuoteInsertedEvent(CompleteEvent):
         self.completions = completions
 
 
-def _quote_is_closed(text_after_cursor: str, quote: str, *, opened_by_cmd2: bool) -> bool:
+def _quote_is_closed(text_after_cursor: str, quote: str, *, opened_by_cmd2: bool, punctuation: str) -> bool:
     """Check whether the text after the cursor closes a quote which is open at the cursor.
 
     The same quote character further along the line is either the end of the argument being
@@ -193,35 +192,95 @@ def _quote_is_closed(text_after_cursor: str, quote: str, *, opened_by_cmd2: bool
     :param text_after_cursor: the rest of the line
     :param quote: the character which opened the quote
     :param opened_by_cmd2: True if cmd2 is adding the opening quote, False if the user typed it
+    :param punctuation: the characters which end an unquoted word the way whitespace does,
+                        which are the redirection characters and the terminators
     :return: True if the quote is already closed and a closing quote should not be added
     """
     # The word under the cursor ends with the quote character
-    rest_of_word = text_after_cursor.split(maxsplit=1)[0] if text_after_cursor[:1].strip() else ""
+    rest_of_word = re.split(rf"[\s{re.escape(punctuation)}]", text_after_cursor, maxsplit=1)[0]
     if rest_of_word.endswith(quote):
         return True
 
-    # A quote which cmd2 adds goes around what was an unquoted word. An unquoted word ends
-    # at whitespace, so a quote character past it has nothing to do with this argument.
+    # A quote which cmd2 adds goes around what was an unquoted word. An unquoted word ends at
+    # whitespace or punctuation, so a quote character past it has nothing to do with this argument.
     if opened_by_cmd2:
         return False
 
-    # An argument which the user quoted can have whitespace in it. It is only closed further
-    # along if the line parses when read as continuing inside the quote.
-    try:
-        shlex_split(quote + text_after_cursor)
-    except ValueError:
+    # An argument which the user quoted can have whitespace and punctuation in it. It is only
+    # closed further along if no quote is left open when the line is read as continuing inside it.
+    if _split_arguments(text_after_cursor, punctuation, open_quote=quote) is None:
         return False
 
     # Read the rest of the line as though the argument ended at the cursor
-    try:
-        tokens = shlex_split(text_after_cursor)
-    except ValueError:
+    arguments = _split_arguments(text_after_cursor, punctuation)
+    if arguments is None:
         # It can't stand on its own, so it must be the rest of this argument
         return True
 
     # A quote character at the end of an unquoted word has no opening quote of its own. One in
     # the middle of a word is an apostrophe, and the quotes of a quoted argument belong to it.
-    return any(token[0] not in constants.QUOTES and token.endswith(quote) for token in tokens)
+    return any(argument[0] not in constants.QUOTES and argument.endswith(quote) for argument in arguments)
+
+
+def _split_arguments(text: str, punctuation: str, open_quote: str = "") -> list[str] | None:
+    """Split text into arguments the way the parser does, to see how its quote characters are used.
+
+    A quote character only starts a quoted argument at the beginning of an argument, and a quoted
+    argument ends at its closing quote. Anywhere else a quote character is an ordinary character.
+
+    :param text: the text to split
+    :param punctuation: the characters which end an unquoted word the way whitespace does
+    :param open_quote: the quote character of a quoted argument which the text starts inside of
+    :return: the arguments, where a quoted one keeps its quotes, or None if a quote is left open
+    """
+    arguments: list[str] = []
+    argument = open_quote
+    quote = open_quote
+
+    for char in text:
+        if quote:
+            argument += char
+            if char == quote:
+                arguments.append(argument)
+                argument = quote = ""
+        elif char.isspace() or char in punctuation:
+            if argument:
+                arguments.append(argument)
+                argument = ""
+        elif not argument and char in constants.QUOTES:
+            argument = quote = char
+        else:
+            argument += char
+
+    if quote:
+        return None
+
+    if argument:
+        arguments.append(argument)
+    return arguments
+
+
+def _completions_for_quoted_text(completions: "Completions") -> "Completions":
+    """Change completions which need an opening quote into what they are once the quote is in the buffer.
+
+    The quote goes after a shortcut, so the word being completed no longer includes the shortcut.
+    """
+    offset = completions._search_text_offset
+    items = [dataclasses.replace(item, text=item.text[offset:]) for item in completions] if offset > 0 else completions.items
+    return dataclasses.replace(
+        completions,
+        items=items,
+        _add_opening_quote=False,
+        _search_text_offset=0,
+    )
+
+
+def _in_event_loop(loop: asyncio.AbstractEventLoop | None) -> bool:
+    """Return whether this is running in the event loop, as opposed to a thread which completes for it."""
+    try:
+        return asyncio.get_running_loop() is loop
+    except RuntimeError:
+        return False
 
 
 class Cmd2Completer(Completer):
@@ -260,16 +319,7 @@ class Cmd2Completer(Completer):
 
         # The matches for the document which has the quote in it, so the re-triggered cycle
         # doesn't invoke cmd2.complete() a second time.
-        offset = completions._search_text_offset
-        cached_items = (
-            [dataclasses.replace(item, text=item.text[offset:]) for item in completions] if offset > 0 else completions.items
-        )
-        cached_completions = dataclasses.replace(
-            completions,
-            items=cached_items,
-            _add_opening_quote=False,
-            _search_text_offset=0,
-        )
+        cached_completions = _completions_for_quoted_text(completions)
 
         # The request which async_completer is running, once that is known
         request_state: CompletionState | None = None
@@ -328,12 +378,7 @@ class Cmd2Completer(Completer):
             if request_state is not None:
                 buffer.on_completions_changed += _on_completions_changed
 
-        try:
-            in_event_loop = asyncio.get_running_loop() is loop
-        except RuntimeError:
-            in_event_loop = False
-
-        if in_event_loop:
+        if _in_event_loop(loop):
             # async_completer is running get_completions() itself (e.g. complete_in_thread=False)
             _wait_for_request_to_finish()
         else:
@@ -352,6 +397,30 @@ class Cmd2Completer(Completer):
 
         return True
 
+    @staticmethod
+    def _insert_quote_for_direct_request(document: Document, quote_char: str, search_text_length: int) -> Document | None:
+        """Insert an opening quote into the buffer right away if a key binding is asking for completions itself.
+
+        Some of prompt-toolkit's key bindings call get_completions() directly from the event loop, such
+        as the one which lists completions like readline does. They read the buffer again once they
+        have the completions, so the quote can go in before they are returned. Nothing which
+        async_completer does is involved, since it isn't running a request.
+
+        :param document: the input being completed
+        :param quote_char: the quote to insert
+        :param search_text_length: how much of the text before the cursor the quote goes in front of
+        :return: the buffer's document with the quote in it, or None if this is not such a request
+        """
+        app = get_app()
+        buffer = app.current_buffer
+        if not _in_event_loop(app.loop) or buffer.complete_state is not None or buffer.document != document:
+            return None
+
+        buffer.cursor_left(search_text_length)
+        buffer.insert_text(quote_char, fire_event=not buffer.complete_while_typing())
+        buffer.cursor_right(search_text_length)
+        return buffer.document
+
     def get_completions(self, document: Document, complete_event: object) -> Iterable[Completion]:
         """Get completions for the current input."""
         # Find the beginning of the current word based on delimiters
@@ -359,6 +428,7 @@ class Cmd2Completer(Completer):
         cursor_pos = document.cursor_position
 
         # Define delimiters for completion to match cmd2/readline behavior
+        punctuation = "".join(constants.REDIRECTION_CHARS) + "".join(self._cmd_app.statement_parser.terminators)
         delimiters = BASE_DELIMITERS
         delimiters += "".join(self._cmd_app.statement_parser.terminators)
 
@@ -390,18 +460,27 @@ class Cmd2Completer(Completer):
         # If matches require quoting but the word isn't quoted yet, the opening quote goes in front
         # of text the user has typed. If any completions change text before the cursor (like
         # prepending a quote), prompt-toolkit will not return a common prefix to the command line.
-        # So for the completion key, whose request inserts that common prefix, the quote is
-        # inserted into the buffer and completion is started again with the quote already present.
-        # Any other request gets the quote as part of each completion further down, so it goes on
-        # to do what it was started for, such as selecting a match.
-        if (
-            completions
-            and completions._add_opening_quote
-            and search_text_length > 0
-            and isinstance(complete_event, _CompletionKeyEvent)
-            and self._insert_quote_and_recomplete(document, completions, search_text_length)
-        ):
-            return
+        quote_inserted = False
+        if completions and completions._add_opening_quote and search_text_length > 0:
+            # For the completion key, whose request inserts that common prefix, the quote is
+            # inserted into the buffer and completion is started again with the quote already present.
+            if isinstance(complete_event, _CompletionKeyEvent) and self._insert_quote_and_recomplete(
+                document, completions, search_text_length
+            ):
+                return
+
+            # A key binding which asks for the completions itself gets the quote put in the
+            # buffer first, and completions for the text as it is with the quote.
+            quoted_document = self._insert_quote_for_direct_request(document, completions._quote_char, search_text_length)
+            if quoted_document is not None:
+                document = quoted_document
+                line = document.text
+                endidx = document.cursor_position
+                completions = _completions_for_quoted_text(completions)
+                quote_inserted = True
+
+            # Any other request gets the quote as part of each completion further down, so it
+            # goes on to do what it was started for, such as selecting a match.
 
         # Print completion table if present
         if completions.table is not None:
@@ -420,8 +499,12 @@ class Cmd2Completer(Completer):
         # the quote. Adding another closing quote would then end the argument at the cursor and
         # leave the rest of it outside the quotes.
         closing_quote = completions._quote_char
-        quote_opened_by_cmd2 = completions._add_opening_quote or isinstance(complete_event, _QuoteInsertedEvent)
-        if closing_quote and _quote_is_closed(line[endidx:], closing_quote, opened_by_cmd2=quote_opened_by_cmd2):
+        quote_opened_by_cmd2 = (
+            quote_inserted or completions._add_opening_quote or isinstance(complete_event, _QuoteInsertedEvent)
+        )
+        if closing_quote and _quote_is_closed(
+            line[endidx:], closing_quote, opened_by_cmd2=quote_opened_by_cmd2, punctuation=punctuation
+        ):
             closing_quote = ""
 
         # Return the completions

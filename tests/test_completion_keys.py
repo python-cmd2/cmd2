@@ -357,6 +357,20 @@ def test_match_in_front_of_a_word_with_an_apostrophe_closes_its_quote(app) -> No
     assert line == "edit 'my file.txt' don't"
 
 
+def test_match_chosen_inside_a_quoted_word_in_front_of_a_redirection_stays_inside_its_quotes(app) -> None:
+    rest_of_line = '.bak">out'
+    line = press_keys(
+        app,
+        [
+            ('shell cat "sp' + rest_of_line + LEFT * len(rest_of_line) + TAB, menu('shell cat "sp' + rest_of_line, 2)),
+            (TAB, shows('shell cat "sp ace.txt' + rest_of_line)),
+            (ENTER, no_menu),
+            (ENTER, None),
+        ],
+    )
+    assert line == 'shell cat "sp ace.txt.bak">out'
+
+
 def test_only_match_keeps_a_closing_quote_which_follows_the_cursor(app) -> None:
     line = press_keys(
         app,
@@ -538,26 +552,49 @@ def test_prompt_ending_during_a_completion_leaves_no_listener_on_the_buffer(app,
     assert [handler.__qualname__ for handler in handlers if "Cmd2Completer" in handler.__qualname__] == []
 
 
-def test_tab_lists_matches_like_readline_when_the_session_is_set_up_to(app) -> None:
+def no_menu_after_a_moment() -> Ready:
+    """Wait a moment for a menu to open if one is going to, and fail if it does."""
     waiting_since: list[float] = []
 
-    def listed_without_a_menu(buffer: Buffer) -> bool:
-        # Readline-style completion prints the matches above the prompt. Give a menu time to open if one is going to.
+    def ready(buffer: Buffer) -> bool:
         if not waiting_since:
             waiting_since.append(time.monotonic())
         if time.monotonic() - waiting_since[0] < 0.3:
             return False
         if buffer.complete_state is not None:
-            raise AssertionError("a completion menu opened")
-        return buffer.text == "h"
+            raise AssertionError(f"a completion menu opened. The command line was {buffer.text!r}")
+        return True
 
-    line = press_keys(
+    return ready
+
+
+@pytest.mark.parametrize(
+    ("typed", "expected"),
+    [
+        # Several matches which need no quote are listed above the prompt
+        ("h", "h"),
+        # The opening quote and the text the matches share are inserted before the rest is listed
+        ("edit lo", 'edit "long name '),
+        ("edit sp", 'edit "sp'),
+        # A single match is completed
+        ("edit my", 'edit "my file.txt" '),
+    ],
+)
+def test_tab_completes_like_readline_when_the_session_is_set_up_to(app, typed, expected) -> None:
+    lines = []
+
+    def record(buffer: Buffer) -> bool:
+        lines.append(buffer.text)
+        return True
+
+    press_keys(
         app,
         [
-            # The commands help and history both match
-            ("h" + TAB, listed_without_a_menu),
-            (ENTER, None),
+            (typed + TAB, no_menu_after_a_moment()),
+            ("", record),
+            # Clear the line and submit it
+            ("\x15" + ENTER, None),
         ],
         complete_style=CompleteStyle.READLINE_LIKE,
     )
-    assert line == "h"
+    assert lines == [expected]
