@@ -105,13 +105,19 @@ after `edit sp` gives:
                spare.txt
 ```
 
-The quote is closed when a match is complete, which is when it is the only match or when you choose
-it from the menu. A directory is the exception. Its quote is left open so you can keep completing
-the rest of the path:
+The quote is closed, and a space is added after it, when a match is complete. That is when it is the
+only match or when you choose it from the menu. A directory is the exception. Its quote is left open
+so you can keep completing the rest of the path:
 
 ```text
 (Cmd) edit "my dir/
 ```
+
+If you write a completer whose matches can be like directories, where the user keeps completing
+after choosing one, set `allow_finalization=False` on the [Completions][cmd2.Completions] it returns
+whenever such a match is among them. No quote is closed for those results. `path_complete` and
+`delimiter_complete` do better than that, closing the quote for every match except the unfinished
+ones, but they rely on a marker which is private to `cmd2`.
 
 ## Included Tab Completion Functions
 

@@ -7,6 +7,8 @@ prompt-toolkit's own handling of the results are all exercised together.
 import asyncio
 import shlex
 import sys
+import threading
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -15,6 +17,7 @@ import pytest
 from prompt_toolkit import PromptSession
 from prompt_toolkit.application import get_app
 from prompt_toolkit.buffer import Buffer
+from prompt_toolkit.enums import EditingMode
 from prompt_toolkit.input import create_pipe_input
 from prompt_toolkit.output import DummyOutput
 
@@ -28,6 +31,7 @@ pytestmark = pytest.mark.skipif(
 TAB = "\t"
 ENTER = "\r"
 LEFT = "\x1b[D"
+CTRL_P = "\x10"
 CTRL_R = "\x12"
 CTRL_T = "\x14"
 
@@ -60,6 +64,7 @@ def press_keys(
     steps: list[tuple[str, Ready | None]],
     *,
     complete_in_thread: bool = True,
+    editing_mode: EditingMode = EditingMode.EMACS,
     read: Callable[[], str] | None = None,
 ) -> str:
     """Send keys to a prompt and return the line it read.
@@ -68,6 +73,7 @@ def press_keys(
     :param steps: the keys to send, each with what to wait for before sending the next ones.
                   The last keys have to submit the line.
     :param complete_in_thread: whether completion runs in a thread, as it does by default
+    :param editing_mode: which set of key bindings the prompt uses
     :param read: function which shows the prompt. Defaults to reading a command line.
     """
 
@@ -106,6 +112,7 @@ def press_keys(
             completer=app.main_session.completer,
             complete_in_thread=complete_in_thread,
             complete_while_typing=False,
+            editing_mode=editing_mode,
             key_bindings=app.main_session.key_bindings,
         )
         if read is None:
@@ -209,13 +216,14 @@ def test_match_chosen_from_the_menu_closes_its_quote(app) -> None:
         app,
         [
             ('edit "sp' + TAB, menu('edit "sp', 2)),
-            (TAB, shows('edit "sp ace.txt"')),
+            # The trailing space keeps another Tab from completing right against the closing quote
+            (TAB, shows('edit "sp ace.txt" ')),
             # The first Enter accepts the selection and the second one submits the line
             (ENTER, no_menu),
             (ENTER, None),
         ],
     )
-    assert line == 'edit "sp ace.txt"'
+    assert line == 'edit "sp ace.txt" '
     assert shlex.split(line) == ["edit", "sp ace.txt"]
 
 
@@ -224,13 +232,13 @@ def test_each_match_in_the_menu_closes_its_quote(app) -> None:
         app,
         [
             ("edit sp" + TAB, menu('edit "sp', 2)),
-            (TAB, shows('edit "sp ace.txt"')),
-            (TAB, shows('edit "spare.txt"')),
+            (TAB, shows('edit "sp ace.txt" ')),
+            (TAB, shows('edit "spare.txt" ')),
             (ENTER, no_menu),
             (ENTER, None),
         ],
     )
-    assert line == 'edit "spare.txt"'
+    assert line == 'edit "spare.txt" '
 
 
 def test_match_chosen_from_the_menu_keeps_a_closing_quote_which_follows_the_cursor(app) -> None:
@@ -274,6 +282,18 @@ def test_match_chosen_in_front_of_another_quoted_word_closes_its_quote(app) -> N
         ],
     )
     assert shlex.split(line) == ["edit", "sp ace.txt", "spare.txt"]
+
+
+def test_match_in_front_of_an_argument_with_a_literal_quote_closes_its_quote(app) -> None:
+    rest_of_line = " 'a\"b'"
+    line = press_keys(
+        app,
+        [
+            ("shell cat my" + rest_of_line + LEFT * len(rest_of_line) + TAB, shows('shell cat "my file.txt"' + rest_of_line)),
+            (ENTER, None),
+        ],
+    )
+    assert shlex.split(line) == ["shell", "cat", "my file.txt", 'a"b']
 
 
 def test_only_match_keeps_a_closing_quote_which_follows_the_cursor(app) -> None:
@@ -331,7 +351,7 @@ def test_directory_chosen_in_front_of_a_separator_stays_open(app) -> None:
     assert line == 'edit "dd one/inner.txt'
 
 
-def test_one_press_of_a_custom_completion_key_completes_a_match_which_needs_a_quote(tmp_path, monkeypatch) -> None:
+def test_custom_completion_key_opens_the_menu_for_a_match_which_needs_a_quote(tmp_path, monkeypatch) -> None:
     make_files(tmp_path)
     monkeypatch.chdir(tmp_path)
     app = cmd2.Cmd(completekey="c-t")
@@ -339,14 +359,18 @@ def test_one_press_of_a_custom_completion_key_completes_a_match_which_needs_a_qu
     line = press_keys(
         app,
         [
-            ("edit my" + CTRL_T, shows('edit "my file.txt" ')),
+            # A custom key only opens the menu on its first press, whether or not the match needs a quote
+            ("edit my" + CTRL_T, menu("edit my", 1)),
+            (CTRL_T, shows('edit "my file.txt" ')),
+            (ENTER, no_menu),
             (ENTER, None),
         ],
     )
     assert line == 'edit "my file.txt" '
 
 
-def test_one_tab_completes_a_match_which_needs_a_quote_when_another_key_is_the_completion_key(tmp_path, monkeypatch) -> None:
+def test_tab_completes_a_match_which_needs_a_quote_when_another_key_is_the_completion_key(tmp_path, monkeypatch) -> None:
+    """Tab keeps prompt-toolkit's own binding here, whose requests cmd2 can't start again."""
     make_files(tmp_path)
     monkeypatch.chdir(tmp_path)
     app = cmd2.Cmd(completekey="c-t")
@@ -355,10 +379,25 @@ def test_one_tab_completes_a_match_which_needs_a_quote_when_another_key_is_the_c
         app,
         [
             ("edit my" + TAB, shows('edit "my file.txt" ')),
+            (ENTER, no_menu),
             (ENTER, None),
         ],
     )
     assert line == 'edit "my file.txt" '
+
+
+def test_request_which_selects_the_last_match_does_so_when_matches_need_a_quote(app) -> None:
+    line = press_keys(
+        app,
+        [
+            # Ctrl-P asks for the last match to be selected in Vi insert mode
+            ("edit sp" + CTRL_P, shows('edit "spare.txt" ')),
+            (ENTER, no_menu),
+            (ENTER, None),
+        ],
+        editing_mode=EditingMode.VI,
+    )
+    assert line == 'edit "spare.txt" '
 
 
 def test_one_tab_adds_the_quote_and_the_shared_prefix_in_read_input(app) -> None:
@@ -366,13 +405,13 @@ def test_one_tab_adds_the_quote_and_the_shared_prefix_in_read_input(app) -> None
         app,
         [
             ("ha" + TAB, menu('"has space ', 2)),
-            (TAB, shows('"has space one"')),
+            (TAB, shows('"has space one" ')),
             (ENTER, no_menu),
             (ENTER, None),
         ],
         read=lambda: app.read_input("> ", choices=["has space one", "has space two"]),
     )
-    assert line == '"has space one"'
+    assert line == '"has space one" '
 
 
 def test_tab_in_a_history_search_does_not_complete_the_search_text(app, monkeypatch) -> None:
@@ -397,9 +436,42 @@ def test_finished_match_closes_its_quote_when_another_match_has_more_segments() 
             ("pick so" + TAB, menu('pick "some ', 2)),
             # This match has another segment after it, so its quote stays open
             (TAB, shows('pick "some dir/')),
-            (TAB, shows('pick "some file"')),
+            (TAB, shows('pick "some file" ')),
             (ENTER, no_menu),
             (ENTER, None),
         ],
     )
-    assert line == 'pick "some file"'
+    assert line == 'pick "some file" '
+
+
+def test_prompt_ending_during_a_completion_leaves_no_listener_on_the_buffer(app, monkeypatch) -> None:
+    complete = app.complete
+    completing = threading.Event()
+
+    def slow_complete(*args: Any, **kwargs: Any) -> cmd2.Completions:
+        # Find the matches, but don't return them until the user has submitted the line
+        completions = complete(*args, **kwargs)
+        completing.set()
+        prompt_app = get_app()
+        deadline = time.monotonic() + 5
+        while not prompt_app.is_done and time.monotonic() < deadline:
+            time.sleep(0.005)
+        return completions
+
+    monkeypatch.setattr(app, "complete", slow_complete)
+
+    def completion_started(_: Buffer) -> bool:
+        return completing.is_set()
+
+    line = press_keys(
+        app,
+        [
+            ("edit my" + TAB, completion_started),
+            (ENTER, None),
+        ],
+    )
+    assert line == "edit my"
+
+    # Nothing of the abandoned request is attached to the buffer which the next prompt will use
+    handlers = app.main_session.default_buffer.on_completions_changed._handlers
+    assert [handler.__qualname__ for handler in handlers if "Cmd2Completer" in handler.__qualname__] == []

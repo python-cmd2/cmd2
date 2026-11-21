@@ -295,8 +295,9 @@ class Completions(CompletionResultsBase):
     # Set this to False for intermediate or hierarchical matches (such as
     # directories) where the user needs to continue typing the next segment.
     #
-    # If there are multiple matches, no trailing space is added, but a match
-    # chosen from them still closes an open quotation mark unless this is False.
+    # If there are multiple matches, a match chosen from them is only finalized
+    # when a quotation mark is open: it closes the quotation mark and appends a
+    # trailing space. Set this to False if any of the matches is intermediate.
     allow_finalization: bool = True
 
     #####################################################################

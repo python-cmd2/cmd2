@@ -207,6 +207,7 @@ from .pt_utils import (
     Cmd2Completer,
     Cmd2History,
     Cmd2Lexer,
+    _CompletionKeyEvent,
     pt_filter_style,
     pt_resolve_color_depth,
 )
@@ -784,7 +785,20 @@ class Cmd:
         """Create and configure custom key bindings for the PromptSession."""
         key_bindings = KeyBindings()
 
-        if completekey != self.DEFAULT_COMPLETEKEY:
+        if completekey == self.DEFAULT_COMPLETEKEY:
+            # Take the place of prompt-toolkit's own binding for Tab, and do what it does. The difference is that
+            # the request says it comes from the completion key, which lets Cmd2Completer insert an opening quote
+            # and start completion again. It can't tell from prompt-toolkit's request what kind of request it is.
+            @key_bindings.add(completekey, filter=filters.emacs_insert_mode | filters.vi_insert_mode)
+            def _complete_or_select_next(event: KeyPressEvent) -> None:  # pragma: no cover
+                """Insert the common prefix of the completions, or select the next completion if a menu is open."""
+                b = event.current_buffer
+                if b.complete_state:
+                    b.complete_next()
+                else:
+                    b.start_completion(insert_common_part=True, complete_event=_CompletionKeyEvent())
+
+        else:
 
             @key_bindings.add(completekey)
             def _trigger_completion(event: KeyPressEvent) -> None:  # pragma: no cover
