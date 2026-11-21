@@ -343,60 +343,6 @@ class TestCmd2Lexer:
         assert tokens1 == [(Cmd2Lexer.ARGUMENT_STYLE, "help")]
 
 
-@pytest.mark.parametrize(
-    ("text_after_cursor", "quote", "opened_by_cmd2", "expected"),
-    [
-        # Nothing after the cursor, or nothing which could close the quote
-        ("", '"', False, False),
-        (" other", '"', False, False),
-        ("'", '"', False, False),
-        # The quote is closed at the end of the word under the cursor
-        ('"', '"', False, True),
-        ('.bak"', '"', False, True),
-        ('" "next"', '"', False, True),
-        (""".bak" 'x"y'""", '"', False, True),
-        ('.bak" "unfinished', '"', False, True),
-        ("""" it's""", '"', False, True),
-        # An argument which the user quoted can have spaces in it and be closed further along
-        (' file.bak"', '"', False, True),
-        (""" 'copy\"""", '"', False, True),
-        (""" it's here.bak\"""", '"', False, True),
-        # The quote character belongs to another quoted argument
-        (' "spare.txt"', '"', False, False),
-        (""" 'a"b'""", '"', False, False),
-        (""" '5" disk'""", '"', False, False),
-        (""" "it's\"""", "'", False, False),
-        # An apostrophe in the middle of a later word doesn't close anything
-        (" don't", "'", False, False),
-        (" rock'n'roll", "'", False, False),
-        # A closing quote can be followed by more of the word, like a file extension
-        (' backup".txt', '"', False, True),
-        ('.bak".txt', '"', False, True),
-        (" backup'.txt", "'", False, True),
-        ('.bak".txt', '"', True, True),
-        # A quote which cmd2 adds goes around one word, so only that word can already have the closing quote
-        ('"', '"', True, True),
-        ('.bak"', '"', True, True),
-        (' file.bak"', '"', True, False),
-        (' 5" nail', '"', True, False),
-        (""" 'a"b'""", '"', True, False),
-        ("", '"', True, False),
-        # A redirection or a terminator ends a word as whitespace does
-        ('.bak">out', '"', False, True),
-        ('.bak"|grep x', '"', False, True),
-        ('.bak";', '"', False, True),
-        (' file.bak">out', '"', False, True),
-        ('">out', '"', True, True),
-        (">out", '"', True, False),
-        (' >"out file"', '"', False, False),
-    ],
-)
-def test_quote_is_closed(text_after_cursor: str, quote: str, opened_by_cmd2: bool, expected: bool) -> None:
-    """Test whether the text after the cursor is taken to close a quote which is open at the cursor."""
-    closed = pt_utils._quote_is_closed(text_after_cursor, quote, opened_by_cmd2=opened_by_cmd2, punctuation="|<>;")
-    assert closed is expected
-
-
 class TestCmd2Completer:
     def test_get_completions(self, mock_cmd_app: MockCmd, monkeypatch) -> None:
         """Test get_completions with matches."""
@@ -1232,33 +1178,25 @@ class TestCmd2Completer:
     @pytest.mark.parametrize(
         ("line", "matches", "quote_char", "expected"),
         [
-            # Matches being chosen from a menu
+            # A closing quote right after the cursor is never doubled
+            ('"ma"', ["match"], '"', ["match"]),
             ('"ma"', ["match one", "match two"], '"', ["match one", "match two"]),
             ("'ma' more", ["match one", "match two"], "'", ["match one", "match two"]),
-            # A single match
-            ('"ma"', ["match"], '"', ["match"]),
-            # The closing quote can be further along the word being completed
+            # Otherwise the only match closes its quote
+            ('"ma.txt"', ["match"], '"', ['match"']),
+            ('"ma more', ["match"], '"', ['match"']),
+            ("\"ma'", ["match"], '"', ['match"']),
+            ('"ma --title="x"', ["match"], '"', ['match"']),
+            # A match chosen from several leaves a quote which the user typed as it is
             ('"ma.txt"', ["match one", "match two"], '"', ["match one", "match two"]),
-            ('"ma.txt"', ["match"], '"', ["match"]),
-            ('"ma" "next"', ["match one", "match two"], '"', ["match one", "match two"]),
-            # A different quote character after the cursor is not the closing quote
-            ("\"ma'", ["match one", "match two"], '"', ['match one"', 'match two"']),
-            # An even number of quotes after the cursor belong to other words, so this one still needs closing
-            ('"ma "next"', ["match one", "match two"], '"', ['match one"', 'match two"']),
-            ('"ma "next"', ["match"], '"', ['match"']),
-            # A quote character inside an argument which is quoted the other way is literal
-            ("\"ma 'a\"b'", ["match one", "match two"], '"', ['match one"', 'match two"']),
-            ("'ma \"it's\"", ["match"], "'", ["match'"]),
-            ('"ma.txt" \'a"b\'', ["match one", "match two"], '"', ["match one", "match two"]),
-            # The other quote character only quotes when it starts an argument, so an apostrophe hides nothing
-            ('"ma it\'s"', ["match one", "match two"], '"', ["match one", "match two"]),
-            ('"ma \'copy"', ["match one", "match two"], '"', ["match one", "match two"]),
+            ('"ma more', ["match one", "match two"], '"', ["match one", "match two"]),
+            ('"ma "next"', ["match one", "match two"], '"', ["match one", "match two"]),
         ],
     )
-    def test_get_completions_closing_quote_already_after_cursor(
+    def test_get_completions_closing_quote_in_the_middle_of_a_line(
         self, line, matches, quote_char, expected, mock_cmd_app: MockCmd
     ) -> None:
-        """Test that a closing quote is not added when text after the cursor already closes the quote."""
+        """Test what is added to a match when the user typed the opening quote and text follows the cursor."""
         completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
 
         # The cursor is right after the search text
@@ -1273,38 +1211,40 @@ class TestCmd2Completer:
         assert [c.text for c in completions] == expected
 
     @pytest.mark.parametrize(
-        ("line", "cursor_position", "complete_event", "add_opening_quote", "expected"),
+        ("line", "cursor_position", "matches", "expected"),
         [
-            # The quote is part of the match
-            ("ma 'a\"b'", 2, None, True, '"match"'),
-            # A closing quote which was left behind is reused
-            ('ma"', 2, None, True, '"match'),
-            # The quote was inserted before completion was started again
-            (
-                "\"ma 'a\"b'",
-                3,
-                pt_utils._QuoteInsertedEvent(
-                    Document("\"ma 'a\"b'", cursor_position=3),
-                    cmd2.Completions([cmd2.CompletionItem("match")], _quote_char='"'),
-                ),
-                False,
-                'match"',
-            ),
+            # The word which cmd2 puts in quotes ended at the cursor, so each match closes the quote
+            ("ma more", 2, ["match one", "match two"], ['"match one"', '"match two"']),
+            ("ma 'a\"b'", 2, ["match one", "match two"], ['"match one"', '"match two"']),
+            ("ma 'a\"b'", 2, ["match"], ['"match"']),
+            # The word carries on after the cursor, so what follows may be the rest of it
+            ('ma"', 2, ["match one", "match two"], ['"match one', '"match two']),
+            ("mab", 2, ["match one", "match two"], ['"match one', '"match two']),
+            ('ma"', 2, ["match"], ['"match']),
+            ("mab", 2, ["match"], ['"match"']),
         ],
     )
+    @pytest.mark.parametrize("quote_already_inserted", [False, True])
     def test_get_completions_close_quote_which_cmd2_opened(
-        self, line, cursor_position, complete_event, add_opening_quote, expected, mock_cmd_app: MockCmd
+        self, line, cursor_position, matches, expected, quote_already_inserted, mock_cmd_app: MockCmd
     ) -> None:
-        """Test that a quote which cmd2 adds is closed unless the text after the cursor already closes it."""
+        """Test what is added to a match when cmd2 adds the opening quote and text follows the cursor."""
         completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
-        document = Document(line, cursor_position=cursor_position)
+        items = [cmd2.CompletionItem(match) for match in matches]
 
-        mock_cmd_app.complete.return_value = cmd2.Completions(
-            [cmd2.CompletionItem("match")], _add_opening_quote=add_opening_quote, _quote_char='"'
-        )
+        if quote_already_inserted:
+            # The quote was put in the buffer and completion was started again with the matches found before
+            document = Document('"' + line, cursor_position=cursor_position + 1)
+            complete_event: object = pt_utils._QuoteInsertedEvent(document, cmd2.Completions(items, _quote_char='"'))
+            expected = [text.removeprefix('"') for text in expected]
+        else:
+            # The quote is part of each match
+            document = Document(line, cursor_position=cursor_position)
+            complete_event = None
+            mock_cmd_app.complete.return_value = cmd2.Completions(items, _add_opening_quote=True, _quote_char='"')
 
         completions = list(completer.get_completions(document, complete_event))
-        assert [c.text for c in completions] == [expected]
+        assert [c.text for c in completions] == expected
 
     @pytest.mark.parametrize(
         ("line", "quote_char", "expected"),

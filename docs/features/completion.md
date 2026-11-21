@@ -113,6 +113,10 @@ so you can keep completing the rest of the path:
 (Cmd) edit "my dir/
 ```
 
+When there is more text after the cursor, that text may already close the quote. So a match chosen
+from the menu in the middle of a line only closes a quote which `cmd2` added itself, around a word
+which ended at the cursor. A quote which you typed is left for you to close.
+
 If you write a completer whose matches can be like directories, where the user keeps completing
 after choosing one, set `allow_finalization=False` on the [Completions][cmd2.Completions] it returns
 whenever such a match is among them. No quote is closed for those results. `path_complete` and

@@ -183,106 +183,6 @@ class _QuoteInsertedEvent(CompleteEvent):
         self.completions = completions
 
 
-def _quote_is_closed(text_after_cursor: str, quote: str, *, opened_by_cmd2: bool, punctuation: str) -> bool:
-    """Check whether the text after the cursor closes a quote which is open at the cursor.
-
-    The same quote character further along the line is either the end of the argument being
-    completed or part of something else: another quoted argument, or a word with an apostrophe
-    or an inch mark in it. Which it is can't always be known, so this looks for a quote character
-    in a place where only a closing quote would be.
-
-    :param text_after_cursor: the rest of the line
-    :param quote: the character which opened the quote
-    :param opened_by_cmd2: True if cmd2 is adding the opening quote, False if the user typed it
-    :param punctuation: the characters which end an unquoted word the way whitespace does,
-                        which are the redirection characters and the terminators
-    :return: True if the quote is already closed and a closing quote should not be added
-    """
-    # The word under the cursor has the closing quote in it
-    rest_of_word = re.split(rf"[\s{re.escape(punctuation)}]", text_after_cursor, maxsplit=1)[0]
-    if _has_closing_quote(rest_of_word, quote):
-        return True
-
-    # A quote which cmd2 adds goes around what was an unquoted word. An unquoted word ends at
-    # whitespace or punctuation, so a quote character past it has nothing to do with this argument.
-    if opened_by_cmd2:
-        return False
-
-    # An argument which the user quoted can have whitespace and punctuation in it. It is only
-    # closed further along if no quote is left open when the line is read as continuing inside it.
-    if _split_arguments(text_after_cursor, punctuation, open_quote=quote) is None:
-        return False
-
-    # Read the rest of the line as though the argument ended at the cursor
-    arguments = _split_arguments(text_after_cursor, punctuation)
-    if arguments is None:
-        # It can't stand on its own, so it must be the rest of this argument
-        return True
-
-    # A quote character in an unquoted word has no opening quote of its own,
-    # while the quotes of a quoted argument belong to that argument
-    return any(argument[0] not in constants.QUOTES and _has_closing_quote(argument, quote) for argument in arguments)
-
-
-def _has_closing_quote(word: str, quote: str) -> bool:
-    """Check whether an unquoted word has a quote character in it which closes a quote.
-
-    It can be at the end of the word or be followed by more of it, as in `backup".txt`.
-    A single quote with a letter on each side is an apostrophe, as in `don't`.
-
-    :param word: the word to look in
-    :param quote: the quote character to look for
-    :return: True if the word has a closing quote
-    """
-    for index, char in enumerate(word):
-        if char != quote:
-            continue
-
-        is_apostrophe = quote == "'" and word[index - 1 : index].isalpha() and word[index + 1 : index + 2].isalpha()
-        if not is_apostrophe:
-            return True
-
-    return False
-
-
-def _split_arguments(text: str, punctuation: str, open_quote: str = "") -> list[str] | None:
-    """Split text into arguments the way the parser does, to see how its quote characters are used.
-
-    A quote character only starts a quoted argument at the beginning of an argument, and a quoted
-    argument ends at its closing quote. Anywhere else a quote character is an ordinary character.
-
-    :param text: the text to split
-    :param punctuation: the characters which end an unquoted word the way whitespace does
-    :param open_quote: the quote character of a quoted argument which the text starts inside of
-    :return: the arguments, where a quoted one keeps its quotes, or None if a quote is left open
-    """
-    arguments: list[str] = []
-    argument = open_quote
-    quote = open_quote
-
-    for char in text:
-        if quote:
-            argument += char
-            if char == quote:
-                arguments.append(argument)
-                argument = quote = ""
-        elif char.isspace() or char in punctuation:
-            if argument:
-                arguments.append(argument)
-                argument = ""
-        elif not argument and char in constants.QUOTES:
-            argument = quote = char
-        else:
-            argument += char
-
-    if quote:
-        return None
-
-    if argument:
-        arguments.append(argument)
-    return arguments
-
-
 def _completions_for_quoted_text(completions: "Completions") -> "Completions":
     """Change completions which need an opening quote into what they are once the quote is in the buffer.
 
@@ -467,7 +367,6 @@ class Cmd2Completer(Completer):
         cursor_pos = document.cursor_position
 
         # Define delimiters for completion to match cmd2/readline behavior
-        punctuation = "".join(constants.REDIRECTION_CHARS) + "".join(self._cmd_app.statement_parser.terminators)
         delimiters = BASE_DELIMITERS
         delimiters += "".join(self._cmd_app.statement_parser.terminators)
 
@@ -503,7 +402,6 @@ class Cmd2Completer(Completer):
         # If matches require quoting but the word isn't quoted yet, the opening quote goes in front
         # of text the user has typed. If any completions change text before the cursor (like
         # prepending a quote), prompt-toolkit will not return a common prefix to the command line.
-        quote_inserted = False
         if completions and completions._add_opening_quote and search_text_length > 0:
             # For the completion key, whose request inserts that common prefix, the quote is
             # inserted into the buffer and completion is started again with the quote already present.
@@ -526,7 +424,6 @@ class Cmd2Completer(Completer):
                 # The quote went after any shortcut, so the word being completed starts after the quote
                 text = text[completions._search_text_offset :]
                 completions = _completions_for_quoted_text(completions)
-                quote_inserted = True
 
             # Any other request gets the quote as part of each completion further down, so it
             # goes on to do what it was started for, such as selecting a match or inserting all of them.
@@ -544,17 +441,24 @@ class Cmd2Completer(Completer):
                 print_formatted_text(pt_filter_style(completions.hint))
             return
 
-        # A completion only replaces text before the cursor, so text after it may already close
-        # the quote. Adding another closing quote would then end the argument at the cursor and
-        # leave the rest of it outside the quotes.
+        # A completion only replaces text before the cursor, so the argument may carry on after it.
+        # Whether a quote character further along closes this argument or belongs to something else
+        # can't be told, so nothing here depends on it. A closing quote is added where it is certain
+        # to be needed, and everywhere else the line is treated as it was before a match chosen from
+        # several closed its quote at all.
+        at_end_of_line = endidx == len(line)
+        next_char = line[endidx : endidx + 1]
+
+        # Never put a closing quote directly in front of one which is already there
         closing_quote = completions._quote_char
-        quote_opened_by_cmd2 = (
-            quote_inserted or completions._add_opening_quote or isinstance(complete_event, _QuoteInsertedEvent)
-        )
-        if closing_quote and _quote_is_closed(
-            line[endidx:], closing_quote, opened_by_cmd2=quote_opened_by_cmd2, punctuation=punctuation
-        ):
+        if next_char == closing_quote:
             closing_quote = ""
+
+        # A match chosen from several closes its quote, so that accepting it does not leave the quote
+        # open, in the two cases where nothing after the cursor can belong to the argument: at the end
+        # of the line, and when cmd2 opened the quote around a word which ended at the cursor.
+        quote_opened_by_cmd2 = completions._add_opening_quote or isinstance(complete_event, _QuoteInsertedEvent)
+        closes_quote_in_menu = at_end_of_line or (quote_opened_by_cmd2 and next_char.isspace())
 
         # Return the completions
         for item in completions:
@@ -579,17 +483,15 @@ class Cmd2Completer(Completer):
                     match_text += closing_quote
 
                     # Add trailing space if the cursor is at the end of the line
-                    if endidx == len(line):
+                    if at_end_of_line:
                         match_text += " "
 
-                # A match chosen from several closes any open quote, so that accepting it does not
-                # leave the quote open.
-                elif closing_quote:
+                elif closing_quote and closes_quote_in_menu:
                     match_text += closing_quote
 
                     # With its quote closed the argument is finished, so add the trailing space too.
                     # Otherwise completing again would start a new argument right against the quote.
-                    if endidx == len(line):
+                    if at_end_of_line:
                         match_text += " "
 
             yield Completion(

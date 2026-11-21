@@ -250,150 +250,82 @@ def test_each_match_in_the_menu_closes_its_quote(app) -> None:
     assert line == 'edit "spare.txt" '
 
 
-def test_match_chosen_from_the_menu_keeps_a_closing_quote_which_follows_the_cursor(app) -> None:
-    line = press_keys(
-        app,
-        [
-            ('edit "sp"' + LEFT + TAB, menu('edit "sp"', 2)),
-            (TAB, shows('edit "sp ace.txt"')),
-            (ENTER, no_menu),
-            (ENTER, None),
-        ],
-    )
-    assert line == 'edit "sp ace.txt"'
-    assert shlex.split(line) == ["edit", "sp ace.txt"]
+def complete_at_cursor(app: cmd2.Cmd, line: str, *, choose_from_menu: bool) -> str:
+    """Type a line, put the cursor where its | is, complete there, and return what the line becomes.
+
+    :param app: the application whose prompt is being typed into
+    :param line: the line to type, with a | where the cursor goes
+    :param choose_from_menu: True if several matches are expected, in which case the first one is chosen
+    """
+    before_cursor, after_cursor = line.split("|")
+    lines = []
+
+    def menu_is_open(buffer: Buffer) -> bool:
+        state = buffer.complete_state
+        return state is not None and len(state.completions) > 1 and state.complete_index is None
+
+    def match_is_selected(buffer: Buffer) -> bool:
+        state = buffer.complete_state
+        return state is not None and state.complete_index == 0
+
+    def match_is_inserted(buffer: Buffer) -> bool:
+        return buffer.text != before_cursor + after_cursor and buffer.complete_state is None
+
+    def record(buffer: Buffer) -> bool:
+        lines.append(buffer.text)
+        return True
+
+    typed = before_cursor + after_cursor + LEFT * len(after_cursor)
+    if choose_from_menu:
+        steps: list[tuple[str, Ready | None]] = [(typed + TAB, menu_is_open), (TAB, match_is_selected)]
+    else:
+        steps = [(typed + TAB, match_is_inserted)]
+
+    # Clear what is in front of the cursor, which closes any menu, and submit what is left
+    press_keys(app, [*steps, ("", record), ("\x15" + ENTER, None)])
+    return lines[0]
 
 
-def test_match_chosen_inside_a_quoted_word_stays_inside_its_quotes(app) -> None:
-    rest_of_word = '.bak"'
-    line = press_keys(
-        app,
-        [
-            ('edit "sp' + rest_of_word + LEFT * len(rest_of_word) + TAB, menu('edit "sp.bak"', 2)),
-            (TAB, shows('edit "sp ace.txt.bak"')),
-            (ENTER, no_menu),
-            (ENTER, None),
-        ],
-    )
-    assert line == 'edit "sp ace.txt.bak"'
-    assert shlex.split(line) == ["edit", "sp ace.txt.bak"]
+@pytest.mark.parametrize(
+    ("line", "expected"),
+    [
+        # A closing quote right after the cursor is left to do its job
+        ('edit "my|"', 'edit "my file.txt"'),
+        # Anywhere else the only match closes its quote, whatever comes after it
+        ("edit my| other", 'edit "my file.txt" other'),
+        ('edit "my| other', 'edit "my file.txt" other'),
+        ("""shell cat my| 'a"b'""", """shell cat "my file.txt" 'a"b'"""),
+        ('edit my| 5" nail', 'edit "my file.txt" 5" nail'),
+        ("edit 'my| don't", "edit 'my file.txt' don't"),
+        ('shell cat "my| --title="x"', 'shell cat "my file.txt" --title="x"'),
+    ],
+)
+def test_only_match_in_the_middle_of_a_line(app, line, expected) -> None:
+    assert complete_at_cursor(app, line, choose_from_menu=False) == expected
 
 
-def test_match_chosen_in_front_of_another_quoted_word_closes_its_quote(app) -> None:
-    rest_of_line = ' "spare.txt"'
-    line = press_keys(
-        app,
-        [
-            ('edit "sp' + rest_of_line + LEFT * len(rest_of_line) + TAB, menu('edit "sp "spare.txt"', 2)),
-            (TAB, shows('edit "sp ace.txt" "spare.txt"')),
-            (ENTER, no_menu),
-            (ENTER, None),
-        ],
-    )
-    assert shlex.split(line) == ["edit", "sp ace.txt", "spare.txt"]
-
-
-def test_match_in_front_of_an_argument_with_a_literal_quote_closes_its_quote(app) -> None:
-    rest_of_line = " 'a\"b'"
-    line = press_keys(
-        app,
-        [
-            ("shell cat my" + rest_of_line + LEFT * len(rest_of_line) + TAB, shows('shell cat "my file.txt"' + rest_of_line)),
-            (ENTER, None),
-        ],
-    )
-    assert shlex.split(line) == ["shell", "cat", "my file.txt", 'a"b']
-
-
-def test_match_chosen_inside_a_quoted_word_with_an_apostrophe_stays_inside_its_quotes(app) -> None:
-    rest_of_word = """ 'copy\""""
-    line = press_keys(
-        app,
-        [
-            ('edit "sp' + rest_of_word + LEFT * len(rest_of_word) + TAB, menu('edit "sp' + rest_of_word, 2)),
-            (TAB, shows('edit "sp ace.txt' + rest_of_word)),
-            (ENTER, no_menu),
-            (ENTER, None),
-        ],
-    )
-    assert shlex.split(line) == ["edit", "sp ace.txt 'copy"]
-
-
-def test_match_reuses_a_closing_quote_whose_opening_quote_is_missing(app) -> None:
-    line = press_keys(
-        app,
-        [
-            # The opening quote is inserted in front of sp, and the quote after the cursor then closes it
-            ('edit sp"' + LEFT + TAB, menu('edit "sp"', 2)),
-            (TAB, shows('edit "sp ace.txt"')),
-            (ENTER, no_menu),
-            (ENTER, None),
-        ],
-    )
-    assert shlex.split(line) == ["edit", "sp ace.txt"]
-
-
-def test_match_in_front_of_a_word_with_an_inch_mark_closes_its_quote(app) -> None:
-    rest_of_line = ' 5" nail'
-    line = press_keys(
-        app,
-        [
-            ("edit my" + rest_of_line + LEFT * len(rest_of_line) + TAB, shows('edit "my file.txt"' + rest_of_line)),
-            (ENTER, None),
-        ],
-    )
-    assert line == 'edit "my file.txt" 5" nail'
-
-
-def test_match_in_front_of_a_word_with_an_apostrophe_closes_its_quote(app) -> None:
-    rest_of_line = " don't"
-    line = press_keys(
-        app,
-        [
-            ("edit 'my" + rest_of_line + LEFT * len(rest_of_line) + TAB, shows("edit 'my file.txt'" + rest_of_line)),
-            (ENTER, None),
-        ],
-    )
-    assert line == "edit 'my file.txt' don't"
-
-
-def test_match_chosen_inside_a_quoted_word_in_front_of_a_redirection_stays_inside_its_quotes(app) -> None:
-    rest_of_line = '.bak">out'
-    line = press_keys(
-        app,
-        [
-            ('shell cat "sp' + rest_of_line + LEFT * len(rest_of_line) + TAB, menu('shell cat "sp' + rest_of_line, 2)),
-            (TAB, shows('shell cat "sp ace.txt' + rest_of_line)),
-            (ENTER, no_menu),
-            (ENTER, None),
-        ],
-    )
-    assert line == 'shell cat "sp ace.txt.bak">out'
-
-
-def test_match_chosen_inside_a_quoted_part_of_a_word_stays_inside_its_quotes(app) -> None:
-    rest_of_line = ' backup".txt'
-    line = press_keys(
-        app,
-        [
-            ('shell cat "sp' + rest_of_line + LEFT * len(rest_of_line) + TAB, menu('shell cat "sp' + rest_of_line, 2)),
-            (TAB, shows('shell cat "sp ace.txt' + rest_of_line)),
-            (ENTER, no_menu),
-            (ENTER, None),
-        ],
-    )
-    assert shlex.split(line) == ["shell", "cat", "sp ace.txt backup.txt"]
-
-
-def test_only_match_keeps_a_closing_quote_which_follows_the_cursor(app) -> None:
-    line = press_keys(
-        app,
-        [
-            ('edit "my"' + LEFT + TAB, shows('edit "my file.txt"')),
-            (ENTER, None),
-        ],
-    )
-    assert line == 'edit "my file.txt"'
+@pytest.mark.parametrize(
+    ("line", "expected"),
+    [
+        # A quote which the user typed is closed somewhere after the cursor, so nothing is added
+        ('edit "sp|"', 'edit "sp ace.txt"'),
+        ('edit "sp|.bak"', 'edit "sp ace.txt.bak"'),
+        ('shell cat "sp|.bak">out', 'shell cat "sp ace.txt.bak">out'),
+        ("""edit "sp| 'copy\"""", """edit "sp ace.txt 'copy\""""),
+        ('shell cat "sp| backup".txt', 'shell cat "sp ace.txt backup".txt'),
+        # It isn't closed, and it is left that way as it always has been. Telling this
+        # apart from the lines above would take guessing what the rest of the line means.
+        ('edit "sp| other', 'edit "sp ace.txt other'),
+        ('edit "sp| "spare.txt"', 'edit "sp ace.txt "spare.txt"'),
+        # cmd2 adds the opening quote around a word which ended at the cursor, so it closes it too
+        ("edit sp| other", 'edit "sp ace.txt" other'),
+        ("""shell cat sp| 'a"b'""", """shell cat "sp ace.txt" 'a"b'"""),
+        # The word carries on after the cursor, where a closing quote was left behind
+        ('edit sp|"', 'edit "sp ace.txt"'),
+    ],
+)
+def test_match_chosen_from_the_menu_in_the_middle_of_a_line(app, line, expected) -> None:
+    assert complete_at_cursor(app, line, choose_from_menu=True) == expected
 
 
 def test_directory_chosen_from_the_menu_stays_open(app) -> None:
