@@ -954,6 +954,50 @@ class TestCmd2Completer:
         # prompt-toolkit clears the state of the first request and says so before the quote is inserted
         assert (line, True) in asyncio.run(run_test())
 
+    def test_get_completions_add_opening_quote_skips_if_prompt_ended(self, mock_cmd_app: MockCmd) -> None:
+        """Verify the quote is not inserted if the line is submitted just as the request finishes."""
+        line = "edit has"
+        mock_cmd_app.complete.return_value = cmd2.Completions(
+            [cmd2.CompletionItem("has space")], _add_opening_quote=True, _quote_char='"'
+        )
+        cmd2_completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+
+        async def run_test() -> str:
+            loop = asyncio.get_running_loop()
+            listening = False
+
+            def end_prompt_when_request_finishes(buffer: Buffer) -> None:
+                # prompt-toolkit clears the state once the request has returned no matches. cmd2 has been told
+                # that already, since it listens ahead of this, and is about to insert the quote.
+                if buffer.complete_state is None and app.future is None:
+                    app.future = loop.create_future()
+                    app.future.set_result(None)
+
+            class RegistersListener(Completer):
+                """Adds a listener once cmd2 has registered its own for the first request."""
+
+                def get_completions(self, document: Document, complete_event: CompleteEvent) -> Iterable[Completion]:
+                    nonlocal listening
+                    yield from cmd2_completer.get_completions(document, complete_event)
+                    if not listening:
+                        listening = True
+                        buf.on_completions_changed += end_prompt_when_request_finishes
+
+            buf = Buffer(document=Document(line, cursor_position=len(line)), completer=RegistersListener())
+            app: Application[None] = Application(
+                layout=Layout(Window(BufferControl(buffer=buf))),
+                input=DummyInput(),
+                output=DummyOutput(),
+            )
+            app.loop = loop
+
+            with set_app(app):
+                buf.start_completion(insert_common_part=True, complete_event=pt_utils._CompletionKeyEvent())
+                await self._wait_for_completion(app)
+            return buf.text
+
+        assert asyncio.run(run_test()) == line
+
     def test_get_completions_add_opening_quote_skips_if_document_changed(self, mock_cmd_app: MockCmd) -> None:
         """Verify deferred quote insertion bails out if the user edits the buffer just as the request finishes."""
         line = "edit has"

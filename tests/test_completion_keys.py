@@ -444,21 +444,35 @@ def test_custom_completion_key_opens_the_menu_for_a_match_which_needs_a_quote(tm
     assert line == 'edit "my file.txt" '
 
 
-def test_tab_completes_a_match_which_needs_a_quote_when_another_key_is_the_completion_key(tmp_path, monkeypatch) -> None:
-    """Tab keeps prompt-toolkit's own binding here, whose requests cmd2 can't start again."""
+@pytest.mark.parametrize(
+    ("typed", "ready"),
+    [
+        ("edit my", shows('edit "my file.txt" ')),
+        ("edit lo", menu('edit "long name ', 2)),
+    ],
+    ids=["one-match", "shared-prefix"],
+)
+def test_tab_still_completes_when_another_key_is_the_completion_key(tmp_path, monkeypatch, typed, ready) -> None:
+    """Tab goes on doing what it does by default, whatever the completion key is set to."""
     make_files(tmp_path)
     monkeypatch.chdir(tmp_path)
     app = cmd2.Cmd(completekey="c-t")
+    lines = []
 
-    line = press_keys(
+    def record(buffer: Buffer) -> bool:
+        lines.append(buffer.text)
+        return True
+
+    press_keys(
         app,
         [
-            ("edit my" + TAB, shows('edit "my file.txt" ')),
-            (ENTER, no_menu),
-            (ENTER, None),
+            (typed + TAB, ready),
+            ("", record),
+            # Clear the line, which closes any menu, and submit it
+            ("\x15" + ENTER, None),
         ],
     )
-    assert line == 'edit "my file.txt" '
+    assert len(lines) == 1
 
 
 def test_request_which_selects_the_last_match_does_so_when_matches_need_a_quote(app) -> None:
@@ -578,6 +592,9 @@ def no_menu_after_a_moment() -> Ready:
         ("edit sp", 'edit "sp'),
         # A single match is completed
         ("edit my", 'edit "my file.txt" '),
+        # The quote goes after a shortcut, here the one for run_script
+        ("@my", '@"my file.txt" '),
+        ("@dd", '@"dd '),
     ],
 )
 def test_tab_completes_like_readline_when_the_session_is_set_up_to(app, typed, expected) -> None:

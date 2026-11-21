@@ -330,8 +330,8 @@ class Cmd2Completer(Completer):
         def _recomplete() -> None:
             buffer.on_completions_changed -= _on_completions_changed
 
-            # The user edited the line after the request finished
-            if buffer.document != document:
+            # The user submitted or edited the line after the request finished
+            if app.is_done or buffer.document != document:
                 return
 
             # If the buffer completes while typing, inserting text starts a completion of its own.
@@ -476,6 +476,9 @@ class Cmd2Completer(Completer):
                 document = quoted_document
                 line = document.text
                 endidx = document.cursor_position
+
+                # The quote went after any shortcut, so the word being completed starts after the quote
+                text = text[completions._search_text_offset :]
                 completions = _completions_for_quoted_text(completions)
                 quote_inserted = True
 

@@ -785,28 +785,28 @@ class Cmd:
         """Create and configure custom key bindings for the PromptSession."""
         key_bindings = KeyBindings()
 
-        if completekey == self.DEFAULT_COMPLETEKEY:
-            # Take the place of prompt-toolkit's own binding for Tab, and do what it does. The difference is that
-            # the request says it comes from the completion key, which lets Cmd2Completer insert an opening quote
-            # and start completion again. It can't tell from prompt-toolkit's request what kind of request it is.
-            # A session which shows completions like readline has a different binding for Tab, which is left alone.
-            @filters.Condition
-            def menu_completion() -> bool:
-                return self.active_session.complete_style != CompleteStyle.READLINE_LIKE
+        # Take the place of prompt-toolkit's own binding for Tab, and do what it does. The difference is that
+        # the request says it comes from this binding, which lets Cmd2Completer insert an opening quote and
+        # start completion again. It can't tell from prompt-toolkit's request what kind of request it is.
+        # A session which shows completions like readline has a different binding for Tab, which is left alone.
+        @filters.Condition
+        def menu_completion() -> bool:
+            return self.active_session.complete_style != CompleteStyle.READLINE_LIKE
 
-            @key_bindings.add(
-                completekey,
-                filter=(filters.emacs_insert_mode | filters.vi_insert_mode) & menu_completion,
-            )
-            def _complete_or_select_next(event: KeyPressEvent) -> None:  # pragma: no cover
-                """Insert the common prefix of the completions, or select the next completion if a menu is open."""
-                b = event.current_buffer
-                if b.complete_state:
-                    b.complete_next()
-                else:
-                    b.start_completion(insert_common_part=True, complete_event=_CompletionKeyEvent())
+        @key_bindings.add(
+            self.DEFAULT_COMPLETEKEY,
+            filter=(filters.emacs_insert_mode | filters.vi_insert_mode) & menu_completion,
+        )
+        def _complete_or_select_next(event: KeyPressEvent) -> None:  # pragma: no cover
+            """Insert the common prefix of the completions, or select the next completion if a menu is open."""
+            b = event.current_buffer
+            if b.complete_state:
+                b.complete_next()
+            else:
+                b.start_completion(insert_common_part=True, complete_event=_CompletionKeyEvent())
 
-        else:
+        # A custom completion key works alongside Tab, as it always has
+        if completekey != self.DEFAULT_COMPLETEKEY:
 
             @key_bindings.add(completekey)
             def _trigger_completion(event: KeyPressEvent) -> None:  # pragma: no cover
