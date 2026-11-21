@@ -73,9 +73,9 @@ class CompletionItem:
 
     # Used internally by cmd2 and not intended for user modification.
     #
-    # Whether an open quote may be closed after this match when it is one of several being offered.
-    # False for a match which the user will keep completing, such as a directory. A single match is
-    # governed by Completions.allow_finalization instead. Not part of an item's identity.
+    # Whether this match may be finalized, meaning an open quote is closed and a trailing space is
+    # added after it. False for a match which the user will keep completing, such as a directory.
+    # Completions.allow_finalization has to allow it as well. Not part of an item's identity.
     _allow_finalization: bool = True
 
     @classmethod

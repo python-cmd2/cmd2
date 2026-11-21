@@ -20,6 +20,7 @@ from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.enums import EditingMode
 from prompt_toolkit.input import create_pipe_input
 from prompt_toolkit.output import DummyOutput
+from prompt_toolkit.shortcuts import CompleteStyle
 
 import cmd2
 
@@ -65,6 +66,7 @@ def press_keys(
     *,
     complete_in_thread: bool = True,
     editing_mode: EditingMode = EditingMode.EMACS,
+    complete_style: CompleteStyle = CompleteStyle.MULTI_COLUMN,
     read: Callable[[], str] | None = None,
 ) -> str:
     """Send keys to a prompt and return the line it read.
@@ -74,6 +76,7 @@ def press_keys(
                   The last keys have to submit the line.
     :param complete_in_thread: whether completion runs in a thread, as it does by default
     :param editing_mode: which set of key bindings the prompt uses
+    :param complete_style: how the prompt shows completions
     :param read: function which shows the prompt. Defaults to reading a command line.
     """
 
@@ -86,8 +89,13 @@ def press_keys(
                 continue
             for _ in range(500):
                 await asyncio.sleep(0.01)
-                if ready(buffer):
-                    break
+                try:
+                    if ready(buffer):
+                        break
+                except AssertionError as ex:
+                    # End the prompt with the failure, since nothing else would end it
+                    prompt_app.exit(exception=ex)
+                    return
             else:
                 state = buffer.complete_state
                 matches = None if state is None else [completion.text for completion in state.completions]
@@ -113,6 +121,7 @@ def press_keys(
             complete_in_thread=complete_in_thread,
             complete_while_typing=False,
             editing_mode=editing_mode,
+            complete_style=complete_style,
             key_bindings=app.main_session.key_bindings,
         )
         if read is None:
@@ -296,6 +305,58 @@ def test_match_in_front_of_an_argument_with_a_literal_quote_closes_its_quote(app
     assert shlex.split(line) == ["shell", "cat", "my file.txt", 'a"b']
 
 
+def test_match_chosen_inside_a_quoted_word_with_an_apostrophe_stays_inside_its_quotes(app) -> None:
+    rest_of_word = """ 'copy\""""
+    line = press_keys(
+        app,
+        [
+            ('edit "sp' + rest_of_word + LEFT * len(rest_of_word) + TAB, menu('edit "sp' + rest_of_word, 2)),
+            (TAB, shows('edit "sp ace.txt' + rest_of_word)),
+            (ENTER, no_menu),
+            (ENTER, None),
+        ],
+    )
+    assert shlex.split(line) == ["edit", "sp ace.txt 'copy"]
+
+
+def test_match_reuses_a_closing_quote_whose_opening_quote_is_missing(app) -> None:
+    line = press_keys(
+        app,
+        [
+            # The opening quote is inserted in front of sp, and the quote after the cursor then closes it
+            ('edit sp"' + LEFT + TAB, menu('edit "sp"', 2)),
+            (TAB, shows('edit "sp ace.txt"')),
+            (ENTER, no_menu),
+            (ENTER, None),
+        ],
+    )
+    assert shlex.split(line) == ["edit", "sp ace.txt"]
+
+
+def test_match_in_front_of_a_word_with_an_inch_mark_closes_its_quote(app) -> None:
+    rest_of_line = ' 5" nail'
+    line = press_keys(
+        app,
+        [
+            ("edit my" + rest_of_line + LEFT * len(rest_of_line) + TAB, shows('edit "my file.txt"' + rest_of_line)),
+            (ENTER, None),
+        ],
+    )
+    assert line == 'edit "my file.txt" 5" nail'
+
+
+def test_match_in_front_of_a_word_with_an_apostrophe_closes_its_quote(app) -> None:
+    rest_of_line = " don't"
+    line = press_keys(
+        app,
+        [
+            ("edit 'my" + rest_of_line + LEFT * len(rest_of_line) + TAB, shows("edit 'my file.txt'" + rest_of_line)),
+            (ENTER, None),
+        ],
+    )
+    assert line == "edit 'my file.txt' don't"
+
+
 def test_only_match_keeps_a_closing_quote_which_follows_the_cursor(app) -> None:
     line = press_keys(
         app,
@@ -475,3 +536,28 @@ def test_prompt_ending_during_a_completion_leaves_no_listener_on_the_buffer(app,
     # Nothing of the abandoned request is attached to the buffer which the next prompt will use
     handlers = app.main_session.default_buffer.on_completions_changed._handlers
     assert [handler.__qualname__ for handler in handlers if "Cmd2Completer" in handler.__qualname__] == []
+
+
+def test_tab_lists_matches_like_readline_when_the_session_is_set_up_to(app) -> None:
+    waiting_since: list[float] = []
+
+    def listed_without_a_menu(buffer: Buffer) -> bool:
+        # Readline-style completion prints the matches above the prompt. Give a menu time to open if one is going to.
+        if not waiting_since:
+            waiting_since.append(time.monotonic())
+        if time.monotonic() - waiting_since[0] < 0.3:
+            return False
+        if buffer.complete_state is not None:
+            raise AssertionError("a completion menu opened")
+        return buffer.text == "h"
+
+    line = press_keys(
+        app,
+        [
+            # The commands help and history both match
+            ("h" + TAB, listed_without_a_menu),
+            (ENTER, None),
+        ],
+        complete_style=CompleteStyle.READLINE_LIKE,
+    )
+    assert line == "h"

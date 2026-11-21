@@ -7,11 +7,17 @@
     - Tab completion of a match which needs quotes, such as a file name with a space, no longer
       takes a second press of Tab. The opening quote is inserted and the completion carries on in
       the same key press.
-    - A match chosen from the completion menu now closes its quote. Previously the quote was left
-      open and the command failed with `Invalid syntax: No closing quotation`. A directory still
-      leaves its quote open so the rest of the path can be completed. See the
+    - A match chosen from the completion menu now closes its quote and adds a trailing space.
+      Previously the quote was left open and the command failed with
+      `Invalid syntax: No closing quotation`. A directory still leaves its quote open so the rest of
+      the path can be completed. See the
       [Quotes Added by Completion](docs/features/completion.md#quotes-added-by-completion)
       documentation for details.
+        - `Completions.allow_finalization` used to be ignored when there were several matches. It
+          now decides whether a match chosen from them closes its quote. If you have written a
+          completer which offers matches the user keeps completing, like directories, alongside
+          other matches, return `allow_finalization=False` for those results so the quote stays
+          open.
 
 ## 4.4.3 (2026-11-16)
 

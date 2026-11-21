@@ -789,7 +789,15 @@ class Cmd:
             # Take the place of prompt-toolkit's own binding for Tab, and do what it does. The difference is that
             # the request says it comes from the completion key, which lets Cmd2Completer insert an opening quote
             # and start completion again. It can't tell from prompt-toolkit's request what kind of request it is.
-            @key_bindings.add(completekey, filter=filters.emacs_insert_mode | filters.vi_insert_mode)
+            # A session which shows completions like readline has a different binding for Tab, which is left alone.
+            @filters.Condition
+            def menu_completion() -> bool:
+                return self.active_session.complete_style != CompleteStyle.READLINE_LIKE
+
+            @key_bindings.add(
+                completekey,
+                filter=(filters.emacs_insert_mode | filters.vi_insert_mode) & menu_completion,
+            )
             def _complete_or_select_next(event: KeyPressEvent) -> None:  # pragma: no cover
                 """Insert the common prefix of the completions, or select the next completion if a menu is open."""
                 b = event.current_buffer

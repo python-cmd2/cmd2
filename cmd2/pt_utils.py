@@ -39,6 +39,7 @@ from . import (
 )
 from . import rich_utils as ru
 from . import string_utils as su
+from .parsing import shlex_split
 from .styles import Cmd2Style
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -181,32 +182,46 @@ class _QuoteInsertedEvent(CompleteEvent):
         self.completions = completions
 
 
-def _quote_is_closed(text_after_cursor: str, quote: str) -> bool:
-    """Check whether the text after the cursor closes a quote which was opened before the cursor.
+def _quote_is_closed(text_after_cursor: str, quote: str, *, opened_by_cmd2: bool) -> bool:
+    """Check whether the text after the cursor closes a quote which is open at the cursor.
 
-    It does if an odd number of the quote character follows the cursor: the first one closes the
-    quote and the rest are in pairs. A quote character inside an argument which is quoted with
-    the other quote character is literal and isn't counted.
+    The same quote character further along the line is either the end of the argument being
+    completed or part of something else: another quoted argument, or a word with an apostrophe
+    or an inch mark in it. Which it is can't always be known, so this looks for a quote character
+    in a place where only a closing quote would be.
 
     :param text_after_cursor: the rest of the line
     :param quote: the character which opened the quote
-    :return: True if the quote is already closed
+    :param opened_by_cmd2: True if cmd2 is adding the opening quote, False if the user typed it
+    :return: True if the quote is already closed and a closing quote should not be added
     """
-    count = 0
-    other_quote = ""
-    previous_char = ""
-    for char in text_after_cursor:
-        if other_quote:
-            if char == other_quote:
-                other_quote = ""
-        elif char == quote:
-            count += 1
-        elif char in constants.QUOTES and previous_char.isspace():
-            # Like the parser, only treat a quote character as quoting when it starts an argument
-            other_quote = char
-        previous_char = char
+    # The word under the cursor ends with the quote character
+    rest_of_word = text_after_cursor.split(maxsplit=1)[0] if text_after_cursor[:1].strip() else ""
+    if rest_of_word.endswith(quote):
+        return True
 
-    return count % 2 == 1
+    # A quote which cmd2 adds goes around what was an unquoted word. An unquoted word ends
+    # at whitespace, so a quote character past it has nothing to do with this argument.
+    if opened_by_cmd2:
+        return False
+
+    # An argument which the user quoted can have whitespace in it. It is only closed further
+    # along if the line parses when read as continuing inside the quote.
+    try:
+        shlex_split(quote + text_after_cursor)
+    except ValueError:
+        return False
+
+    # Read the rest of the line as though the argument ended at the cursor
+    try:
+        tokens = shlex_split(text_after_cursor)
+    except ValueError:
+        # It can't stand on its own, so it must be the rest of this argument
+        return True
+
+    # A quote character at the end of an unquoted word has no opening quote of its own. One in
+    # the middle of a word is an apostrophe, and the quotes of a quoted argument belong to it.
+    return any(token[0] not in constants.QUOTES and token.endswith(quote) for token in tokens)
 
 
 class Cmd2Completer(Completer):
@@ -269,8 +284,10 @@ class Cmd2Completer(Completer):
             if buffer.document != document:
                 return
 
+            # If the buffer completes while typing, inserting text starts a completion of its own.
+            # prompt-toolkit would run that one and ignore the completion which is started below.
             buffer.cursor_left(search_text_length)
-            buffer.insert_text(quote_char)
+            buffer.insert_text(quote_char, fire_event=not buffer.complete_while_typing())
             buffer.cursor_right(search_text_length)
 
             # The matches go with the request for the re-triggered cycle. If prompt-toolkit
@@ -399,13 +416,12 @@ class Cmd2Completer(Completer):
                 print_formatted_text(pt_filter_style(completions.hint))
             return
 
-        # A completion only replaces text before the cursor, so text after it may already close a
-        # quote which the user opened. Adding another closing quote would end the argument at the
-        # cursor and leave the rest of it outside the quotes. A quote which cmd2 opened was not
-        # there before, so nothing after the cursor closes it.
+        # A completion only replaces text before the cursor, so text after it may already close
+        # the quote. Adding another closing quote would then end the argument at the cursor and
+        # leave the rest of it outside the quotes.
         closing_quote = completions._quote_char
         quote_opened_by_cmd2 = completions._add_opening_quote or isinstance(complete_event, _QuoteInsertedEvent)
-        if closing_quote and not quote_opened_by_cmd2 and _quote_is_closed(line[endidx:], closing_quote):
+        if closing_quote and _quote_is_closed(line[endidx:], closing_quote, opened_by_cmd2=quote_opened_by_cmd2):
             closing_quote = ""
 
         # Return the completions
@@ -423,7 +439,8 @@ class Cmd2Completer(Completer):
                     + match_text[completions._search_text_offset :]
                 )
 
-            if completions.allow_finalization:
+            # A match which the user will keep completing, like a directory, is left as it is
+            if completions.allow_finalization and item._allow_finalization:
                 # Finalize if there's only one match
                 if len(completions) == 1:
                     # Close any open quote
@@ -434,8 +451,8 @@ class Cmd2Completer(Completer):
                         match_text += " "
 
                 # A match chosen from several closes any open quote, so that accepting it does not
-                # leave the quote open. A directory doesn't, since the user will keep completing it.
-                elif closing_quote and item._allow_finalization:
+                # leave the quote open.
+                elif closing_quote:
                     match_text += closing_quote
 
                     # With its quote closed the argument is finished, so add the trailing space too.
