@@ -42,7 +42,8 @@ does in a shell.
 
 Completion results are literal names too. `cmd2` does not escape them, because most commands use a
 path directly in Python, where the literal name is exactly what is wanted. The only thing `cmd2`
-adds is quotes around a match which contains a space, so it stays a single argument.
+adds is quotes around a match which contains a space, so it stays a single argument. See
+[Quotes Added by Completion](#quotes-added-by-completion) for how that works.
 
 ### Paths Passed to a Shell
 
@@ -78,6 +79,39 @@ There are limits to this:
   command is covered.
 - Your own commands are not covered, even if they pass their arguments to a shell. Quote or escape
   those arguments in the command.
+
+## Quotes Added by Completion
+
+A match which contains a space needs quotes to stay a single argument. So does a match with a
+special character in one of the places where it is [passed to a shell](#paths-passed-to-a-shell). If
+you have not typed a quote yourself, `cmd2` adds one for you. This applies to everything `cmd2`
+completes, not only to paths.
+
+The opening quote goes in front of the text you typed, and completion carries on in the same press
+of Tab. With a file named `my file.txt` in the current directory, pressing Tab once after `edit my`
+gives:
+
+```text
+(Cmd) edit "my file.txt"
+```
+
+When there are several matches, that first press inserts the quote and any text which the matches
+have in common, and it opens the completion menu. With `sp ace.txt` and `spare.txt`, pressing Tab
+after `edit sp` gives:
+
+```text
+(Cmd) edit "sp
+               sp ace.txt
+               spare.txt
+```
+
+The quote is closed when a match is complete, which is when it is the only match or when you choose
+it from the menu. A directory is the exception. Its quote is left open so you can keep completing
+the rest of the path:
+
+```text
+(Cmd) edit "my dir/
+```
 
 ## Included Tab Completion Functions
 

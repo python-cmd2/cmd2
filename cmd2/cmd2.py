@@ -2464,9 +2464,12 @@ class Cmd:
         items = []
         for match in matches:
             name = os.path.basename(match)
-            if add_trailing_sep_if_dir and os.path.isdir(match):
+            is_dir = os.path.isdir(match)
+            if add_trailing_sep_if_dir and is_dir:
                 name += trailing_sep
-            items.append(CompletionItem(value=typed_directory + name, display=name))
+
+            # A directory is not the end of a path, so it leaves an open quote for the rest of the path
+            items.append(CompletionItem(value=typed_directory + name, display=name, _allow_finalization=not is_dir))
 
         return Completions(items=items, allow_finalization=allow_finalization)
 

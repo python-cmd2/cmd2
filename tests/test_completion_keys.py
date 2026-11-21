@@ -1,0 +1,326 @@
+"""Tests which press the completion key at a real prompt and check what ends up on the command line.
+
+The prompt reads its keys from a pipe, so the key bindings, cmd2's completion logic, and
+prompt-toolkit's own handling of the results are all exercised together.
+"""
+
+import asyncio
+import shlex
+import sys
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any
+
+import pytest
+from prompt_toolkit import PromptSession
+from prompt_toolkit.application import get_app
+from prompt_toolkit.buffer import Buffer
+from prompt_toolkit.input import create_pipe_input
+from prompt_toolkit.output import DummyOutput
+
+import cmd2
+
+pytestmark = pytest.mark.skipif(
+    sys.platform.startswith("win"),
+    reason="Don't have a real Windows console with how we are currently running tests in GitHub Actions",
+)
+
+TAB = "\t"
+ENTER = "\r"
+LEFT = "\x1b[D"
+CTRL_R = "\x12"
+CTRL_T = "\x14"
+
+# What the prompt has to look like before the next keys are sent
+Ready = Callable[[Buffer], bool]
+
+
+def shows(text: str) -> Ready:
+    """Wait for the command line to be exactly this text."""
+    return lambda buffer: buffer.text == text
+
+
+def menu(text: str, count: int) -> Ready:
+    """Wait for the command line to be this text with a menu of this many matches and none selected."""
+
+    def ready(buffer: Buffer) -> bool:
+        state = buffer.complete_state
+        return buffer.text == text and state is not None and len(state.completions) == count and state.complete_index is None
+
+    return ready
+
+
+def no_menu(buffer: Buffer) -> bool:
+    """Wait for the completion menu to close."""
+    return buffer.complete_state is None
+
+
+def press_keys(
+    app: cmd2.Cmd,
+    steps: list[tuple[str, Ready | None]],
+    *,
+    complete_in_thread: bool = True,
+    read: Callable[[], str] | None = None,
+) -> str:
+    """Send keys to a prompt and return the line it read.
+
+    :param app: the application whose prompt is being typed into
+    :param steps: the keys to send, each with what to wait for before sending the next ones.
+                  The last keys have to submit the line.
+    :param complete_in_thread: whether completion runs in a thread, as it does by default
+    :param read: function which shows the prompt. Defaults to reading a command line.
+    """
+
+    async def send_keys() -> None:
+        prompt_app = get_app()
+        buffer = prompt_app.current_buffer
+        for keys, ready in steps:
+            pipe_input.send_text(keys)
+            if ready is None:
+                continue
+            for _ in range(500):
+                await asyncio.sleep(0.01)
+                if ready(buffer):
+                    break
+            else:
+                state = buffer.complete_state
+                matches = None if state is None else [completion.text for completion in state.completions]
+                msg = f"after sending {keys!r} the command line was {buffer.text!r} and the menu had {matches!r}"
+                prompt_app.exit(exception=AssertionError(msg))
+                return
+
+        # The prompt ends this task when the line is submitted. Don't wait forever for that.
+        await asyncio.sleep(5)
+        prompt_app.exit(exception=AssertionError(f"the line was never submitted. It was {buffer.text!r}"))
+
+    read_raw_input = app._read_raw_input
+
+    def read_and_send_keys(prompt: Any, session: PromptSession[str], **_kwargs: Any) -> str:
+        return read_raw_input(prompt, session, pre_run=lambda: get_app().create_background_task(send_keys()))
+
+    with create_pipe_input() as pipe_input, pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(app, "_read_raw_input", read_and_send_keys)
+        app.main_session = PromptSession(
+            input=pipe_input,
+            output=DummyOutput(),
+            completer=app.main_session.completer,
+            complete_in_thread=complete_in_thread,
+            complete_while_typing=False,
+            key_bindings=app.main_session.key_bindings,
+        )
+        if read is None:
+            return app._read_command_line(app.prompt)
+        return read()
+
+
+def make_files(directory: Path) -> None:
+    """Create the files and directories which the tests complete."""
+    for name in ("my file.txt", "sp ace.txt", "spare.txt", "long name a.txt", "long name b.txt"):
+        (directory / name).touch()
+    for name in ("dd one", "dd two"):
+        (directory / name).mkdir()
+    (directory / "dd one" / "inner.txt").touch()
+
+
+@pytest.fixture
+def app(tmp_path, monkeypatch) -> cmd2.Cmd:
+    make_files(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    return cmd2.Cmd()
+
+
+@pytest.mark.parametrize("complete_in_thread", [True, False])
+def test_one_tab_completes_a_match_which_needs_a_quote(app, complete_in_thread) -> None:
+    line = press_keys(
+        app,
+        [
+            ("edit my" + TAB, shows('edit "my file.txt" ')),
+            (ENTER, None),
+        ],
+        complete_in_thread=complete_in_thread,
+    )
+    assert line == 'edit "my file.txt" '
+
+
+def test_one_tab_adds_the_quote_and_the_shared_prefix_and_opens_the_menu(app) -> None:
+    line = press_keys(
+        app,
+        [
+            ("edit lo" + TAB, menu('edit "long name ', 2)),
+            (ENTER, None),
+        ],
+    )
+    assert line == 'edit "long name '
+
+
+def test_one_tab_completes_a_shell_argument_which_needs_a_quote(app) -> None:
+    line = press_keys(
+        app,
+        [
+            ("!ls my" + TAB, shows('!ls "my file.txt" ')),
+            (ENTER, None),
+        ],
+    )
+    assert line == '!ls "my file.txt" '
+
+
+@pytest.mark.parametrize(
+    ("typed", "completed", "search_text"),
+    [
+        ("edit spar", "edit spare.txt ", "spar"),
+        # The matches found before the quote was inserted are reused afterwards
+        ("edit my", 'edit "my file.txt" ', "my"),
+    ],
+    ids=["no-quote-needed", "quote-needed"],
+)
+def test_completion_runs_once_for_one_tab(app, monkeypatch, typed, completed, search_text) -> None:
+    texts = []
+    complete = app.complete
+
+    def counting_complete(text: str, *args: Any, **kwargs: Any) -> cmd2.Completions:
+        texts.append(text)
+        return complete(text, *args, **kwargs)
+
+    monkeypatch.setattr(app, "complete", counting_complete)
+
+    line = press_keys(
+        app,
+        [
+            (typed + TAB, shows(completed)),
+            (ENTER, None),
+        ],
+    )
+    assert line == completed
+    assert texts == [search_text]
+
+
+def test_match_chosen_from_the_menu_closes_its_quote(app) -> None:
+    line = press_keys(
+        app,
+        [
+            ('edit "sp' + TAB, menu('edit "sp', 2)),
+            (TAB, shows('edit "sp ace.txt"')),
+            # The first Enter accepts the selection and the second one submits the line
+            (ENTER, no_menu),
+            (ENTER, None),
+        ],
+    )
+    assert line == 'edit "sp ace.txt"'
+    assert shlex.split(line) == ["edit", "sp ace.txt"]
+
+
+def test_each_match_in_the_menu_closes_its_quote(app) -> None:
+    line = press_keys(
+        app,
+        [
+            ("edit sp" + TAB, menu('edit "sp', 2)),
+            (TAB, shows('edit "sp ace.txt"')),
+            (TAB, shows('edit "spare.txt"')),
+            (ENTER, no_menu),
+            (ENTER, None),
+        ],
+    )
+    assert line == 'edit "spare.txt"'
+
+
+def test_directory_chosen_from_the_menu_stays_open(app) -> None:
+    line = press_keys(
+        app,
+        [
+            ("edit dd" + TAB, menu('edit "dd ', 2)),
+            (TAB, shows('edit "dd one/')),
+            (ENTER, no_menu),
+            # The quote was left open, so completion carries on inside the directory
+            (TAB, shows('edit "dd one/inner.txt" ')),
+            (ENTER, None),
+        ],
+    )
+    assert line == 'edit "dd one/inner.txt" '
+
+
+def test_directory_chosen_after_a_shortcut_stays_open(app) -> None:
+    line = press_keys(
+        app,
+        [
+            # @ is the shortcut for run_script. The quote goes after it.
+            ("@dd" + TAB, menu('@"dd ', 2)),
+            (TAB, shows('@"dd one/')),
+            (ENTER, no_menu),
+            (ENTER, None),
+        ],
+    )
+    assert line == '@"dd one/'
+
+
+def test_directory_chosen_in_front_of_a_separator_stays_open(app) -> None:
+    """A directory is offered without a trailing separator when one already follows the cursor."""
+    rest_of_path = "/inner.txt"
+    line = press_keys(
+        app,
+        [
+            ('edit "dd ' + rest_of_path + LEFT * len(rest_of_path) + TAB, menu('edit "dd /inner.txt', 2)),
+            (TAB, shows('edit "dd one/inner.txt')),
+            (ENTER, no_menu),
+            (ENTER, None),
+        ],
+    )
+    assert line == 'edit "dd one/inner.txt'
+
+
+def test_one_press_of_a_custom_completion_key_completes_a_match_which_needs_a_quote(tmp_path, monkeypatch) -> None:
+    make_files(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    app = cmd2.Cmd(completekey="c-t")
+
+    line = press_keys(
+        app,
+        [
+            ("edit my" + CTRL_T, shows('edit "my file.txt" ')),
+            (ENTER, None),
+        ],
+    )
+    assert line == 'edit "my file.txt" '
+
+
+def test_one_tab_completes_a_match_which_needs_a_quote_when_another_key_is_the_completion_key(tmp_path, monkeypatch) -> None:
+    make_files(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    app = cmd2.Cmd(completekey="c-t")
+
+    line = press_keys(
+        app,
+        [
+            ("edit my" + TAB, shows('edit "my file.txt" ')),
+            (ENTER, None),
+        ],
+    )
+    assert line == 'edit "my file.txt" '
+
+
+def test_one_tab_adds_the_quote_and_the_shared_prefix_in_read_input(app) -> None:
+    line = press_keys(
+        app,
+        [
+            ("ha" + TAB, menu('"has space ', 2)),
+            (TAB, shows('"has space one"')),
+            (ENTER, no_menu),
+            (ENTER, None),
+        ],
+        read=lambda: app.read_input("> ", choices=["has space one", "has space two"]),
+    )
+    assert line == '"has space one"'
+
+
+def test_tab_in_a_history_search_does_not_complete_the_search_text(app, monkeypatch) -> None:
+    texts = []
+    monkeypatch.setattr(app, "complete", lambda text, *_args, **_kwargs: texts.append(text) or cmd2.Completions())
+
+    line = press_keys(
+        app,
+        [
+            # Enter ends the search and then submits the line, which is empty since nothing was found
+            (CTRL_R + "my" + TAB + ENTER + ENTER, None),
+        ],
+    )
+    assert line == ""
+    assert texts == []

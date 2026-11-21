@@ -1,5 +1,6 @@
 """Utilities for integrating prompt_toolkit with cmd2."""
 
+import dataclasses
 import os
 import re
 from collections.abc import (
@@ -14,6 +15,7 @@ from typing import (
 
 from prompt_toolkit import print_formatted_text
 from prompt_toolkit.application import get_app
+from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.completion import (
     Completer,
     Completion,
@@ -37,6 +39,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from rich.color import Color
 
     from .cmd2 import Cmd
+    from .completion import Completions
 
 
 BASE_DELIMITERS = " \t\n" + "".join(constants.QUOTES) + "".join(constants.REDIRECTION_CHARS)
@@ -147,6 +150,7 @@ class Cmd2Completer(Completer):
         """Initialize prompt_toolkit based completer class."""
         self._cmd_app = cmd_app
         self.custom_settings = custom_settings
+        self._pending_completions: tuple[Document, Completions] | None = None
 
     def get_completions(self, document: Document, complete_event: object) -> Iterable[Completion]:  # noqa: ARG002
         """Get completions for the current input."""
@@ -168,12 +172,85 @@ class Cmd2Completer(Completer):
         endidx = cursor_pos
         text = line[begidx:endidx]
 
-        completions = self._cmd_app.complete(
-            text, line=line, begidx=begidx, endidx=endidx, custom_settings=self.custom_settings
-        )
+        # Reuse cached completions if this cycle was triggered right after inserting an opening quote
+        pending = self._pending_completions
+        self._pending_completions = None
+        if pending is not None and pending[0] == document:
+            completions = pending[1]
+        else:
+            completions = self._cmd_app.complete(
+                text, line=line, begidx=begidx, endidx=endidx, custom_settings=self.custom_settings
+            )
 
         if completions.error:
             print_formatted_text(pt_filter_style(completions.error))
+            return
+
+        # The length of the user's input minus any shortcut.
+        search_text_length = len(text) - completions._search_text_offset
+
+        # If matches require quoting but the word isn't quoted yet, we insert the
+        # opening quote directly into the buffer. We do this because if any completions
+        # change text before the cursor (like prepending a quote), prompt-toolkit will
+        # not return a common prefix to the command line. By deferring the buffer edit
+        # and restarting completion once the current cycle finishes, the quote is
+        # already present on the next cycle without requiring a second Tab press.
+        if completions and completions._add_opening_quote and search_text_length > 0:
+            app = get_app()
+            buffer = app.current_buffer
+            quote_char = completions._quote_char
+
+            def _insert_quote_and_recomplete() -> None:
+                if buffer.document != document:
+                    return
+
+                buffer.cursor_left(search_text_length)
+                buffer.insert_text(quote_char)
+                buffer.cursor_right(search_text_length)
+                buffer.start_completion(insert_common_part=True)
+
+            def _schedule_recomplete() -> None:
+                if buffer.complete_state is None:
+                    # async_completer already finished (e.g. complete_in_thread=False)
+                    _insert_quote_and_recomplete()
+                else:
+                    # async_completer is still finishing (e.g. complete_in_thread=True);
+                    # wait until it clears complete_state, then run on the next loop tick
+                    # after _only_one_at_a_time resets its running flag.
+                    def _on_completions_changed(_: Buffer) -> None:
+                        if buffer.complete_state is None:
+                            buffer.on_completions_changed -= _on_completions_changed
+                            if app.loop is not None and not app.loop.is_closed():
+                                app.loop.call_soon(_insert_quote_and_recomplete)
+
+                    buffer.on_completions_changed += _on_completions_changed
+
+            if app.loop is not None and not app.loop.is_closed():
+                # Cache completions for the post-quote document so the re-triggered cycle
+                # doesn't invoke cmd2.complete() a second time.
+                insert_pos = cursor_pos - search_text_length
+                expected_doc = Document(
+                    text=line[:insert_pos] + quote_char + line[insert_pos:],
+                    cursor_position=cursor_pos + len(quote_char),
+                )
+                offset = completions._search_text_offset
+                cached_items = (
+                    [dataclasses.replace(item, text=item.text[offset:]) for item in completions]
+                    if offset > 0
+                    else completions.items
+                )
+                cached_completions = dataclasses.replace(
+                    completions,
+                    items=cached_items,
+                    _add_opening_quote=False,
+                    _search_text_offset=0,
+                )
+                self._pending_completions = (expected_doc, cached_completions)
+                app.loop.call_soon_threadsafe(_schedule_recomplete)
+            else:
+                buffer.cursor_left(search_text_length)
+                buffer.insert_text(quote_char)
+                buffer.cursor_right(search_text_length)
             return
 
         # Print completion table if present
@@ -187,23 +264,6 @@ class Cmd2Completer(Completer):
             # Print hint if present
             if completions.hint:
                 print_formatted_text(pt_filter_style(completions.hint))
-            return
-
-        # The length of the user's input minus any shortcut.
-        search_text_length = len(text) - completions._search_text_offset
-
-        # If matches require quoting but the word isn't quoted yet, we insert the
-        # opening quote directly into the buffer. We do this because if any completions
-        # change text before the cursor (like prepending a quote), prompt-toolkit will
-        # not return a common prefix to the command line. By modifying the buffer
-        # and returning early, we trigger a new completion cycle where the quote
-        # is already present, allowing for proper common prefix calculation.
-        if completions._add_opening_quote and search_text_length > 0:
-            buffer = get_app().current_buffer
-
-            buffer.cursor_left(search_text_length)
-            buffer.insert_text(completions._quote_char)
-            buffer.cursor_right(search_text_length)
             return
 
         # Return the completions
@@ -221,15 +281,21 @@ class Cmd2Completer(Completer):
                     + match_text[completions._search_text_offset :]
                 )
 
-            # Finalize if there's only one match
-            if len(completions) == 1 and completions.allow_finalization:
-                # Close any open quote
-                if completions._quote_char:
-                    match_text += completions._quote_char
+            if completions.allow_finalization:
+                # Finalize if there's only one match
+                if len(completions) == 1:
+                    # Close any open quote
+                    if completions._quote_char:
+                        match_text += completions._quote_char
 
-                # Add trailing space if the cursor is at the end of the line
-                if endidx == len(line):
-                    match_text += " "
+                    # Add trailing space if the cursor is at the end of the line
+                    if endidx == len(line):
+                        match_text += " "
+
+                # A match chosen from several closes any open quote, so that accepting it does not
+                # leave the quote open. A directory doesn't, since the user will keep completing it.
+                elif completions._quote_char and item._allow_finalization:
+                    match_text += completions._quote_char
 
             yield Completion(
                 match_text,

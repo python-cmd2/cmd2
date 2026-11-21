@@ -4,6 +4,14 @@
     - On Windows, shell command completion now recognizes paths typed with forward slashes, such as
       `./my` and `C:/tools/my`. Path completion preserves the typed separators so the first Tab
       extends the shared prefix when several names match.
+    - Tab completion of a match which needs quotes, such as a file name with a space, no longer
+      takes a second press of Tab. The opening quote is inserted and the completion carries on in
+      the same key press.
+    - A match chosen from the completion menu now closes its quote. Previously the quote was left
+      open and the command failed with `Invalid syntax: No closing quotation`. A directory still
+      leaves its quote open so the rest of the path can be completed. See the
+      [Quotes Added by Completion](docs/features/completion.md#quotes-added-by-completion)
+      documentation for details.
 
 ## 4.4.3 (2026-11-16)
 

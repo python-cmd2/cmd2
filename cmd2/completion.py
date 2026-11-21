@@ -71,6 +71,13 @@ class CompletionItem:
     display_plain: str = field(default="", init=False)
     display_meta_plain: str = field(default="", init=False)
 
+    # Used internally by cmd2 and not intended for user modification.
+    #
+    # Whether an open quote may be closed after this match when it is one of several being offered.
+    # False for a match which the user will keep completing, such as a directory. A single match is
+    # governed by Completions.allow_finalization instead. Not part of an item's identity.
+    _allow_finalization: bool = True
+
     @classmethod
     def _clean_display(cls, val: str) -> str:
         """Clean a string for display in the completion menu.
@@ -287,7 +294,9 @@ class Completions(CompletionResultsBase):
     #
     # Set this to False for intermediate or hierarchical matches (such as
     # directories) where the user needs to continue typing the next segment.
-    # This flag is ignored if there are multiple matches.
+    #
+    # If there are multiple matches, no trailing space is added, but a match
+    # chosen from them still closes an open quotation mark unless this is False.
     allow_finalization: bool = True
 
     #####################################################################
