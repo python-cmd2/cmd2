@@ -25,6 +25,7 @@ from prompt_toolkit.layout.containers import Window
 from prompt_toolkit.layout.controls import BufferControl
 from prompt_toolkit.output.color_depth import ColorDepth
 from prompt_toolkit.output.defaults import DummyOutput
+from prompt_toolkit.shortcuts import CompleteStyle
 from rich.table import Table
 
 import cmd2
@@ -59,6 +60,8 @@ class MockCmd:
         self.aliases = {}
         self.macros = {}
         self.all_commands = []
+        self.active_session = Mock()
+        self.active_session.complete_style = CompleteStyle.MULTI_COLUMN
 
     def get_all_commands(self) -> list[str]:
         return self.all_commands
@@ -365,6 +368,12 @@ class TestCmd2Lexer:
         (""" "it's\"""", "'", False, False),
         # An apostrophe in the middle of a later word doesn't close anything
         (" don't", "'", False, False),
+        (" rock'n'roll", "'", False, False),
+        # A closing quote can be followed by more of the word, like a file extension
+        (' backup".txt', '"', False, True),
+        ('.bak".txt', '"', False, True),
+        (" backup'.txt", "'", False, True),
+        ('.bak".txt', '"', True, True),
         # A quote which cmd2 adds goes around one word, so only that word can already have the closing quote
         ('"', '"', True, True),
         ('.bak"', '"', True, True),
@@ -526,24 +535,40 @@ class TestCmd2Completer:
         assert [(c.text, c.start_position) for c in completions] == [(expected, -len(line))]
 
     @pytest.mark.parametrize(
-        ("buffer_line", "requested_line", "cursor_position", "expected_matches", "expected_buffer_line"),
+        ("complete_style", "buffer_line", "requested_line", "cursor_position", "expected_matches", "expected_buffer_line"),
         [
-            # The quote is put in the buffer, where these bindings read the line from again,
+            # The quote is put in the buffer, where the readline-style binding reads the line from again,
             # so the match doesn't have to change text which is in front of the cursor
-            ("edit has", "edit has", 8, ['has space" '], 'edit "has'),
+            (CompleteStyle.READLINE_LIKE, "edit has", "edit has", 8, ['has space" '], 'edit "has'),
             # The quote was added by cmd2, so a quote character in a later word doesn't close it
-            ('edit has 5" nail', 'edit has 5" nail', 8, ['has space"'], 'edit "has 5" nail'),
+            (CompleteStyle.READLINE_LIKE, 'edit has 5" nail', 'edit has 5" nail', 8, ['has space"'], 'edit "has 5" nail'),
             # The request is not for what the buffer holds, so the buffer is left alone
-            ("edit other", "edit has", 8, ['"has space" '], "edit other"),
+            (CompleteStyle.READLINE_LIKE, "edit other", "edit has", 8, ['"has space" '], "edit other"),
+            # Other bindings which ask directly, like Meta-* in Emacs mode, insert what they are given.
+            # They get whole matches with their own quotes and the buffer is left alone.
+            (CompleteStyle.MULTI_COLUMN, "edit has", "edit has", 8, ['"has space" '], "edit has"),
+            (CompleteStyle.COLUMN, "edit has", "edit has", 8, ['"has space" '], "edit has"),
         ],
     )
     def test_get_completions_add_opening_quote_for_synchronous_request(
-        self, buffer_line, requested_line, cursor_position, expected_matches, expected_buffer_line, mock_cmd_app: MockCmd
+        self,
+        complete_style,
+        buffer_line,
+        requested_line,
+        cursor_position,
+        expected_matches,
+        expected_buffer_line,
+        mock_cmd_app: MockCmd,
     ) -> None:
-        """Verify a request made directly, as some prompt-toolkit key bindings do, gets the quote and the matches at once."""
-        mock_cmd_app.complete.return_value = cmd2.Completions(
-            [cmd2.CompletionItem("has space")], _add_opening_quote=True, _quote_char='"'
-        )
+        """Verify what a request made directly by one of prompt-toolkit's key bindings gets."""
+        mock_cmd_app.active_session.complete_style = complete_style
+
+        def complete(*_args: Any, **_kwargs: Any) -> cmd2.Completions:
+            # cmd2 switches the session to one of its menu styles whenever it completes
+            mock_cmd_app.active_session.complete_style = CompleteStyle.COLUMN
+            return cmd2.Completions([cmd2.CompletionItem("has space")], _add_opening_quote=True, _quote_char='"')
+
+        mock_cmd_app.complete.side_effect = complete
         completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
 
         async def run_test() -> tuple[list[str], str]:
@@ -749,7 +774,10 @@ class TestCmd2Completer:
         completed_lines = [call.kwargs["line"] for call in mock_cmd_app.complete.call_args_list]
         assert completed_lines == [line, 'edit "has space" ']
 
-    def test_get_completions_add_opening_quote_updates_suggestion(self, mock_cmd_app: MockCmd) -> None:
+    @pytest.mark.parametrize("complete_while_typing", [False, True])
+    def test_get_completions_add_opening_quote_updates_suggestion(
+        self, complete_while_typing: bool, mock_cmd_app: MockCmd
+    ) -> None:
         """Verify the line with the quote in it is offered to auto-suggest, as any other inserted text is."""
         line = "edit has"
         mock_cmd_app.complete.return_value = cmd2.Completions(
@@ -771,6 +799,7 @@ class TestCmd2Completer:
                 document=Document(line, cursor_position=len(line)),
                 completer=completer,
                 auto_suggest=RecordsRequests(),
+                complete_while_typing=complete_while_typing,
             )
             app: Application[None] = Application(
                 layout=Layout(Window(BufferControl(buffer=buf))),
@@ -786,6 +815,9 @@ class TestCmd2Completer:
 
         assert asyncio.run(run_test()) == 'edit "has'
         assert suggested_for == ['edit "has']
+
+        # Inserting the quote didn't make the buffer complete the line on its own
+        assert mock_cmd_app.complete.call_count == 1
 
     def test_get_completions_add_opening_quote_waits_for_running_request(self, mock_cmd_app: MockCmd) -> None:
         """Verify the quote is inserted once prompt-toolkit has finished a request it was still waiting on.

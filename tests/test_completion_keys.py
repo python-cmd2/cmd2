@@ -371,6 +371,20 @@ def test_match_chosen_inside_a_quoted_word_in_front_of_a_redirection_stays_insid
     assert line == 'shell cat "sp ace.txt.bak">out'
 
 
+def test_match_chosen_inside_a_quoted_part_of_a_word_stays_inside_its_quotes(app) -> None:
+    rest_of_line = ' backup".txt'
+    line = press_keys(
+        app,
+        [
+            ('shell cat "sp' + rest_of_line + LEFT * len(rest_of_line) + TAB, menu('shell cat "sp' + rest_of_line, 2)),
+            (TAB, shows('shell cat "sp ace.txt' + rest_of_line)),
+            (ENTER, no_menu),
+            (ENTER, None),
+        ],
+    )
+    assert shlex.split(line) == ["shell", "cat", "sp ace.txt backup.txt"]
+
+
 def test_only_match_keeps_a_closing_quote_which_follows_the_cursor(app) -> None:
     line = press_keys(
         app,
@@ -615,3 +629,23 @@ def test_tab_completes_like_readline_when_the_session_is_set_up_to(app, typed, e
         complete_style=CompleteStyle.READLINE_LIKE,
     )
     assert lines == [expected]
+
+
+def test_binding_which_inserts_every_match_gets_each_with_its_own_quotes(app) -> None:
+    """Meta-* in Emacs mode asks for the completions itself and inserts all of them after the cursor."""
+    lines = []
+
+    def record(buffer: Buffer) -> bool:
+        lines.append(buffer.text)
+        return True
+
+    press_keys(
+        app,
+        [
+            ("shell cat sp" + "\x1b*", shows('shell cat sp"sp ace.txt"  "spare.txt" ')),
+            ("", record),
+            # Clear the line and submit it
+            ("\x15" + ENTER, None),
+        ],
+    )
+    assert len(lines) == 1

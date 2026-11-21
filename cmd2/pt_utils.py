@@ -27,10 +27,12 @@ from prompt_toolkit.completion import (
     Completion,
 )
 from prompt_toolkit.document import Document
+from prompt_toolkit.filters import Never
 from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.history import History
 from prompt_toolkit.lexers import Lexer
 from prompt_toolkit.output.color_depth import ColorDepth
+from prompt_toolkit.shortcuts import CompleteStyle
 from rich.style import Style, StyleType
 
 from . import (
@@ -196,9 +198,9 @@ def _quote_is_closed(text_after_cursor: str, quote: str, *, opened_by_cmd2: bool
                         which are the redirection characters and the terminators
     :return: True if the quote is already closed and a closing quote should not be added
     """
-    # The word under the cursor ends with the quote character
+    # The word under the cursor has the closing quote in it
     rest_of_word = re.split(rf"[\s{re.escape(punctuation)}]", text_after_cursor, maxsplit=1)[0]
-    if rest_of_word.endswith(quote):
+    if _has_closing_quote(rest_of_word, quote):
         return True
 
     # A quote which cmd2 adds goes around what was an unquoted word. An unquoted word ends at
@@ -217,9 +219,30 @@ def _quote_is_closed(text_after_cursor: str, quote: str, *, opened_by_cmd2: bool
         # It can't stand on its own, so it must be the rest of this argument
         return True
 
-    # A quote character at the end of an unquoted word has no opening quote of its own. One in
-    # the middle of a word is an apostrophe, and the quotes of a quoted argument belong to it.
-    return any(argument[0] not in constants.QUOTES and argument.endswith(quote) for argument in arguments)
+    # A quote character in an unquoted word has no opening quote of its own,
+    # while the quotes of a quoted argument belong to that argument
+    return any(argument[0] not in constants.QUOTES and _has_closing_quote(argument, quote) for argument in arguments)
+
+
+def _has_closing_quote(word: str, quote: str) -> bool:
+    """Check whether an unquoted word has a quote character in it which closes a quote.
+
+    It can be at the end of the word or be followed by more of it, as in `backup".txt`.
+    A single quote with a letter on each side is an apostrophe, as in `don't`.
+
+    :param word: the word to look in
+    :param quote: the quote character to look for
+    :return: True if the word has a closing quote
+    """
+    for index, char in enumerate(word):
+        if char != quote:
+            continue
+
+        is_apostrophe = quote == "'" and word[index - 1 : index].isalpha() and word[index + 1 : index + 2].isalpha()
+        if not is_apostrophe:
+            return True
+
+    return False
 
 
 def _split_arguments(text: str, punctuation: str, open_quote: str = "") -> list[str] | None:
@@ -273,6 +296,27 @@ def _completions_for_quoted_text(completions: "Completions") -> "Completions":
         _add_opening_quote=False,
         _search_text_offset=0,
     )
+
+
+def _insert_opening_quote(buffer: Buffer, quote_char: str, search_text_length: int) -> None:
+    """Insert an opening quote in front of the text being completed and put the cursor back after that text.
+
+    This tells the buffer's listeners about the new text as any other insertion does, so things
+    like auto-suggest keep up. The exception is completion while typing. It would start a completion
+    of its own for the quote, which prompt-toolkit would run in place of the one cmd2 is about to start.
+
+    :param buffer: the buffer to insert into
+    :param quote_char: the quote to insert
+    :param search_text_length: how much of the text before the cursor the quote goes in front of
+    """
+    complete_while_typing = buffer.complete_while_typing
+    buffer.complete_while_typing = Never()
+    try:
+        buffer.cursor_left(search_text_length)
+        buffer.insert_text(quote_char)
+        buffer.cursor_right(search_text_length)
+    finally:
+        buffer.complete_while_typing = complete_while_typing
 
 
 def _in_event_loop(loop: asyncio.AbstractEventLoop | None) -> bool:
@@ -334,11 +378,7 @@ class Cmd2Completer(Completer):
             if app.is_done or buffer.document != document:
                 return
 
-            # If the buffer completes while typing, inserting text starts a completion of its own.
-            # prompt-toolkit would run that one and ignore the completion which is started below.
-            buffer.cursor_left(search_text_length)
-            buffer.insert_text(quote_char, fire_event=not buffer.complete_while_typing())
-            buffer.cursor_right(search_text_length)
+            _insert_opening_quote(buffer, quote_char, search_text_length)
 
             # The matches go with the request for the re-triggered cycle. If prompt-toolkit
             # doesn't run that request, they are dropped along with it.
@@ -398,27 +438,26 @@ class Cmd2Completer(Completer):
         return True
 
     @staticmethod
-    def _insert_quote_for_direct_request(document: Document, quote_char: str, search_text_length: int) -> Document | None:
-        """Insert an opening quote into the buffer right away if a key binding is asking for completions itself.
+    def _insert_quote_for_readline_style(document: Document, quote_char: str, search_text_length: int) -> Document | None:
+        """Insert an opening quote into the buffer right away if completions are being listed like readline.
 
-        Some of prompt-toolkit's key bindings call get_completions() directly from the event loop, such
-        as the one which lists completions like readline does. They read the buffer again once they
-        have the completions, so the quote can go in before they are returned. Nothing which
-        async_completer does is involved, since it isn't running a request.
+        The key binding which does that calls get_completions() directly from the event loop. It
+        reads the buffer again once it has the completions, so the quote can go in before they are
+        returned and it can then insert the text they share. Nothing which async_completer does
+        is involved, since it isn't running a request.
 
         :param document: the input being completed
         :param quote_char: the quote to insert
         :param search_text_length: how much of the text before the cursor the quote goes in front of
-        :return: the buffer's document with the quote in it, or None if this is not such a request
+        :return: the buffer's document with the quote in it, or None if the request doesn't come
+                 from that key binding and the buffer has been left alone
         """
         app = get_app()
         buffer = app.current_buffer
         if not _in_event_loop(app.loop) or buffer.complete_state is not None or buffer.document != document:
             return None
 
-        buffer.cursor_left(search_text_length)
-        buffer.insert_text(quote_char, fire_event=not buffer.complete_while_typing())
-        buffer.cursor_right(search_text_length)
+        _insert_opening_quote(buffer, quote_char, search_text_length)
         return buffer.document
 
     def get_completions(self, document: Document, complete_event: object) -> Iterable[Completion]:
@@ -441,6 +480,10 @@ class Cmd2Completer(Completer):
 
         endidx = cursor_pos
         text = line[begidx:endidx]
+
+        # Whether completions are listed like readline. This has to be looked at now, because
+        # cmd2's completion logic sets the session to one of the menu styles each time it runs.
+        readline_style = self._cmd_app.active_session.complete_style == CompleteStyle.READLINE_LIKE
 
         # Reuse cached completions if this cycle was triggered right after inserting an opening quote
         if isinstance(complete_event, _QuoteInsertedEvent) and complete_event.document == document:
@@ -469,9 +512,12 @@ class Cmd2Completer(Completer):
             ):
                 return
 
-            # A key binding which asks for the completions itself gets the quote put in the
+            # The key binding which lists completions like readline gets the quote put in the
             # buffer first, and completions for the text as it is with the quote.
-            quoted_document = self._insert_quote_for_direct_request(document, completions._quote_char, search_text_length)
+            quoted_document = None
+            if readline_style:
+                quoted_document = self._insert_quote_for_readline_style(document, completions._quote_char, search_text_length)
+
             if quoted_document is not None:
                 document = quoted_document
                 line = document.text
@@ -483,7 +529,7 @@ class Cmd2Completer(Completer):
                 quote_inserted = True
 
             # Any other request gets the quote as part of each completion further down, so it
-            # goes on to do what it was started for, such as selecting a match.
+            # goes on to do what it was started for, such as selecting a match or inserting all of them.
 
         # Print completion table if present
         if completions.table is not None:
