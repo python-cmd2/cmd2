@@ -200,6 +200,21 @@ class Cmd2Completer(Completer):
             buffer = app.current_buffer
             quote_char = completions._quote_char
 
+            # The matches for the document which has the quote in it, so the re-triggered cycle
+            # doesn't invoke cmd2.complete() a second time.
+            offset = completions._search_text_offset
+            cached_items = (
+                [dataclasses.replace(item, text=item.text[offset:]) for item in completions]
+                if offset > 0
+                else completions.items
+            )
+            cached_completions = dataclasses.replace(
+                completions,
+                items=cached_items,
+                _add_opening_quote=False,
+                _search_text_offset=0,
+            )
+
             def _insert_quote_and_recomplete() -> None:
                 if buffer.document != document:
                     return
@@ -207,6 +222,10 @@ class Cmd2Completer(Completer):
                 buffer.cursor_left(search_text_length)
                 buffer.insert_text(quote_char)
                 buffer.cursor_right(search_text_length)
+
+                # Only cache the matches now that the re-triggered cycle is certain to start. If they
+                # were cached for a request which gets abandoned, a later request could reuse them.
+                self._pending_completions = (buffer.document, cached_completions)
                 buffer.start_completion(insert_common_part=True)
 
             def _schedule_recomplete() -> None:
@@ -226,26 +245,6 @@ class Cmd2Completer(Completer):
                     buffer.on_completions_changed += _on_completions_changed
 
             if app.loop is not None and not app.loop.is_closed():
-                # Cache completions for the post-quote document so the re-triggered cycle
-                # doesn't invoke cmd2.complete() a second time.
-                insert_pos = cursor_pos - search_text_length
-                expected_doc = Document(
-                    text=line[:insert_pos] + quote_char + line[insert_pos:],
-                    cursor_position=cursor_pos + len(quote_char),
-                )
-                offset = completions._search_text_offset
-                cached_items = (
-                    [dataclasses.replace(item, text=item.text[offset:]) for item in completions]
-                    if offset > 0
-                    else completions.items
-                )
-                cached_completions = dataclasses.replace(
-                    completions,
-                    items=cached_items,
-                    _add_opening_quote=False,
-                    _search_text_offset=0,
-                )
-                self._pending_completions = (expected_doc, cached_completions)
                 app.loop.call_soon_threadsafe(_schedule_recomplete)
             else:
                 buffer.cursor_left(search_text_length)
@@ -266,6 +265,12 @@ class Cmd2Completer(Completer):
                 print_formatted_text(pt_filter_style(completions.hint))
             return
 
+        # A completion only replaces text before the cursor. If the quote is already closed
+        # right after the cursor, then adding a closing quote would leave two of them.
+        closing_quote = completions._quote_char
+        if closing_quote and line.startswith(closing_quote, endidx):
+            closing_quote = ""
+
         # Return the completions
         for item in completions:
             # Set offset to the start of the current word to overwrite it with the completion
@@ -285,8 +290,7 @@ class Cmd2Completer(Completer):
                 # Finalize if there's only one match
                 if len(completions) == 1:
                     # Close any open quote
-                    if completions._quote_char:
-                        match_text += completions._quote_char
+                    match_text += closing_quote
 
                     # Add trailing space if the cursor is at the end of the line
                     if endidx == len(line):
@@ -294,8 +298,8 @@ class Cmd2Completer(Completer):
 
                 # A match chosen from several closes any open quote, so that accepting it does not
                 # leave the quote open. A directory doesn't, since the user will keep completing it.
-                elif completions._quote_char and item._allow_finalization:
-                    match_text += completions._quote_char
+                elif item._allow_finalization:
+                    match_text += closing_quote
 
             yield Completion(
                 match_text,

@@ -2347,9 +2347,9 @@ class Cmd:
 
         # Remove from each match everything after where the user is completing.
         # This approach can result in duplicates so we will filter those out.
-        unique_results: dict[str, str] = {}
+        # Each result is stored with its display value and whether it is a full item.
+        unique_results: dict[str, tuple[str, bool]] = {}
 
-        allow_finalization = True
         for cur_match in match_strings:
             match_tokens = cur_match.split(delimiter)
 
@@ -2357,21 +2357,27 @@ class Cmd:
             display_val = match_tokens[display_token_index]
 
             # If there are more tokens, then we aren't done completing a full item
-            if len(match_tokens) > display_token_index + 1:
+            is_full_item = len(match_tokens) <= display_token_index + 1
+            if not is_full_item:
                 full_value += delimiter
                 display_val += delimiter
-                allow_finalization = False
 
             if full_value not in unique_results:
-                unique_results[full_value] = display_val
+                unique_results[full_value] = (display_val, is_full_item)
 
+        # A match which isn't a full item leaves an open quote for the rest of the item.
+        # Marking each match lets a full item which is offered alongside it close the quote.
         items = [
             CompletionItem(
                 value=value,
                 display=display,
+                _allow_finalization=is_full_item,
             )
-            for value, display in unique_results.items()
+            for value, (display, is_full_item) in unique_results.items()
         ]
+
+        # A single match is finalized according to this flag instead of its own
+        allow_finalization = not (len(items) == 1 and not items[0]._allow_finalization)
 
         return Completions(items, allow_finalization=allow_finalization)
 

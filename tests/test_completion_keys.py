@@ -122,6 +122,16 @@ def make_files(directory: Path) -> None:
     (directory / "dd one" / "inner.txt").touch()
 
 
+class DelimiterApp(cmd2.Cmd):
+    """Has a command whose argument is completed one segment at a time, like a path."""
+
+    def do_pick(self, _: cmd2.Statement) -> None:
+        """Pick something."""
+
+    def complete_pick(self, text: str, line: str, begidx: int, endidx: int) -> cmd2.Completions:
+        return self.delimiter_complete(text, line, begidx, endidx, ["some dir/next", "some file"], "/")
+
+
 @pytest.fixture
 def app(tmp_path, monkeypatch) -> cmd2.Cmd:
     make_files(tmp_path)
@@ -221,6 +231,31 @@ def test_each_match_in_the_menu_closes_its_quote(app) -> None:
         ],
     )
     assert line == 'edit "spare.txt"'
+
+
+def test_match_chosen_from_the_menu_keeps_a_closing_quote_which_follows_the_cursor(app) -> None:
+    line = press_keys(
+        app,
+        [
+            ('edit "sp"' + LEFT + TAB, menu('edit "sp"', 2)),
+            (TAB, shows('edit "sp ace.txt"')),
+            (ENTER, no_menu),
+            (ENTER, None),
+        ],
+    )
+    assert line == 'edit "sp ace.txt"'
+    assert shlex.split(line) == ["edit", "sp ace.txt"]
+
+
+def test_only_match_keeps_a_closing_quote_which_follows_the_cursor(app) -> None:
+    line = press_keys(
+        app,
+        [
+            ('edit "my"' + LEFT + TAB, shows('edit "my file.txt"')),
+            (ENTER, None),
+        ],
+    )
+    assert line == 'edit "my file.txt"'
 
 
 def test_directory_chosen_from_the_menu_stays_open(app) -> None:
@@ -324,3 +359,18 @@ def test_tab_in_a_history_search_does_not_complete_the_search_text(app, monkeypa
     )
     assert line == ""
     assert texts == []
+
+
+def test_finished_match_closes_its_quote_when_another_match_has_more_segments() -> None:
+    line = press_keys(
+        DelimiterApp(),
+        [
+            ("pick so" + TAB, menu('pick "some ', 2)),
+            # This match has another segment after it, so its quote stays open
+            (TAB, shows('pick "some dir/')),
+            (TAB, shows('pick "some file"')),
+            (ENTER, no_menu),
+            (ENTER, None),
+        ],
+    )
+    assert line == 'pick "some file"'

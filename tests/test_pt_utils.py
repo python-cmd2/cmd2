@@ -567,6 +567,43 @@ class TestCmd2Completer:
         assert asyncio.run(run_test()) == "edit hasx"
         assert mock_cmd_app.complete.call_count == 1
 
+    def test_get_completions_add_opening_quote_drops_matches_if_document_changed(self, mock_cmd_app: MockCmd) -> None:
+        """Verify matches found for a request which was abandoned are not reused by a later request."""
+        line = "edit has"
+        mock_cmd_app.complete.return_value = cmd2.Completions(
+            [cmd2.CompletionItem("has space")],
+            _add_opening_quote=True,
+            _search_text_offset=0,
+            _quote_char='"',
+        )
+        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+
+        async def run_test() -> None:
+            buf = Buffer(document=Document(line, cursor_position=len(line)), completer=completer)
+            app: Application[None] = Application(
+                layout=Layout(Window(BufferControl(buffer=buf))),
+                input=DummyInput(),
+                output=DummyOutput(),
+            )
+            app.loop = asyncio.get_running_loop()
+
+            with set_app(app):
+                # The user edits the line before the quote can be inserted, so the request is abandoned
+                list(completer.get_completions(buf.document, None))
+                buf.insert_text("x")
+                await asyncio.sleep(0)
+
+        asyncio.run(run_test())
+        assert mock_cmd_app.complete.call_count == 1
+
+        # Later the user asks for the completions of the line which that request would have produced
+        quoted_line = 'edit "has'
+        mock_cmd_app.complete.return_value = cmd2.Completions([cmd2.CompletionItem("has changed")], _quote_char='"')
+        completions = list(completer.get_completions(Document(quoted_line, cursor_position=len(quoted_line)), None))
+
+        assert mock_cmd_app.complete.call_count == 2
+        assert [c.text for c in completions] == ['has changed" ']
+
     @pytest.mark.parametrize(
         # search_text_offset is the starting index of the user-provided search text within a full match.
         # This accounts for leading shortcuts (e.g., in '@has', the offset is 1).
@@ -724,6 +761,37 @@ class TestCmd2Completer:
         mock_cmd_app.complete.return_value = cmd2.Completions(
             items,
             allow_finalization=allow_finalization,
+            _quote_char=quote_char,
+        )
+
+        completions = list(completer.get_completions(document, None))
+        assert [c.text for c in completions] == expected
+
+    @pytest.mark.parametrize(
+        ("line", "matches", "quote_char", "expected"),
+        [
+            # Matches being chosen from a menu
+            ('"ma"', ["match one", "match two"], '"', ["match one", "match two"]),
+            ("'ma' more", ["match one", "match two"], "'", ["match one", "match two"]),
+            # A single match
+            ('"ma"', ["match"], '"', ["match"]),
+            # A different quote character after the cursor is not the closing quote
+            ("\"ma'", ["match one", "match two"], '"', ['match one"', 'match two"']),
+            # Neither is the same quote character further along the line
+            ('"ma "next"', ["match one", "match two"], '"', ['match one"', 'match two"']),
+        ],
+    )
+    def test_get_completions_closing_quote_already_after_cursor(
+        self, line, matches, quote_char, expected, mock_cmd_app: MockCmd
+    ) -> None:
+        """Test that a closing quote is not added in front of one which is already there."""
+        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+
+        # The cursor is right after the search text
+        document = Document(line, cursor_position=3)
+
+        mock_cmd_app.complete.return_value = cmd2.Completions(
+            [cmd2.CompletionItem(match) for match in matches],
             _quote_char=quote_char,
         )
 
