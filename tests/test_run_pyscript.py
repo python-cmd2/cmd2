@@ -262,3 +262,26 @@ def test_run_pyscript_print_redirection(base_app, request, tmp_path, capsys) -> 
     # Verify the remaining output when to the correct stream
     assert "this goes to sys.stdout" in out
     assert "this goes to sys.stderr" in err
+
+
+@pytest.mark.parametrize("encoding", ["utf-8", "utf-8-sig"])
+def test_run_pyscript_reads_utf8(base_app, tmp_path, monkeypatch, encoding) -> None:
+    import cmd2.cmd2
+
+    real_open = open
+
+    def open_cp1252(file, mode="r", *args, **kwargs):
+        # Without an explicit encoding, open() uses cp1252, as it does on a non-UTF-8 Windows locale
+        if "b" not in mode and not args:
+            kwargs.setdefault("encoding", "cp1252")
+        return real_open(file, mode, *args, **kwargs)
+
+    monkeypatch.setattr(cmd2.cmd2, "open", open_cp1252, raising=False)
+    python_script = tmp_path / "script.py"
+    python_script.write_text('print("Łukasz ✨")\n', encoding=encoding)
+
+    out, err = run_cmd(base_app, f'run_pyscript "{python_script}"')
+
+    assert err == []
+    assert out == ["Łukasz ✨"]
+    assert base_app.last_result is True

@@ -1473,6 +1473,59 @@ def test_history_edit(monkeypatch) -> None:
     run_script_mock.assert_called_once()
 
 
+@pytest.fixture
+def non_utf8_locale(monkeypatch):
+    """Make cmd2's open() and os.fdopen() default to cp1252, as they do on a non-UTF-8 Windows locale."""
+    real_open = open
+    real_fdopen = os.fdopen
+
+    def open_cp1252(file, mode="r", *args, **kwargs):
+        if "b" not in mode and not args:
+            kwargs.setdefault("encoding", "cp1252")
+        return real_open(file, mode, *args, **kwargs)
+
+    def fdopen_cp1252(fd, mode="r", *args, **kwargs):
+        if "b" not in mode and not args:
+            kwargs.setdefault("encoding", "cp1252")
+        return real_fdopen(fd, mode, *args, **kwargs)
+
+    monkeypatch.setattr(cmd2.cmd2, "open", open_cp1252, raising=False)
+    monkeypatch.setattr(cmd2.cmd2.os, "fdopen", fdopen_cp1252)
+
+
+class SayApp(cmd2.Cmd):
+    def do_say(self, args) -> None:
+        self.poutput(args)
+
+
+def test_history_output_file_is_utf8(non_utf8_locale, tmp_path) -> None:
+    app = SayApp()
+    run_cmd(app, "say Łukasz ✨")
+    fname = tmp_path / "history.txt"
+
+    run_cmd(app, f'history -o "{fname}"')
+
+    assert app.last_result is True
+    assert fname.read_bytes().decode("utf-8").splitlines() == ["say Łukasz ✨"]
+
+    # run_script reads only ASCII or UTF-8 files, so the saved history can be run again
+    out, err = run_cmd(app, f'run_script "{fname}"')
+    assert err == []
+    assert out == ["Łukasz ✨"]
+
+
+def test_history_edit_runs_non_ascii_commands(non_utf8_locale, monkeypatch) -> None:
+    app = SayApp()
+    # Leave the file as history wrote it
+    monkeypatch.setattr("cmd2.Cmd.run_editor", lambda _self, _fname: None)
+    run_cmd(app, "say Łukasz ✨")
+
+    out, err = run_cmd(app, "history -e 1")
+
+    assert err == []
+    assert out == ["Łukasz ✨"]
+
+
 def test_history_run_all_commands(base_app) -> None:
     # make sure we refuse to run all commands as a default
     run_cmd(base_app, "shortcuts")
