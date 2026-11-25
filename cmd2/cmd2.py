@@ -5315,7 +5315,7 @@ class Cmd:
                 expanded_filename = os.path.expanduser(pyscript)
 
                 try:
-                    with open(expanded_filename) as f:
+                    with open(expanded_filename, encoding="utf-8-sig") as f:
                         py_code_to_run = f.read()
                 except OSError as ex:
                     self.perror(f"Error reading script file '{expanded_filename}': {ex}")
@@ -5628,7 +5628,7 @@ class Cmd:
         if args.edit:
             fd, fname = tempfile.mkstemp(suffix=".txt", text=True)
             fobj: TextIO
-            with os.fdopen(fd, "w") as fobj:
+            with os.fdopen(fd, "w", encoding="utf-8") as fobj:
                 for command in history.values():
                     if command.statement.multiline_command:
                         fobj.write(f"{command.expanded}\n")
@@ -5644,7 +5644,7 @@ class Cmd:
         elif args.output_file:
             full_path = os.path.abspath(os.path.expanduser(args.output_file))
             try:
-                with open(full_path, "w") as fobj:
+                with open(full_path, "w", encoding="utf-8") as fobj:
                     for item in history.values():
                         if item.statement.multiline_command:
                             fobj.write(f"{item.expanded}\n")

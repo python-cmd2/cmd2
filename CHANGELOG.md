@@ -4,6 +4,12 @@
     - On Windows, shell command completion now recognizes paths typed with forward slashes, such as
       `./my` and `C:/tools/my`. Path completion preserves the typed separators so the first Tab
       extends the shared prefix when several names match.
+    - `history --output-file` and `history --edit` now write UTF-8 files, so `run_script` can run
+      them again. On a locale whose encoding is not UTF-8, such as Korean or Japanese Windows, a
+      history with non-ASCII text was written in the locale's encoding, which `run_script` rejects
+      as not being an ASCII or UTF-8 encoded text file. `run_pyscript` now reads scripts as UTF-8,
+      the default encoding of Python source files, with or without a byte order mark, instead of in
+      the locale's encoding.
 
 ## 4.4.3 (2026-11-16)
 
