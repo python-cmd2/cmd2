@@ -4,6 +4,9 @@
     - On Windows, shell command completion now recognizes paths typed with forward slashes, such as
       `./my` and `C:/tools/my`. Path completion preserves the typed separators so the first Tab
       extends the shared prefix when several names match.
+    - `set_window_title()` now queues writes from other threads on the event loop of a prompt-toolkit
+      app that shares cmd2's AppSession and terminal output, such as a prompt opened by
+      `prompt_toolkit.prompt()` or the `ipy` command.
 
 ## 4.4.3 (2026-11-16)
 

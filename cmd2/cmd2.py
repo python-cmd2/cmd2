@@ -6071,6 +6071,8 @@ class Cmd:
             and (loop := ambient_app.loop) is not None
             and ambient_app.output is self._get_window_title_output()
         ):
+            # If the external app closes its loop before the callback runs, the title stays pending
+            # until cmd2 cleans up a prompt or another title replaces it. See #1792.
             return loop
         return None
 
