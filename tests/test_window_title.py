@@ -92,6 +92,38 @@ def test_title_uses_the_ambient_app_session_output_for_sys_stdout(monkeypatch):
     assert stream.getvalue().endswith("\x1b]2;Ambient\x07")
 
 
+@pytest.mark.parametrize("shared_output", [True, False])
+def test_worker_title_during_ambient_external_prompt(monkeypatch, shared_output):
+    output = title_output(TtyStream())
+    workers = []
+    prompt_loops = []
+    with create_pipe_input() as pipe_input, create_app_session(input=DummyInput(), output=output):
+        monkeypatch.setattr(sys, "stdout", TtyStream())
+        monkeypatch.setattr("cmd2.cmd2.create_input", lambda **_kwargs: pipe_input)
+        app = cmd2.Cmd(stdin=TtyStream(), allow_cli_args=False)
+        other_output = output if shared_output else title_output(TtyStream())
+        prompt = PromptSession(input=pipe_input, output=other_output)
+
+        def update_title(loop):
+            try:
+                app.set_window_title("External prompt")
+            finally:
+                loop.call_soon_threadsafe(lambda: prompt.app.exit(result="done"))
+
+        def before_prompt():
+            loop = asyncio.get_running_loop()
+            prompt_loops.append(loop)
+            workers.append(start_worker(update_title, loop))
+
+        assert prompt.prompt("external> ", pre_run=before_prompt, set_exception_handler=False) == "done"
+        workers[0].result(timeout=5)
+        app.set_window_title("After")
+
+    assert output.title_loops["External prompt"] is (prompt_loops[0] if shared_output else None)
+    assert output.title_loops["After"] is None
+    assert "\x1b]2;External prompt\x07" in output.stdout.getvalue()
+
+
 @pytest.mark.parametrize("from_worker", [False, True])
 @pytest.mark.parametrize("custom_prompt", [False, True])
 def test_title_before_during_and_after_a_real_prompt(monkeypatch, from_worker, custom_prompt):
