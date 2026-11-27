@@ -453,7 +453,9 @@ def test_shell_command_completion_windows_forward_slashes(cmd_app, tmp_path, mon
 
     assert get_common_complete_suffix(document, matches) == "tool-"
     completed_lines = {document.text_before_cursor[: match.start_position] + match.text for match in matches}
-    assert completed_lines == {f'shell "{directory}mytool-one.exe', f'shell "{directory}mytool-two.exe'}
+
+    # Each match closes the quote which the user opened and adds a trailing space
+    assert completed_lines == {f'shell "{directory}mytool-one.exe" ', f'shell "{directory}mytool-two.exe" '}
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="'*' and '?' are not legal in Windows file names")

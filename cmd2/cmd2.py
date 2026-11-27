@@ -207,6 +207,7 @@ from .pt_utils import (
     Cmd2Completer,
     Cmd2History,
     Cmd2Lexer,
+    _CompletionKeyEvent,
     pt_filter_style,
     pt_resolve_color_depth,
 )
@@ -786,6 +787,27 @@ class Cmd:
         """Create and configure custom key bindings for the PromptSession."""
         key_bindings = KeyBindings()
 
+        # Take the place of prompt-toolkit's own binding for Tab, and do what it does. The difference is that
+        # the request says it comes from this binding, which lets Cmd2Completer insert an opening quote and
+        # start completion again. It can't tell from prompt-toolkit's request what kind of request it is.
+        # A session which shows completions like readline has a different binding for Tab, which is left alone.
+        @filters.Condition
+        def menu_completion() -> bool:
+            return self.active_session.complete_style != CompleteStyle.READLINE_LIKE
+
+        @key_bindings.add(
+            self.DEFAULT_COMPLETEKEY,
+            filter=(filters.emacs_insert_mode | filters.vi_insert_mode) & menu_completion,
+        )
+        def _complete_or_select_next(event: KeyPressEvent) -> None:  # pragma: no cover
+            """Insert the common prefix of the completions, or select the next completion if a menu is open."""
+            b = event.current_buffer
+            if b.complete_state:
+                b.complete_next()
+            else:
+                b.start_completion(insert_common_part=True, complete_event=_CompletionKeyEvent())
+
+        # A custom completion key works alongside Tab, as it always has
         if completekey != self.DEFAULT_COMPLETEKEY:
 
             @key_bindings.add(completekey)
@@ -2349,9 +2371,9 @@ class Cmd:
 
         # Remove from each match everything after where the user is completing.
         # This approach can result in duplicates so we will filter those out.
-        unique_results: dict[str, str] = {}
+        # Each result is stored with its display value and whether it is a full item.
+        unique_results: dict[str, tuple[str, bool]] = {}
 
-        allow_finalization = True
         for cur_match in match_strings:
             match_tokens = cur_match.split(delimiter)
 
@@ -2359,21 +2381,27 @@ class Cmd:
             display_val = match_tokens[display_token_index]
 
             # If there are more tokens, then we aren't done completing a full item
-            if len(match_tokens) > display_token_index + 1:
+            is_full_item = len(match_tokens) <= display_token_index + 1
+            if not is_full_item:
                 full_value += delimiter
                 display_val += delimiter
-                allow_finalization = False
 
             if full_value not in unique_results:
-                unique_results[full_value] = display_val
+                unique_results[full_value] = (display_val, is_full_item)
 
+        # A match which isn't a full item leaves an open quote for the rest of the item.
+        # Marking each match lets a full item which is offered alongside it close the quote.
         items = [
             CompletionItem(
                 value=value,
                 display=display,
+                _allow_finalization=is_full_item,
             )
-            for value, display in unique_results.items()
+            for value, (display, is_full_item) in unique_results.items()
         ]
+
+        # A single match is finalized according to this flag instead of its own
+        allow_finalization = not (len(items) == 1 and not items[0]._allow_finalization)
 
         return Completions(items, allow_finalization=allow_finalization)
 
@@ -2466,9 +2494,12 @@ class Cmd:
         items = []
         for match in matches:
             name = os.path.basename(match)
-            if add_trailing_sep_if_dir and os.path.isdir(match):
+            is_dir = os.path.isdir(match)
+            if add_trailing_sep_if_dir and is_dir:
                 name += trailing_sep
-            items.append(CompletionItem(value=typed_directory + name, display=name))
+
+            # A directory is not the end of a path, so it leaves an open quote for the rest of the path
+            items.append(CompletionItem(value=typed_directory + name, display=name, _allow_finalization=not is_dir))
 
         return Completions(items=items, allow_finalization=allow_finalization)
 

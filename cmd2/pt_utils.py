@@ -1,7 +1,10 @@
 """Utilities for integrating prompt_toolkit with cmd2."""
 
+import asyncio
+import dataclasses
 import os
 import re
+import threading
 from collections.abc import (
     Callable,
     Iterable,
@@ -14,15 +17,22 @@ from typing import (
 
 from prompt_toolkit import print_formatted_text
 from prompt_toolkit.application import get_app
+from prompt_toolkit.buffer import (
+    Buffer,
+    CompletionState,
+)
 from prompt_toolkit.completion import (
+    CompleteEvent,
     Completer,
     Completion,
 )
 from prompt_toolkit.document import Document
+from prompt_toolkit.filters import Never
 from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.history import History
 from prompt_toolkit.lexers import Lexer
 from prompt_toolkit.output.color_depth import ColorDepth
+from prompt_toolkit.shortcuts import CompleteStyle
 from rich.style import Style, StyleType
 
 from . import (
@@ -37,6 +47,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from rich.color import Color
 
     from .cmd2 import Cmd
+    from .completion import Completions
 
 
 BASE_DELIMITERS = " \t\n" + "".join(constants.QUOTES) + "".join(constants.REDIRECTION_CHARS)
@@ -136,6 +147,86 @@ def rich_to_pt_style(rich_style: StyleType) -> str:
     return " ".join(parts)
 
 
+# How long a completion which runs in a thread waits for the event loop before giving up on it
+_EVENT_LOOP_TIMEOUT = 1.0
+
+
+class _CompletionKeyEvent(CompleteEvent):
+    """Requests the completion which cmd2's key binding for the default completion key starts.
+
+    prompt-toolkit doesn't tell a completer what a request will do with its matches. This tells
+    Cmd2Completer that the common prefix of the matches will be inserted, which is the one kind
+    of request it can start again after inserting an opening quote.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the instance."""
+        super().__init__(completion_requested=True)
+
+
+class _QuoteInsertedEvent(CompleteEvent):
+    """Requests the completion which Cmd2Completer starts after it has inserted an opening quote.
+
+    It carries the matches which were found before the quote was inserted, so cmd2's completion
+    logic doesn't run a second time. Since the matches travel with the request they were found for,
+    no other request can be given them.
+    """
+
+    def __init__(self, document: Document, completions: "Completions") -> None:
+        """Initialize the instance.
+
+        :param document: the input, with the quote in it, which the matches are for
+        :param completions: the matches, changed to what they are once the quote is present
+        """
+        super().__init__(completion_requested=True)
+        self.document = document
+        self.completions = completions
+
+
+def _completions_for_quoted_text(completions: "Completions") -> "Completions":
+    """Change completions which need an opening quote into what they are once the quote is in the buffer.
+
+    The quote goes after a shortcut, so the word being completed no longer includes the shortcut.
+    """
+    offset = completions._search_text_offset
+    items = [dataclasses.replace(item, text=item.text[offset:]) for item in completions] if offset > 0 else completions.items
+    return dataclasses.replace(
+        completions,
+        items=items,
+        _add_opening_quote=False,
+        _search_text_offset=0,
+    )
+
+
+def _insert_opening_quote(buffer: Buffer, quote_char: str, search_text_length: int) -> None:
+    """Insert an opening quote in front of the text being completed and put the cursor back after that text.
+
+    This tells the buffer's listeners about the new text as any other insertion does, so things
+    like auto-suggest keep up. The exception is completion while typing. It would start a completion
+    of its own for the quote, which prompt-toolkit would run in place of the one cmd2 is about to start.
+
+    :param buffer: the buffer to insert into
+    :param quote_char: the quote to insert
+    :param search_text_length: how much of the text before the cursor the quote goes in front of
+    """
+    complete_while_typing = buffer.complete_while_typing
+    buffer.complete_while_typing = Never()
+    try:
+        buffer.cursor_left(search_text_length)
+        buffer.insert_text(quote_char)
+        buffer.cursor_right(search_text_length)
+    finally:
+        buffer.complete_while_typing = complete_while_typing
+
+
+def _in_event_loop(loop: asyncio.AbstractEventLoop | None) -> bool:
+    """Return whether this is running in the event loop, as opposed to a thread which completes for it."""
+    try:
+        return asyncio.get_running_loop() is loop
+    except RuntimeError:
+        return False
+
+
 class Cmd2Completer(Completer):
     """Completer that delegates to cmd2's completion logic."""
 
@@ -148,7 +239,128 @@ class Cmd2Completer(Completer):
         self._cmd_app = cmd_app
         self.custom_settings = custom_settings
 
-    def get_completions(self, document: Document, complete_event: object) -> Iterable[Completion]:  # noqa: ARG002
+    def _insert_quote_and_recomplete(self, document: Document, completions: "Completions", search_text_length: int) -> bool:
+        """Arrange for an opening quote to be inserted and completion started again, once prompt-toolkit is ready.
+
+        prompt-toolkit's async_completer is running the request this is called for. It discards the
+        results of a request whose input changed while it ran, and it ignores a completion which is
+        started before it has finished the request. So the buffer is left alone until the request has
+        finished, and only if it finished without having been cancelled.
+
+        :param document: the input being completed
+        :param completions: the matches which need an opening quote
+        :param search_text_length: how much of the text before the cursor the quote goes in front of
+        :return: True if this has been arranged, in which case the request must return no completions.
+                 False if there is no running event loop to do it.
+        """
+        app = get_app()
+        loop = app.loop
+        if loop is None or loop.is_closed():
+            return False
+
+        buffer = app.current_buffer
+        quote_char = completions._quote_char
+
+        # The matches for the document which has the quote in it, so the re-triggered cycle
+        # doesn't invoke cmd2.complete() a second time.
+        cached_completions = _completions_for_quoted_text(completions)
+
+        # The request which async_completer is running, once that is known
+        request_state: CompletionState | None = None
+
+        # Whether async_completer has been seen to reach the end of the request with it still intact
+        request_ended_intact = False
+
+        def _recomplete() -> None:
+            buffer.on_completions_changed -= _on_completions_changed
+
+            # The user submitted or edited the line after the request finished
+            if app.is_done or buffer.document != document:
+                return
+
+            _insert_opening_quote(buffer, quote_char, search_text_length)
+
+            # The matches go with the request for the re-triggered cycle. If prompt-toolkit
+            # doesn't run that request, they are dropped along with it.
+            complete_event = _QuoteInsertedEvent(buffer.document, cached_completions)
+            buffer.start_completion(insert_common_part=True, complete_event=complete_event)
+
+        def _on_completions_changed(_: Buffer) -> None:
+            nonlocal request_ended_intact
+
+            # The prompt has ended. Nobody is left to miss a notification, so the handler is removed here.
+            if app.is_done:
+                buffer.on_completions_changed -= _on_completions_changed
+                return
+
+            # When async_completer has all the results of a request, it notifies with the request's
+            # state still in place. If there were no completions, it then clears the state and
+            # notifies again. A request which was cancelled, or whose input was edited, had its state
+            # cleared without a notification, so it is never seen intact here.
+            if buffer.complete_state is request_state:
+                request_ended_intact = True
+                return
+
+            if request_ended_intact and buffer.complete_state is None:
+                # Run on the next loop tick, after _only_one_at_a_time resets its running flag
+                loop.call_soon(_recomplete)
+            else:
+                # Removing the handler now would make prompt-toolkit skip the handler after it
+                loop.call_soon(buffer.on_completions_changed.remove_handler, _on_completions_changed)
+
+        def _wait_for_request_to_finish() -> None:
+            nonlocal request_state
+
+            # async_completer can't have finished the request yet, since it is waiting for
+            # get_completions() to return. So if the state is already cleared, the request
+            # was cancelled or the line was edited while cmd2 was completing.
+            request_state = buffer.complete_state
+            if request_state is not None:
+                buffer.on_completions_changed += _on_completions_changed
+
+        if _in_event_loop(loop):
+            # async_completer is running get_completions() itself (e.g. complete_in_thread=False)
+            _wait_for_request_to_finish()
+        else:
+            # get_completions() is running in a thread (e.g. complete_in_thread=True). Don't return
+            # until the event loop is watching the request, or async_completer could finish it first.
+            watching = threading.Event()
+
+            def _wait_for_request_to_finish_in_event_loop() -> None:
+                try:
+                    _wait_for_request_to_finish()
+                finally:
+                    watching.set()
+
+            loop.call_soon_threadsafe(_wait_for_request_to_finish_in_event_loop)
+            watching.wait(timeout=_EVENT_LOOP_TIMEOUT)
+
+        return True
+
+    @staticmethod
+    def _insert_quote_for_readline_style(document: Document, quote_char: str, search_text_length: int) -> Document | None:
+        """Insert an opening quote into the buffer right away if completions are being listed like readline.
+
+        The key binding which does that calls get_completions() directly from the event loop. It
+        reads the buffer again once it has the completions, so the quote can go in before they are
+        returned and it can then insert the text they share. Nothing which async_completer does
+        is involved, since it isn't running a request.
+
+        :param document: the input being completed
+        :param quote_char: the quote to insert
+        :param search_text_length: how much of the text before the cursor the quote goes in front of
+        :return: the buffer's document with the quote in it, or None if the request doesn't come
+                 from that key binding and the buffer has been left alone
+        """
+        app = get_app()
+        buffer = app.current_buffer
+        if not _in_event_loop(app.loop) or buffer.complete_state is not None or buffer.document != document:
+            return None
+
+        _insert_opening_quote(buffer, quote_char, search_text_length)
+        return buffer.document
+
+    def get_completions(self, document: Document, complete_event: object) -> Iterable[Completion]:
         """Get completions for the current input."""
         # Find the beginning of the current word based on delimiters
         line = document.text
@@ -168,13 +380,53 @@ class Cmd2Completer(Completer):
         endidx = cursor_pos
         text = line[begidx:endidx]
 
-        completions = self._cmd_app.complete(
-            text, line=line, begidx=begidx, endidx=endidx, custom_settings=self.custom_settings
-        )
+        # Whether completions are listed like readline. This has to be looked at now, because
+        # cmd2's completion logic sets the session to one of the menu styles each time it runs.
+        readline_style = self._cmd_app.active_session.complete_style == CompleteStyle.READLINE_LIKE
+
+        # Reuse cached completions if this cycle was triggered right after inserting an opening quote
+        if isinstance(complete_event, _QuoteInsertedEvent) and complete_event.document == document:
+            completions = complete_event.completions
+        else:
+            completions = self._cmd_app.complete(
+                text, line=line, begidx=begidx, endidx=endidx, custom_settings=self.custom_settings
+            )
 
         if completions.error:
             print_formatted_text(pt_filter_style(completions.error))
             return
+
+        # The length of the user's input minus any shortcut.
+        search_text_length = len(text) - completions._search_text_offset
+
+        # If matches require quoting but the word isn't quoted yet, the opening quote goes in front
+        # of text the user has typed. If any completions change text before the cursor (like
+        # prepending a quote), prompt-toolkit will not return a common prefix to the command line.
+        if completions and completions._add_opening_quote and search_text_length > 0:
+            # For the completion key, whose request inserts that common prefix, the quote is
+            # inserted into the buffer and completion is started again with the quote already present.
+            if isinstance(complete_event, _CompletionKeyEvent) and self._insert_quote_and_recomplete(
+                document, completions, search_text_length
+            ):
+                return
+
+            # The key binding which lists completions like readline gets the quote put in the
+            # buffer first, and completions for the text as it is with the quote.
+            quoted_document = None
+            if readline_style:
+                quoted_document = self._insert_quote_for_readline_style(document, completions._quote_char, search_text_length)
+
+            if quoted_document is not None:
+                document = quoted_document
+                line = document.text
+                endidx = document.cursor_position
+
+                # The quote went after any shortcut, so the word being completed starts after the quote
+                text = text[completions._search_text_offset :]
+                completions = _completions_for_quoted_text(completions)
+
+            # Any other request gets the quote as part of each completion further down, so it
+            # goes on to do what it was started for, such as selecting a match or inserting all of them.
 
         # Print completion table if present
         if completions.table is not None:
@@ -189,22 +441,24 @@ class Cmd2Completer(Completer):
                 print_formatted_text(pt_filter_style(completions.hint))
             return
 
-        # The length of the user's input minus any shortcut.
-        search_text_length = len(text) - completions._search_text_offset
+        # A completion only replaces text before the cursor, so the argument may carry on after it.
+        # Whether a quote character further along closes this argument or belongs to something else
+        # can't be told, so nothing here depends on it. A closing quote is added where it is certain
+        # to be needed, and everywhere else the line is treated as it was before a match chosen from
+        # several closed its quote at all.
+        at_end_of_line = endidx == len(line)
+        next_char = line[endidx : endidx + 1]
 
-        # If matches require quoting but the word isn't quoted yet, we insert the
-        # opening quote directly into the buffer. We do this because if any completions
-        # change text before the cursor (like prepending a quote), prompt-toolkit will
-        # not return a common prefix to the command line. By modifying the buffer
-        # and returning early, we trigger a new completion cycle where the quote
-        # is already present, allowing for proper common prefix calculation.
-        if completions._add_opening_quote and search_text_length > 0:
-            buffer = get_app().current_buffer
+        # Never put a closing quote directly in front of one which is already there
+        closing_quote = completions._quote_char
+        if next_char == closing_quote:
+            closing_quote = ""
 
-            buffer.cursor_left(search_text_length)
-            buffer.insert_text(completions._quote_char)
-            buffer.cursor_right(search_text_length)
-            return
+        # A match chosen from several closes its quote, so that accepting it does not leave the quote
+        # open, in the two cases where nothing after the cursor can belong to the argument: at the end
+        # of the line, and when cmd2 opened the quote around a word which ended at the cursor.
+        quote_opened_by_cmd2 = completions._add_opening_quote or isinstance(complete_event, _QuoteInsertedEvent)
+        closes_quote_in_menu = at_end_of_line or (quote_opened_by_cmd2 and next_char.isspace())
 
         # Return the completions
         for item in completions:
@@ -212,7 +466,7 @@ class Cmd2Completer(Completer):
             start_position = -len(text)
             match_text = item.text
 
-            # If we need a quote but didn't interrupt (because text was empty),
+            # If the matches need an opening quote which isn't in the buffer, then
             # prepend the quote here so it's included in the insertion.
             if completions._add_opening_quote:
                 match_text = (
@@ -221,15 +475,24 @@ class Cmd2Completer(Completer):
                     + match_text[completions._search_text_offset :]
                 )
 
-            # Finalize if there's only one match
-            if len(completions) == 1 and completions.allow_finalization:
-                # Close any open quote
-                if completions._quote_char:
-                    match_text += completions._quote_char
+            # A match which the user will keep completing, like a directory, is left as it is
+            if completions.allow_finalization and item._allow_finalization:
+                # Finalize if there's only one match
+                if len(completions) == 1:
+                    # Close any open quote
+                    match_text += closing_quote
 
-                # Add trailing space if the cursor is at the end of the line
-                if endidx == len(line):
-                    match_text += " "
+                    # Add trailing space if the cursor is at the end of the line
+                    if at_end_of_line:
+                        match_text += " "
+
+                elif closing_quote and closes_quote_in_menu:
+                    match_text += closing_quote
+
+                    # With its quote closed the argument is finished, so add the trailing space too.
+                    # Otherwise completing again would start a new argument right against the quote.
+                    if at_end_of_line:
+                        match_text += " "
 
             yield Completion(
                 match_text,

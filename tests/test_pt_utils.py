@@ -1,17 +1,31 @@
 """Unit tests for cmd2/pt_utils.py"""
 
+import asyncio
 import io
 import re
+import threading
+from collections.abc import Iterable
 from typing import Any, cast
 from unittest.mock import Mock
 
 import pytest
+from prompt_toolkit.application import Application
+from prompt_toolkit.application.current import set_app
+from prompt_toolkit.auto_suggest import AutoSuggest, Suggestion
+from prompt_toolkit.buffer import Buffer
+from prompt_toolkit.completion import CompleteEvent, Completer, Completion, ThreadedCompleter
 from prompt_toolkit.document import Document
 from prompt_toolkit.formatted_text import (
     ANSI,
     to_formatted_text,
 )
+from prompt_toolkit.input.defaults import DummyInput
+from prompt_toolkit.layout import Layout
+from prompt_toolkit.layout.containers import Window
+from prompt_toolkit.layout.controls import BufferControl
 from prompt_toolkit.output.color_depth import ColorDepth
+from prompt_toolkit.output.defaults import DummyOutput
+from prompt_toolkit.shortcuts import CompleteStyle
 from rich.table import Table
 
 import cmd2
@@ -46,6 +60,8 @@ class MockCmd:
         self.aliases = {}
         self.macros = {}
         self.all_commands = []
+        self.active_session = Mock()
+        self.active_session.complete_style = CompleteStyle.MULTI_COLUMN
 
     def get_all_commands(self) -> list[str]:
         return self.all_commands
@@ -423,17 +439,26 @@ class TestCmd2Completer:
     @pytest.mark.parametrize(
         # search_text_offset is the starting index of the user-provided search text within a full match.
         # This accounts for leading shortcuts (e.g., in '@has', the offset is 1).
-        ("line", "match", "search_text_offset"),
+        ("line", "match", "search_text_offset", "expected"),
         [
-            ("has", "has space", 0),
-            ("@has", "@has space", 1),
+            ("has", "has space", 0, '"has space" '),
+            ("@has", "@has space", 1, '@"has space" '),
         ],
     )
-    def test_get_completions_add_opening_quote_and_abort(self, line, match, search_text_offset, mock_cmd_app) -> None:
-        """Test case where adding an opening quote changes text before cursor.
-
-        This applies when there is search text.
-        """
+    @pytest.mark.parametrize(
+        "complete_event",
+        [
+            None,
+            CompleteEvent(completion_requested=True),
+            # Not even the completion key's request can be started again without a running application
+            pt_utils._CompletionKeyEvent(),
+        ],
+        ids=["no-event", "requested", "completion-key"],
+    )
+    def test_get_completions_add_opening_quote_in_front_of_search_text(
+        self, line, match, search_text_offset, expected, complete_event, mock_cmd_app
+    ) -> None:
+        """Test that a match carries the opening quote when it goes in front of text which was already typed."""
         completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
 
         # Set up document
@@ -450,10 +475,542 @@ class TestCmd2Completer:
         mock_cmd_app.complete.return_value = cmd2_completions
 
         # Call get_completions
-        completions = list(completer.get_completions(document, None))
+        completions = list(completer.get_completions(document, complete_event))
 
-        # get_completions inserted an opening quote in the buffer and then aborted before returning completions
-        assert not completions
+        # The completion replaces everything which was typed
+        assert [(c.text, c.start_position) for c in completions] == [(expected, -len(line))]
+
+    @pytest.mark.parametrize(
+        ("complete_style", "buffer_line", "requested_line", "cursor_position", "expected_matches", "expected_buffer_line"),
+        [
+            # The quote is put in the buffer, where the readline-style binding reads the line from again,
+            # so the match doesn't have to change text which is in front of the cursor
+            (CompleteStyle.READLINE_LIKE, "edit has", "edit has", 8, ['has space" '], 'edit "has'),
+            # The quote was added by cmd2, so a quote character in a later word doesn't close it
+            (CompleteStyle.READLINE_LIKE, 'edit has 5" nail', 'edit has 5" nail', 8, ['has space"'], 'edit "has 5" nail'),
+            # The request is not for what the buffer holds, so the buffer is left alone
+            (CompleteStyle.READLINE_LIKE, "edit other", "edit has", 8, ['"has space" '], "edit other"),
+            # Other bindings which ask directly, like Meta-* in Emacs mode, insert what they are given.
+            # They get whole matches with their own quotes and the buffer is left alone.
+            (CompleteStyle.MULTI_COLUMN, "edit has", "edit has", 8, ['"has space" '], "edit has"),
+            (CompleteStyle.COLUMN, "edit has", "edit has", 8, ['"has space" '], "edit has"),
+        ],
+    )
+    def test_get_completions_add_opening_quote_for_synchronous_request(
+        self,
+        complete_style,
+        buffer_line,
+        requested_line,
+        cursor_position,
+        expected_matches,
+        expected_buffer_line,
+        mock_cmd_app: MockCmd,
+    ) -> None:
+        """Verify what a request made directly by one of prompt-toolkit's key bindings gets."""
+        mock_cmd_app.active_session.complete_style = complete_style
+
+        def complete(*_args: Any, **_kwargs: Any) -> cmd2.Completions:
+            # cmd2 switches the session to one of its menu styles whenever it completes
+            mock_cmd_app.active_session.complete_style = CompleteStyle.COLUMN
+            return cmd2.Completions([cmd2.CompletionItem("has space")], _add_opening_quote=True, _quote_char='"')
+
+        mock_cmd_app.complete.side_effect = complete
+        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+
+        async def run_test() -> tuple[list[str], str]:
+            buf = Buffer(document=Document(buffer_line, cursor_position=cursor_position), completer=completer)
+            app: Application[None] = Application(
+                layout=Layout(Window(BufferControl(buffer=buf))),
+                input=DummyInput(),
+                output=DummyOutput(),
+            )
+            app.loop = asyncio.get_running_loop()
+
+            with set_app(app):
+                # This is how display_completions_like_readline() and the Emacs Meta-* binding ask for completions
+                complete_event = CompleteEvent(completion_requested=True)
+                document = Document(requested_line, cursor_position=cursor_position)
+                completions = list(completer.get_completions(document, complete_event))
+                await self._wait_for_completion(app)
+            return [c.text for c in completions], buf.text
+
+        assert asyncio.run(run_test()) == (expected_matches, expected_buffer_line)
+
+    @pytest.mark.parametrize("complete_in_thread", [False, True])
+    @pytest.mark.parametrize(
+        ("line", "matches", "search_text_offset", "expected_text", "expected_completion_count"),
+        [
+            # Multiple matches: inserts opening quote + common prefix and displays completions
+            ("edit has", ["has space 1", "has space 2"], 0, 'edit "has space ', 2),
+            # Single match: inserts opening quote + match + closing quote + trailing space, no lingering menu
+            ("edit has", ["has space"], 0, 'edit "has space" ', 0),
+            # Shortcut prefix: inserts opening quote after shortcut and completes
+            ("@has", ["@has space"], 1, '@"has space" ', 0),
+        ],
+    )
+    def test_get_completions_add_opening_quote_retriggers_completion(
+        self,
+        complete_in_thread: bool,
+        line: str,
+        matches: list[str],
+        search_text_offset: int,
+        expected_text: str,
+        expected_completion_count: int,
+        mock_cmd_app: MockCmd,
+        mocker: Any,
+    ) -> None:
+        """Verify inserting an opening quote restarts completion using cached results without re-calling complete()."""
+        table = Table()
+        table.add_column("Match")
+        table.add_row("info")
+
+        mock_cmd_app.complete.return_value = cmd2.Completions(
+            [cmd2.CompletionItem(m) for m in matches],
+            table=table,
+            _add_opening_quote=True,
+            _search_text_offset=search_text_offset,
+            _quote_char='"',
+        )
+        mock_print = mocker.patch("cmd2.pt_utils.print_formatted_text")
+
+        base_completer: Completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+        completer: Completer = ThreadedCompleter(base_completer) if complete_in_thread else base_completer
+
+        async def run_completion() -> tuple[str, int]:
+            buf = Buffer(document=Document(line, cursor_position=len(line)), completer=completer)
+            app: Application[None] = Application(
+                layout=Layout(Window(BufferControl(buffer=buf))),
+                input=DummyInput(),
+                output=DummyOutput(),
+            )
+            app.loop = asyncio.get_running_loop()
+
+            with set_app(app):
+                buf.start_completion(insert_common_part=True, complete_event=pt_utils._CompletionKeyEvent())
+                # Wait for all completion background tasks (first + re-triggered) to finish
+                for _ in range(20):
+                    tasks = list(app._background_tasks)
+                    if tasks:
+                        await asyncio.gather(*tasks)
+                    await asyncio.sleep(0)
+                    if not app._background_tasks and buf.text != line:
+                        break
+
+            count = len(buf.complete_state.completions) if buf.complete_state else 0
+            return buf.text, count
+
+        final_text, completion_count = asyncio.run(run_completion())
+        assert final_text == expected_text
+        assert completion_count == expected_completion_count
+        # Cached completions were reused on the re-triggered cycle: complete() and table print each ran once
+        assert mock_cmd_app.complete.call_count == 1
+        assert mock_print.call_count == 1
+
+    @staticmethod
+    async def _wait_for_completion(app: Application[None]) -> None:
+        """Wait for a completion, and any completion which it restarts, to finish."""
+        for _ in range(10):
+            tasks = list(app._background_tasks)
+            if tasks:
+                await asyncio.gather(*tasks)
+            await asyncio.sleep(0.005)
+
+    @pytest.mark.parametrize(
+        ("interruption", "expected_text", "expected_calls"),
+        [
+            ("cancel", "edit has", 2),
+            # prompt-toolkit completes the edited line itself, which is one more call
+            ("edit", "edit hasx", 3),
+        ],
+    )
+    def test_get_completions_add_opening_quote_abandoned_request(
+        self, interruption: str, expected_text: str, expected_calls: int, mock_cmd_app: MockCmd
+    ) -> None:
+        """Verify nothing is inserted or kept for a request which is cancelled or outdated while cmd2 is completing."""
+        line = "edit has"
+        completer = ThreadedCompleter(pt_utils.Cmd2Completer(cast(Any, mock_cmd_app)))
+
+        async def run_test() -> tuple[str, str]:
+            loop = asyncio.get_running_loop()
+            completing = asyncio.Event()
+            interrupted = threading.Event()
+
+            def slow_complete(text: str, *_args: Any, **_kwargs: Any) -> cmd2.Completions:
+                # Keep the request busy in its thread until it has been interrupted
+                loop.call_soon_threadsafe(completing.set)
+                interrupted.wait(timeout=5)
+                if text != "has":
+                    return cmd2.Completions()
+                return cmd2.Completions([cmd2.CompletionItem("has space")], _add_opening_quote=True, _quote_char='"')
+
+            mock_cmd_app.complete.side_effect = slow_complete
+
+            buf = Buffer(document=Document(line, cursor_position=len(line)), completer=completer)
+            app: Application[None] = Application(
+                layout=Layout(Window(BufferControl(buffer=buf))),
+                input=DummyInput(),
+                output=DummyOutput(),
+            )
+            app.loop = loop
+
+            with set_app(app):
+                buf.start_completion(insert_common_part=True, complete_event=pt_utils._CompletionKeyEvent())
+                await completing.wait()
+                if interruption == "cancel":
+                    buf.cancel_completion()
+                else:
+                    buf.insert_text("x")
+                interrupted.set()
+                await self._wait_for_completion(app)
+                text_after_interruption = buf.text
+
+                # The next request for the original line has to ask cmd2 again
+                buf.set_document(Document(line, cursor_position=len(line)))
+                mock_cmd_app.complete.side_effect = None
+                mock_cmd_app.complete.return_value = cmd2.Completions(
+                    [cmd2.CompletionItem("has changed")], _add_opening_quote=True, _quote_char='"'
+                )
+                buf.start_completion(insert_common_part=True, complete_event=pt_utils._CompletionKeyEvent())
+                await self._wait_for_completion(app)
+                return text_after_interruption, buf.text
+
+        text_after_interruption, final_text = asyncio.run(run_test())
+        assert text_after_interruption == expected_text
+        assert final_text == 'edit "has changed" '
+        assert mock_cmd_app.complete.call_count == expected_calls
+
+    @pytest.mark.parametrize("complete_in_thread", [False, True])
+    def test_get_completions_add_opening_quote_with_complete_while_typing(
+        self, complete_in_thread: bool, mock_cmd_app: MockCmd
+    ) -> None:
+        """Verify inserting the quote doesn't start an automatic completion which takes the place of the restart."""
+        line = "edit has"
+
+        def complete(_text: str, *, line: str, **_kwargs: Any) -> cmd2.Completions:
+            if '"' in line:
+                return cmd2.Completions([cmd2.CompletionItem("has space")], _quote_char='"')
+            return cmd2.Completions([cmd2.CompletionItem("has space")], _add_opening_quote=True, _quote_char='"')
+
+        mock_cmd_app.complete.side_effect = complete
+        base_completer: Completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+        completer: Completer = ThreadedCompleter(base_completer) if complete_in_thread else base_completer
+
+        async def run_test() -> str:
+            buf = Buffer(
+                document=Document(line, cursor_position=len(line)),
+                completer=completer,
+                complete_while_typing=True,
+            )
+            app: Application[None] = Application(
+                layout=Layout(Window(BufferControl(buffer=buf))),
+                input=DummyInput(),
+                output=DummyOutput(),
+            )
+            app.loop = asyncio.get_running_loop()
+
+            with set_app(app):
+                buf.start_completion(insert_common_part=True, complete_event=pt_utils._CompletionKeyEvent())
+                await self._wait_for_completion(app)
+            return buf.text
+
+        assert asyncio.run(run_test()) == 'edit "has space" '
+
+        # The line with only the quote inserted was completed from the matches which had already been found.
+        # prompt-toolkit then completes the finished line itself, as it does after any text is inserted.
+        completed_lines = [call.kwargs["line"] for call in mock_cmd_app.complete.call_args_list]
+        assert completed_lines == [line, 'edit "has space" ']
+
+    @pytest.mark.parametrize("complete_while_typing", [False, True])
+    def test_get_completions_add_opening_quote_updates_suggestion(
+        self, complete_while_typing: bool, mock_cmd_app: MockCmd
+    ) -> None:
+        """Verify the line with the quote in it is offered to auto-suggest, as any other inserted text is."""
+        line = "edit has"
+        mock_cmd_app.complete.return_value = cmd2.Completions(
+            # These have nothing in common past what was typed, so the quote is all which gets inserted
+            [cmd2.CompletionItem("has space"), cmd2.CompletionItem("hash")],
+            _add_opening_quote=True,
+            _quote_char='"',
+        )
+        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+        suggested_for: list[str] = []
+
+        class RecordsRequests(AutoSuggest):
+            def get_suggestion(self, _buffer: Buffer, document: Document) -> Suggestion | None:
+                suggested_for.append(document.text)
+                return None
+
+        async def run_test() -> str:
+            buf = Buffer(
+                document=Document(line, cursor_position=len(line)),
+                completer=completer,
+                auto_suggest=RecordsRequests(),
+                complete_while_typing=complete_while_typing,
+            )
+            app: Application[None] = Application(
+                layout=Layout(Window(BufferControl(buffer=buf))),
+                input=DummyInput(),
+                output=DummyOutput(),
+            )
+            app.loop = asyncio.get_running_loop()
+
+            with set_app(app):
+                buf.start_completion(insert_common_part=True, complete_event=pt_utils._CompletionKeyEvent())
+                await self._wait_for_completion(app)
+            return buf.text
+
+        assert asyncio.run(run_test()) == 'edit "has'
+        assert suggested_for == ['edit "has']
+
+        # Inserting the quote didn't make the buffer complete the line on its own
+        assert mock_cmd_app.complete.call_count == 1
+
+    def test_get_completions_add_opening_quote_waits_for_running_request(self, mock_cmd_app: MockCmd) -> None:
+        """Verify the quote is inserted once prompt-toolkit has finished a request it was still waiting on.
+
+        This is what happens when a completion which runs in a thread takes a while. prompt-toolkit
+        ignores a completion which is started before it has finished the request.
+        """
+        line = "edit has"
+        completer = ThreadedCompleter(pt_utils.Cmd2Completer(cast(Any, mock_cmd_app)))
+
+        async def run_test() -> str:
+            loop = asyncio.get_running_loop()
+            completing = asyncio.Event()
+            waited_on = threading.Event()
+
+            def slow_complete(*_args: Any, **_kwargs: Any) -> cmd2.Completions:
+                # Don't return until prompt-toolkit is waiting for the results
+                loop.call_soon_threadsafe(completing.set)
+                waited_on.wait(timeout=5)
+                return cmd2.Completions([cmd2.CompletionItem("has space")], _add_opening_quote=True, _quote_char='"')
+
+            mock_cmd_app.complete.side_effect = slow_complete
+
+            buf = Buffer(document=Document(line, cursor_position=len(line)), completer=completer)
+            app: Application[None] = Application(
+                layout=Layout(Window(BufferControl(buffer=buf))),
+                input=DummyInput(),
+                output=DummyOutput(),
+            )
+            app.loop = loop
+
+            with set_app(app):
+                buf.start_completion(insert_common_part=True, complete_event=pt_utils._CompletionKeyEvent())
+                await completing.wait()
+                waited_on.set()
+                await self._wait_for_completion(app)
+
+            # cmd2 has stopped listening to the buffer
+            handlers = buf.on_completions_changed._handlers
+            assert [handler.__qualname__ for handler in handlers if "Cmd2Completer" in handler.__qualname__] == []
+            return buf.text
+
+        assert asyncio.run(run_test()) == 'edit "has space" '
+        assert mock_cmd_app.complete.call_count == 1
+
+    def test_get_completions_add_opening_quote_cancelled_before_request_finished(self, mock_cmd_app: MockCmd) -> None:
+        """Verify nothing is inserted if the request is cancelled after cmd2 has completed it.
+
+        prompt-toolkit hasn't been told that the request is finished at that point.
+        """
+        line = "edit has"
+        mock_cmd_app.complete.return_value = cmd2.Completions(
+            [cmd2.CompletionItem("has space")], _add_opening_quote=True, _quote_char='"'
+        )
+        cmd2_completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+
+        async def run_test() -> str:
+            loop = asyncio.get_running_loop()
+            cancelled = False
+
+            class CancelledAfterCompleting(Completer):
+                """Has the user cancel the first request right after cmd2 has returned its results."""
+
+                def get_completions(self, document: Document, complete_event: CompleteEvent) -> Iterable[Completion]:
+                    nonlocal cancelled
+                    yield from cmd2_completer.get_completions(document, complete_event)
+                    if not cancelled:
+                        cancelled = True
+                        loop.call_soon_threadsafe(buf.cancel_completion)
+
+            buf = Buffer(
+                document=Document(line, cursor_position=len(line)),
+                completer=ThreadedCompleter(CancelledAfterCompleting()),
+            )
+            app: Application[None] = Application(
+                layout=Layout(Window(BufferControl(buffer=buf))),
+                input=DummyInput(),
+                output=DummyOutput(),
+            )
+            app.loop = loop
+
+            with set_app(app):
+                buf.start_completion(insert_common_part=True, complete_event=pt_utils._CompletionKeyEvent())
+                await self._wait_for_completion(app)
+            return buf.text
+
+        assert asyncio.run(run_test()) == line
+        assert mock_cmd_app.complete.call_count == 1
+
+    @pytest.mark.parametrize("complete_in_thread", [False, True])
+    def test_get_completions_add_opening_quote_keeps_selection_of_other_requests(
+        self, complete_in_thread: bool, mock_cmd_app: MockCmd
+    ) -> None:
+        """Verify a request which selects a match gets the quote in each match instead of a restarted completion.
+
+        Starting again would turn it into a request for the common prefix of the matches. That is
+        only right for a request which comes from the completion key.
+        """
+        line = "edit has"
+        mock_cmd_app.complete.return_value = cmd2.Completions(
+            [cmd2.CompletionItem("has space 1"), cmd2.CompletionItem("has space 2")],
+            _add_opening_quote=True,
+            _quote_char='"',
+        )
+        base_completer: Completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+        completer: Completer = ThreadedCompleter(base_completer) if complete_in_thread else base_completer
+
+        async def run_test() -> tuple[str, int | None]:
+            buf = Buffer(document=Document(line, cursor_position=len(line)), completer=completer)
+            app: Application[None] = Application(
+                layout=Layout(Window(BufferControl(buffer=buf))),
+                input=DummyInput(),
+                output=DummyOutput(),
+            )
+            app.loop = asyncio.get_running_loop()
+
+            with set_app(app):
+                # What Ctrl-P does in Vi insert mode
+                buf.start_completion(select_last=True)
+                await self._wait_for_completion(app)
+            assert buf.complete_state is not None
+            return buf.text, buf.complete_state.complete_index
+
+        assert asyncio.run(run_test()) == ('edit "has space 2" ', 1)
+        assert mock_cmd_app.complete.call_count == 1
+
+    def test_get_completions_add_opening_quote_does_not_hide_notifications(self, mock_cmd_app: MockCmd) -> None:
+        """Verify a listener registered after cmd2's own still hears that the first request finished."""
+        line = "edit has"
+        mock_cmd_app.complete.return_value = cmd2.Completions(
+            [cmd2.CompletionItem("has space")], _add_opening_quote=True, _quote_char='"'
+        )
+        cmd2_completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+
+        async def run_test() -> list[tuple[str, bool]]:
+            heard: list[tuple[str, bool]] = []
+            listening = False
+
+            def listener(buffer: Buffer) -> None:
+                heard.append((buffer.text, buffer.complete_state is None))
+
+            class RegistersListener(Completer):
+                """Adds a listener once cmd2 has registered its own for the first request."""
+
+                def get_completions(self, document: Document, complete_event: CompleteEvent) -> Iterable[Completion]:
+                    nonlocal listening
+                    yield from cmd2_completer.get_completions(document, complete_event)
+                    if not listening:
+                        listening = True
+                        buf.on_completions_changed += listener
+
+            buf = Buffer(document=Document(line, cursor_position=len(line)), completer=RegistersListener())
+            app: Application[None] = Application(
+                layout=Layout(Window(BufferControl(buffer=buf))),
+                input=DummyInput(),
+                output=DummyOutput(),
+            )
+            app.loop = asyncio.get_running_loop()
+
+            with set_app(app):
+                buf.start_completion(insert_common_part=True, complete_event=pt_utils._CompletionKeyEvent())
+                await self._wait_for_completion(app)
+            assert buf.text == 'edit "has space" '
+            return heard
+
+        # prompt-toolkit clears the state of the first request and says so before the quote is inserted
+        assert (line, True) in asyncio.run(run_test())
+
+    def test_get_completions_add_opening_quote_skips_if_prompt_ended(self, mock_cmd_app: MockCmd) -> None:
+        """Verify the quote is not inserted if the line is submitted just as the request finishes."""
+        line = "edit has"
+        mock_cmd_app.complete.return_value = cmd2.Completions(
+            [cmd2.CompletionItem("has space")], _add_opening_quote=True, _quote_char='"'
+        )
+        cmd2_completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+
+        async def run_test() -> str:
+            loop = asyncio.get_running_loop()
+            listening = False
+
+            def end_prompt_when_request_finishes(buffer: Buffer) -> None:
+                # prompt-toolkit clears the state once the request has returned no matches. cmd2 has been told
+                # that already, since it listens ahead of this, and is about to insert the quote.
+                if buffer.complete_state is None and app.future is None:
+                    app.future = loop.create_future()
+                    app.future.set_result(None)
+
+            class RegistersListener(Completer):
+                """Adds a listener once cmd2 has registered its own for the first request."""
+
+                def get_completions(self, document: Document, complete_event: CompleteEvent) -> Iterable[Completion]:
+                    nonlocal listening
+                    yield from cmd2_completer.get_completions(document, complete_event)
+                    if not listening:
+                        listening = True
+                        buf.on_completions_changed += end_prompt_when_request_finishes
+
+            buf = Buffer(document=Document(line, cursor_position=len(line)), completer=RegistersListener())
+            app: Application[None] = Application(
+                layout=Layout(Window(BufferControl(buffer=buf))),
+                input=DummyInput(),
+                output=DummyOutput(),
+            )
+            app.loop = loop
+
+            with set_app(app):
+                buf.start_completion(insert_common_part=True, complete_event=pt_utils._CompletionKeyEvent())
+                await self._wait_for_completion(app)
+            return buf.text
+
+        assert asyncio.run(run_test()) == line
+
+    def test_get_completions_add_opening_quote_skips_if_document_changed(self, mock_cmd_app: MockCmd) -> None:
+        """Verify deferred quote insertion bails out if the user edits the buffer just as the request finishes."""
+        line = "edit has"
+        mock_cmd_app.complete.return_value = cmd2.Completions(
+            [cmd2.CompletionItem("has space")],
+            _add_opening_quote=True,
+            _search_text_offset=0,
+            _quote_char='"',
+        )
+        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+
+        async def run_test() -> str:
+            buf = Buffer(document=Document(line, cursor_position=len(line)), completer=completer)
+            app: Application[None] = Application(
+                layout=Layout(Window(BufferControl(buffer=buf))),
+                input=DummyInput(),
+                output=DummyOutput(),
+            )
+            app.loop = asyncio.get_running_loop()
+
+            def edit_when_request_finishes(_: Buffer) -> None:
+                # prompt-toolkit clears the completion state once the request has returned no matches.
+                # The quote has not been inserted yet at that point.
+                if buf.complete_state is None and buf.text == line:
+                    buf.insert_text("x")
+
+            buf.on_completions_changed += edit_when_request_finishes
+
+            with set_app(app):
+                buf.start_completion(insert_common_part=True, complete_event=pt_utils._CompletionKeyEvent())
+                await self._wait_for_completion(app)
+            return buf.text
+
+        assert asyncio.run(run_test()) == "edit hasx"
+        assert mock_cmd_app.complete.call_count == 1
 
     @pytest.mark.parametrize(
         # search_text_offset is the starting index of the user-provided search text within a full match.
@@ -463,9 +1020,9 @@ class TestCmd2Completer:
             # Single matches need opening quote, closing quote, and trailing space
             ("", ["has space"], 0, '"', ['"has space" ']),
             ("@", ["@has space"], 1, "'", ["@'has space' "]),
-            # Multiple matches only need opening quote
-            ("", ["has space", "more space"], 0, '"', ['"has space', '"more space']),
-            ("@", ["@has space", "@more space"], 1, "'", ["@'has space", "@'more space"]),
+            # Multiple matches need the same, so choosing one of them leaves it finished
+            ("", ["has space", "more space"], 0, '"', ['"has space" ', '"more space" ']),
+            ("@", ["@has space", "@more space"], 1, "'", ["@'has space' ", "@'more space' "]),
         ],
     )
     def test_get_completions_add_opening_quote_and_return_results(
@@ -563,6 +1120,176 @@ class TestCmd2Completer:
         # Call get_completions and compare results
         completions = list(completer.get_completions(document, None))
         assert completions[0].text == expected
+
+    @pytest.mark.parametrize(
+        ("line", "items", "quote_char", "allow_finalization", "expected"),
+        [
+            # Each match closes a quote which is open and adds a trailing space
+            (
+                '"ma',
+                [cmd2.CompletionItem("match one"), cmd2.CompletionItem("match two")],
+                '"',
+                True,
+                ['match one" ', 'match two" '],
+            ),
+            (
+                "'ma",
+                [cmd2.CompletionItem("match one"), cmd2.CompletionItem("match two")],
+                "'",
+                True,
+                ["match one' ", "match two' "],
+            ),
+            # Nothing is added when no quote is open
+            ("ma", [cmd2.CompletionItem("match"), cmd2.CompletionItem("matter")], "", True, ["match", "matter"]),
+            # No match closes the quote when the matches are not allowed to be finalized
+            (
+                '"ma',
+                [cmd2.CompletionItem("match one"), cmd2.CompletionItem("match two")],
+                '"',
+                False,
+                ["match one", "match two"],
+            ),
+            # A match which can't be finalized itself, like a directory, leaves the quote open
+            (
+                '"ma',
+                [cmd2.CompletionItem("match dir/", _allow_finalization=False), cmd2.CompletionItem("match file")],
+                '"',
+                True,
+                ["match dir/", 'match file" '],
+            ),
+        ],
+    )
+    def test_get_completions_close_quote_of_each_of_several_matches(
+        self, line, items, quote_char, allow_finalization, expected, mock_cmd_app: MockCmd
+    ) -> None:
+        """Test that a match chosen from several does not leave its quote open."""
+        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+        document = Document(line, cursor_position=len(line))
+
+        mock_cmd_app.complete.return_value = cmd2.Completions(
+            items,
+            allow_finalization=allow_finalization,
+            _quote_char=quote_char,
+        )
+
+        completions = list(completer.get_completions(document, None))
+        assert [c.text for c in completions] == expected
+
+    @pytest.mark.parametrize(
+        ("line", "matches", "quote_char", "expected"),
+        [
+            # A closing quote right after the cursor is never doubled
+            ('"ma"', ["match"], '"', ["match"]),
+            ('"ma"', ["match one", "match two"], '"', ["match one", "match two"]),
+            ("'ma' more", ["match one", "match two"], "'", ["match one", "match two"]),
+            # Otherwise the only match closes its quote
+            ('"ma.txt"', ["match"], '"', ['match"']),
+            ('"ma more', ["match"], '"', ['match"']),
+            ("\"ma'", ["match"], '"', ['match"']),
+            ('"ma --title="x"', ["match"], '"', ['match"']),
+            # A match chosen from several leaves a quote which the user typed as it is
+            ('"ma.txt"', ["match one", "match two"], '"', ["match one", "match two"]),
+            ('"ma more', ["match one", "match two"], '"', ["match one", "match two"]),
+            ('"ma "next"', ["match one", "match two"], '"', ["match one", "match two"]),
+        ],
+    )
+    def test_get_completions_closing_quote_in_the_middle_of_a_line(
+        self, line, matches, quote_char, expected, mock_cmd_app: MockCmd
+    ) -> None:
+        """Test what is added to a match when the user typed the opening quote and text follows the cursor."""
+        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+
+        # The cursor is right after the search text
+        document = Document(line, cursor_position=3)
+
+        mock_cmd_app.complete.return_value = cmd2.Completions(
+            [cmd2.CompletionItem(match) for match in matches],
+            _quote_char=quote_char,
+        )
+
+        completions = list(completer.get_completions(document, None))
+        assert [c.text for c in completions] == expected
+
+    @pytest.mark.parametrize(
+        ("line", "cursor_position", "matches", "expected"),
+        [
+            # The word which cmd2 puts in quotes ended at the cursor, so each match closes the quote
+            ("ma more", 2, ["match one", "match two"], ['"match one"', '"match two"']),
+            ("ma 'a\"b'", 2, ["match one", "match two"], ['"match one"', '"match two"']),
+            ("ma 'a\"b'", 2, ["match"], ['"match"']),
+            # The word carries on after the cursor, so what follows may be the rest of it
+            ('ma"', 2, ["match one", "match two"], ['"match one', '"match two']),
+            ("mab", 2, ["match one", "match two"], ['"match one', '"match two']),
+            ('ma"', 2, ["match"], ['"match']),
+            ("mab", 2, ["match"], ['"match"']),
+        ],
+    )
+    @pytest.mark.parametrize("quote_already_inserted", [False, True])
+    def test_get_completions_close_quote_which_cmd2_opened(
+        self, line, cursor_position, matches, expected, quote_already_inserted, mock_cmd_app: MockCmd
+    ) -> None:
+        """Test what is added to a match when cmd2 adds the opening quote and text follows the cursor."""
+        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+        items = [cmd2.CompletionItem(match) for match in matches]
+
+        if quote_already_inserted:
+            # The quote was put in the buffer and completion was started again with the matches found before
+            document = Document('"' + line, cursor_position=cursor_position + 1)
+            complete_event: object = pt_utils._QuoteInsertedEvent(document, cmd2.Completions(items, _quote_char='"'))
+            expected = [text.removeprefix('"') for text in expected]
+        else:
+            # The quote is part of each match
+            document = Document(line, cursor_position=cursor_position)
+            complete_event = None
+            mock_cmd_app.complete.return_value = cmd2.Completions(items, _add_opening_quote=True, _quote_char='"')
+
+        completions = list(completer.get_completions(document, complete_event))
+        assert [c.text for c in completions] == expected
+
+    @pytest.mark.parametrize(
+        ("line", "quote_char", "expected"),
+        [
+            ("ma", "", "match dir/"),
+            ('"ma', '"', "match dir/"),
+        ],
+    )
+    def test_get_completions_single_match_which_is_not_finished(
+        self, line, quote_char, expected, mock_cmd_app: MockCmd
+    ) -> None:
+        """Test that the only match is left open when it is marked as one the user will keep completing.
+
+        This is what a completer gets if it filters the results of path_complete() or
+        delimiter_complete() down to a single directory-like match.
+        """
+        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+        document = Document(line, cursor_position=len(line))
+
+        mock_cmd_app.complete.return_value = cmd2.Completions(
+            [cmd2.CompletionItem("match dir/", _allow_finalization=False)],
+            _quote_char=quote_char,
+        )
+
+        completions = list(completer.get_completions(document, None))
+        assert [c.text for c in completions] == [expected]
+
+    def test_get_completions_ignores_matches_found_for_another_document(self, mock_cmd_app: MockCmd) -> None:
+        """Verify matches which were found before a quote was inserted are only used for the line they are for."""
+        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+        quoted_document = Document('edit "has', cursor_position=9)
+        found = cmd2.Completions([cmd2.CompletionItem("has space")], _quote_char='"')
+        complete_event = pt_utils._QuoteInsertedEvent(quoted_document, found)
+
+        # They are used for the line which the quote was inserted in
+        completions = list(completer.get_completions(quoted_document, complete_event))
+        assert [c.text for c in completions] == ['has space" ']
+        assert mock_cmd_app.complete.call_count == 0
+
+        # The user typed another character before the completion started
+        mock_cmd_app.complete.return_value = cmd2.Completions([cmd2.CompletionItem("hash value")], _quote_char='"')
+        edited_document = Document('edit "hash', cursor_position=10)
+        completions = list(completer.get_completions(edited_document, complete_event))
+        assert [c.text for c in completions] == ['hash value" ']
+        assert mock_cmd_app.complete.call_count == 1
 
     def test_init_with_custom_settings(self, mock_cmd_app: MockCmd) -> None:
         """Test initializing with custom settings."""
