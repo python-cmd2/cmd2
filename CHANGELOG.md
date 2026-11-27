@@ -18,6 +18,9 @@
           completer which offers matches the user keeps completing, like directories, alongside
           other matches, return `allow_finalization=False` for those results so the quote stays
           open.
+    - `set_window_title()` now queues writes from other threads on the event loop of a
+      prompt-toolkit app that shares cmd2's AppSession and terminal output, such as a prompt opened
+      by `prompt_toolkit.prompt()` or the `ipy` command.
 
 ## 4.4.3 (2026-11-16)
 

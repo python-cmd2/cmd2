@@ -72,7 +72,7 @@ from prompt_toolkit import (
     filters,
     print_formatted_text,
 )
-from prompt_toolkit.application import Application, AppSession, create_app_session, get_app
+from prompt_toolkit.application import Application, AppSession, create_app_session, get_app, get_app_session
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import Completer, DummyCompleter
 from prompt_toolkit.formatted_text import ANSI, AnyFormattedText
@@ -717,6 +717,8 @@ class Cmd:
         self._window_title_fallback_checked = False
         self._window_title_fallback_output: Output | None = None
 
+        # Keep the AppSession itself so background callers can find its current app without sharing a context.
+        self._window_title_app_session = get_app_session()
         # The AppSession of a select() menu while it is displayed, so window titles can find its event loop.
         self._select_app_session: AppSession | None = None
 
@@ -6042,10 +6044,11 @@ class Cmd:
         from another thread isn't synchronized with other writers to the terminal, such as a prompt
         which is just starting or finishing.
 
-        While a prompt is running, the title is written on the prompt's event loop, even when this is
-        called on that loop, so it doesn't interleave with rendering. It appears once the loop runs its
-        next callback, which can be delayed while the loop is busy, such as in a slow completer. If
-        several titles are set before then, only the latest is written. Output errors are ignored so
+        While a cmd2 prompt is running, the title is written on the prompt's event loop so it doesn't
+        interleave with rendering. This also applies to a prompt-toolkit app that shares the title output
+        and runs in the AppSession active when this Cmd was created. The title appears once the loop
+        runs its next callback, which can be delayed while the loop is busy, such as in a slow completer.
+        If several titles are set before then, only the latest is written. Output errors are ignored so
         they can't disrupt the prompt.
 
         :param title: the new window title
@@ -6092,6 +6095,16 @@ class Cmd:
             loop = app.loop
             if loop is not None:
                 return loop
+
+        ambient_app = self._window_title_app_session.app
+        if (
+            ambient_app is not None
+            and (loop := ambient_app.loop) is not None
+            and ambient_app.output is self._get_window_title_output()
+        ):
+            # If the external app closes its loop before the callback runs, the title stays pending
+            # until cmd2 cleans up a prompt or another title replaces it. See #1792.
+            return loop
         return None
 
     def _get_window_title_fallback_output(self) -> Output | None:
